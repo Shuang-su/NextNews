@@ -16,4 +16,7 @@ This is a development checkpoint, not completed runtime acceptance.
 - Configured IDE HTTP proxy to the already configured local system proxy `127.0.0.1:1082`. IDE Check Connection to `https://developer.huawei.com` returned success. Retrying the image through IDE returned `HTTP/1.1 503 Service Unavailable` from the proxy tunnel. The simulator CLI still reported connection refused. This narrows the failure to the download connection; it does not prove the image server itself is down.
 - Repository created and verified private: `https://github.com/Shuang-su/NextNews`. SDKs, installers, build artifacts and signing material are excluded.
 
+- Subsequent user-triggered IDE retry began downloading the 2.31 GB phone image from `update.dbankcdn.com`; this supersedes the earlier network-blocked state. Installation and startup are still pending.
+- DevEco CLI OAuth login completed. Credentials remain local.
+
 Build/test/download logs remain in ignored `artifacts/harmonyos`. Full simulator agreements remain local; user authorized acceptance.

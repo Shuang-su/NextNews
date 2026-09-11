@@ -29,7 +29,7 @@ def sha256(path):
 
 def prepare(source, destination, limit=100000, label='', license_note='Private local validation only'):
     source, destination = Path(source).resolve(), Path(destination).resolve()
-    if source == destination or destination.exists():
+    if source == destination or destination.exists() or destination.with_suffix('.manifest.json').exists():
         raise ValueError('Refusing to overwrite an existing model')
     if not 1 <= limit <= 300000:
         raise ValueError('Limit must be between 1 and 300000')
@@ -38,6 +38,7 @@ def prepare(source, destination, limit=100000, label='', license_note='Private l
             raise ValueError('Not PLY; decompress with splat-transform first')
         props, fmt, count, done = [], [], None, False
         current = ''
+        format_seen = False
         for _ in range(512):
             line = stream.readline(8192).decode('ascii').strip()
             words = line.split()
@@ -46,8 +47,10 @@ def prepare(source, destination, limit=100000, label='', license_note='Private l
                 break
             if not words:
                 raise ValueError('Incomplete PLY header')
-            if words[0] == 'format' and words[1:] != ['binary_little_endian', '1.0']:
-                raise ValueError('Expected binary little-endian PLY')
+            if words[0] == 'format':
+                if format_seen or words[1:] != ['binary_little_endian', '1.0']:
+                    raise ValueError('Expected one binary little-endian PLY format declaration')
+                format_seen = True
             if words[0] == 'element':
                 current = words[1]
                 if current == 'vertex':
@@ -63,7 +66,7 @@ def prepare(source, destination, limit=100000, label='', license_note='Private l
                     raise ValueError('Duplicate property')
                 props.append(words[2])
                 fmt.append(TYPES[words[1]])
-        if not done or count is None or count < 1:
+        if not done or not format_seen or count is None or count < 1:
             raise ValueError('Invalid PLY header')
         row = struct.Struct('<' + ''.join(fmt))
         if source.stat().st_size - stream.tell() != count * row.size:

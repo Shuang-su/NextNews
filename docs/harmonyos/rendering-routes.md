@@ -31,6 +31,15 @@ generation capability, not required for the viewer milestone.
 Track runtime results separately for each backend. Tiled loading is an optional
 future experiment, not part of the current small-model acceptance requirement.
 
+## AR placement extension
+
+The ARViewController reference also exposes API 26 `loadGSModel` and
+`removeGSModel` for placement inside an AR session, with one Gaussian model per
+session. It requires AR capability checks and session initialization involving
+camera and motion-sensor permissions. This is a future AR presentation mode;
+the standalone comparison viewer can use SpatialReconKit directly. AR and AGP
+coordinate systems must be converted explicitly when sharing poses.
+
 Related user-provided sources:
 - [SpatialRecon C API](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/capi-spatialrecon)
 - [AR scene management](https://developer.huawei.com/consumer/cn/doc/harmonyos-references/arengine-api-arviewcontroller)
