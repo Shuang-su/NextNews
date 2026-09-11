@@ -43,5 +43,7 @@ private:
     EGLContext context_ = EGL_NO_CONTEXT;
     EGLSurface surface_ = EGL_NO_SURFACE;
     GLuint program_ = 0, vao_ = 0, buffer_ = 0;
+    void *window_ = nullptr;
+    int bufferWidth_ = 0, bufferHeight_ = 0;
 };
 }

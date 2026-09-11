@@ -21,6 +21,25 @@ is retained so a recreated surface can render it again.
 bash scripts/harmonyos/build.sh
 ```
 
+For a signed debug HAP after starting the emulator and logging in:
+
+```bash
+source scripts/harmonyos/env.sh
+devecocli emulator start NextNews_API26
+devecocli auth login
+bash scripts/harmonyos/debug-build.sh
+```
+
+The debug script synchronizes source into ignored `.local/signed-harmonyos`,
+retains local signing configuration there and writes
+`artifacts/harmonyos/NextNews-debug.hap`. Signing credentials never enter the
+tracked build profile. With exactly one device connected, install and launch:
+
+```bash
+/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc install artifacts/harmonyos/NextNews-debug.hap
+/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc shell aa start -b com.nextnews.splatviewer -a EntryAbility
+```
+
 The environment wrapper is project-scoped and does not edit shell profiles or
 the machine-wide Xcode selection. DevEco CLI is pinned to `1.3.0-stable` in
 `.tools/deveco`. Install it on another machine using:
@@ -101,3 +120,5 @@ build, EGL rendering and gesture/lifecycle acceptance are separate checks.
 - https://github.com/playcanvas/splat-transform
 
 See verification.md for the actual completed checks and outstanding work.
+See toolchain.md for versions and rendering-routes.md for the SpatialReconKit
+comparison page and the separate future AR placement path.

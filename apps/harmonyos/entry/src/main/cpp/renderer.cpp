@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 #include <stdexcept>
+#include <native_window/external_window.h>
 
 namespace splat {
 namespace {
@@ -95,6 +96,7 @@ void Renderer::SetCamera(Camera camera) {
 void Renderer::SetActive(bool active) { {std::lock_guard<std::mutex> lock(mutex_);active_=active;dirty_=true;}changed_.notify_one(); }
 Status Renderer::GetStatus() {std::lock_guard<std::mutex> lock(mutex_);return status_;}
 void Renderer::InitGL(void *window) {
+    window_ = window; bufferWidth_ = bufferHeight_ = 0;
     display_=eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if(display_==EGL_NO_DISPLAY || !eglInitialize(display_,nullptr,nullptr)) throw std::runtime_error("EGL display initialization failed");
     const EGLint configAttrs[]={EGL_SURFACE_TYPE,EGL_WINDOW_BIT,EGL_RENDERABLE_TYPE,EGL_OPENGL_ES3_BIT,EGL_RED_SIZE,8,EGL_GREEN_SIZE,8,EGL_BLUE_SIZE,8,EGL_ALPHA_SIZE,8,EGL_NONE};
@@ -129,6 +131,11 @@ void Renderer::DestroyGL() {
     eglTerminate(display_);display_=EGL_NO_DISPLAY;surface_=EGL_NO_SURFACE;context_=EGL_NO_CONTEXT;
 }
 void Renderer::Draw(const View &view,int width,int height) {
+    if(bufferWidth_!=width || bufferHeight_!=height) {
+        const int result=OH_NativeWindow_NativeWindowHandleOpt(static_cast<OHNativeWindow*>(window_),SET_BUFFER_GEOMETRY,width,height);
+        if(result!=0)throw std::runtime_error("Native window buffer resize failed: "+std::to_string(result));
+        bufferWidth_=width;bufferHeight_=height;
+    }
     const auto start=Clock::now();auto sorted=Sort(scene_,view);const double sortMs=Ms(start);
     const auto drawStart=Clock::now();
     glViewport(0,0,width,height);glClearColor(.035f,.045f,.065f,1);glClear(GL_COLOR_BUFFER_BIT);glUseProgram(program_);

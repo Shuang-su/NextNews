@@ -57,12 +57,15 @@ struct SpatialViewer {
     this.busy = true; this.message = '正在加载华为原生 3DGS 插件与模型';
     const request = ++this.generation; const start = Date.now();
     let pending: Scene | undefined = undefined;
+    let stage: string = '初始化渲染上下文';
     try {
       const context = Scene.getDefaultRenderContext();
       if (!context || !await context.loadPlugin(spatialRender.GSPlugin.PLUGIN_ID)) {
         throw new Error('SpatialRender 插件不可用');
       }
+      stage = '创建 ArkGraphics3D 场景';
       pending = await Scene.load();
+      stage = '加载 3DGS 模型';
       await spatialRender.GSPlugin.loadGSNode(pending,
         { uri: `OhosRawFile://models/${SAMPLE_BOUNDS[index].file}` }, pending.root ?? undefined);
       const camera = await pending.getResourceFactory().createCamera({ name: 'comparisonCamera' });
@@ -76,7 +79,9 @@ struct SpatialViewer {
       this.message = `${this.bounds.file} · 原生加载 ${Date.now() - start} ms · SH0 输入\n图像、颜色和设备兼容性仍需实测确认`;
     } catch (error) {
       if (this.visible && request === this.generation) {
-        this.message = `原生加载失败：${(error as BusinessError).message}`;
+        const detail = (error as BusinessError)?.message ?? String(error);
+        this.message = `${stage}失败：${detail || '引擎未提供错误详情'}。可返回 C++ 查看器。`;
+        console.error(`SpatialViewer ${stage}: ${detail}`);
       }
     } finally {
       pending?.destroy();
