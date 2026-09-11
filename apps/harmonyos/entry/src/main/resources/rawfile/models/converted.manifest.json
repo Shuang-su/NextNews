@@ -1,0 +1,15 @@
+{
+  "label": "Huafa LOD8 SOG chunk",
+  "source": "/Users/szmg/Documents/NextNews/.local/samples/converted.ply",
+  "source_sha256": "6c22eec88d1463e506ac456ebe1297b7d20d5c874136dbf5a875036431022c20",
+  "output": "converted.ply",
+  "output_sha256": "e7fd99bc9c914085719701b0cb15a6a3229051077a66b557a247acf985767366",
+  "input_count": 524474,
+  "output_count": 80000,
+  "sh_degree": 0,
+  "sampling": "even source indices floor(i * input_count / output_count)",
+  "high_order_sh_removed": false,
+  "quaternion": "wxyz normalized",
+  "coordinate_transform": "none",
+  "license": "Private local validation only"
+}

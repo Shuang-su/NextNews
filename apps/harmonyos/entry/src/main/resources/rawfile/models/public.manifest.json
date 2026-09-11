@@ -1,0 +1,16 @@
+{
+  "label": "PlayCanvas biker",
+  "source": "/Users/szmg/Documents/NextNews/.local/samples/public.ply",
+  "source_sha256": "726aa85bd646790c5a3d0d82207691cfa4bd22d1aff4f03699dce43466e3be51",
+  "output": "public.ply",
+  "output_sha256": "e326a781b1c1dbff8fed2407e191db51295bac9abb6d2086d3cfd7313410cec3",
+  "input_count": 152746,
+  "output_count": 80000,
+  "sh_degree": 0,
+  "sampling": "even source indices floor(i * input_count / output_count)",
+  "high_order_sh_removed": false,
+  "opacity_infinity_to_logit_20": 100,
+  "quaternion": "wxyz normalized",
+  "coordinate_transform": "none",
+  "license": "PlayCanvas engine MIT; see docs/harmonyos/THIRD_PARTY_NOTICES.md"
+}

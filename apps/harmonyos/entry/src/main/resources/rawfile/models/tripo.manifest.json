@@ -1,0 +1,16 @@
+{
+  "label": "Tripo MPS smoke 1",
+  "source": "/Users/szmg/Documents/NextNews/.local/samples/tripo.ply",
+  "source_sha256": "128b7474ead80df3fe48c12b673d67ed0717093c2a25748b41f78f9cf65b8b94",
+  "output": "tripo.ply",
+  "output_sha256": "9bdae843684e466e36a3fd402b75784aa43d2dcad500c615eb1fae4051ca5d9f",
+  "input_count": 32768,
+  "output_count": 32768,
+  "sh_degree": 0,
+  "sampling": "even source indices floor(i * input_count / output_count)",
+  "high_order_sh_removed": false,
+  "opacity_infinity_to_logit_20": 1685,
+  "quaternion": "wxyz normalized",
+  "coordinate_transform": "none",
+  "license": "Private local validation only"
+}
