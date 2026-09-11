@@ -47,3 +47,7 @@ const e=focusEye(focus);focus.focus([.3,.2,.1]);const e2=focusEye(focus);e.forEa
 assert.deepEqual(Array.from(focus.current.slice(3)),[.3,.2,.1]);
 focus.setFly(true);const feye=Array.from(focus.current.slice(3));focus.focus([0,0,0]);assert.deepEqual(Array.from(focus.current.slice(3)),feye);
 console.log('PASS focus: orbit preserves eye and changes pivot; flight preserves position');
+const slow=new Controls(),fast=new Controls();slow.setFly(true);fast.setFly(true);fast.speed=2;
+slow.key('w',true);fast.key('w',true);slow.tick(32);fast.tick(32);
+close(3-fast.target[5],2*(3-slow.target[5]));
+console.log('PASS flight speed multiplier');

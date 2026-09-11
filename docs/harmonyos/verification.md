@@ -188,3 +188,50 @@ edge-on foreground at the default camera. Preserving pose across panel resize
 removes the implicit dolly, but does **not** resolve this image-parity issue.
 The full-scene visual acceptance remains open; package completion, selected
 count and FPS must not be interpreted as matching Viewer image quality.
+
+## GPU / overlay viewer iteration
+
+The viewport is now 1256×2526 physical pixels on NextNews_API26. Panels overlay
+it instead of changing its geometry. These measurements are **not** directly
+comparable to the earlier 1144×671 tests.
+
+Before the final projected-radius cap was added, the same resident 2M selection
+and ten-second trajectory measured 60.0 fps with opacity/frustum clipping on,
+60.0 fps off, and 60.0 fps on again. The final timer-enabled build measured
+59.9 fps. Both paths hit the refresh limit; this does not prove a FPS increase.
+A public-model stationary crop (1160000 pixels, x=40..1199, y=400..1399) had
+RGB mean absolute difference 0.001205 in 8-bit units, maximum channel delta 1,
+and no pixel with a delta above 2. These are native on/off images, **not** a
+pixel-parity comparison against the browser.
+
+The final shader additionally caps projected semi-axis extent using the
+reference engine's min(1024, viewport width, viewport height) ceiling. This
+intentionally changes enormous environment splats compared with the legacy
+4096-sigma limit. The opacity-support proof does not imply that the separate
+radius cap preserves every legacy pixel. Actual Gaussian count and texture
+precision remain unchanged. Covariance fetches follow depth/alpha rejection;
+uniform locations are cached when linking the shader.
+
+GPU timestamps use EXT_disjoint_timer_query only when advertised and callable.
+Queries are polled without a wait; disjoint results are discarded. This emulator
+does not advertise the capability, so the UI reports GPU timing unavailable.
+Frame/swap wall time is not substituted for hardware GPU duration.
+
+The public model remains upright. Icon controls and fly joystick were exercised;
+joystick movement changed camera position to approximately (0.039,0,2.931).
+After fixing toolbar focus, a W down / 1000 ms / up event moved fly Z from 3 to
+1.956. Home / ability start retained the model. Hardware phone touch ergonomics,
+XR, authored annotations and camera-track import remain unverified/unimplemented.
+
+Final capped build: 2M / 1256×2526 measured 600 frames in 10.01 s (59.9 fps)
+with optimization and 601 in 10.02 s (60.0 fps) without. This is a refresh-limited
+result, not evidence of a speedup. `gpu-cap-scene-on.png` restores a visible
+foreground roof compared with `gpu-final-stream-framing.png`'s near-solid
+occlusion. The environment is still blurry and full Web image parity remains
+open. The stream reset camera uses pitch 0.35, consistent with the locally
+prepared browser reference, while public/local model reset remains pitch zero.
+
+Final toolbar regression passes F immersive, H help, double-click flight and
+reset. Screenshots confirm the fly icon now highlights correctly after replacing
+nonreactive builder arguments with a `@Prop` component. Evidence is committed in
+`evidence/viewer-toolbar.png`, `viewer-flight.png`, and `toolbar-regression.txt`.

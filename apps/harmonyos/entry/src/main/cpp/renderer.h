@@ -13,6 +13,7 @@ struct Status {
     std::string state = "waiting", message = "Waiting for render surface", graphics;
     size_t count = 0, bytes = 0, frames = 0;
     int width = 1, height = 1;
+    double gpuMs = -1;
     double loadMs = 0, sortMs = 0, frameMs = 0, fps = 0;
 };
 class Renderer {
@@ -26,6 +27,7 @@ public:
     void SetCamera(Camera camera);
     void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {});
     void SetActive(bool active);
+    void SetOptimized(bool enabled);
     Status GetStatus();
     std::vector<float> Pick(float x,float y);
 private:
@@ -44,6 +46,7 @@ private:
     bool sortPending_ = false, sortReady_ = false;
     double completedSortMs_ = 0;
     std::atomic<bool> cancel_{false};
+    std::atomic<bool> optimized_{true};
     bool stop_ = false, dirty_ = true, active_ = true;
     int width_ = 1, height_ = 1;
     std::string pendingPath_;
@@ -62,6 +65,12 @@ private:
     EGLDisplay display_ = EGL_NO_DISPLAY;
     EGLContext context_ = EGL_NO_CONTEXT;
     EGLSurface surface_ = EGL_NO_SURFACE;
+    using TimerResult = void (*)(GLuint, GLenum, GLuint64 *);
+    TimerResult timerResult_ = nullptr;
+    GLuint timerQueries_[4]{};
+    bool timerPending_[4]{}, timerInvalid_[4]{};
+    int timerSlot_ = 0;
+    GLint viewLocation_=-1, viewportLocation_=-1, nearLocation_=-1, farLocation_=-1, dataLocation_=-1, optimizedLocation_=-1;
     GLuint program_ = 0, vao_ = 0, buffer_ = 0, dataTexture_ = 0;
     void *window_ = nullptr;
     int bufferWidth_ = 0, bufferHeight_ = 0;

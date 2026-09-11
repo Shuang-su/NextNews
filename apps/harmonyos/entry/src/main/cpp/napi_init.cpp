@@ -28,6 +28,11 @@ napi_value Camera(napi_env env,napi_callback_info info) {
     for(int i=0;i<7;++i)if(napi_get_value_double(env,args[i],&v[i])!=napi_ok||!std::isfinite(v[i])||std::abs(v[i])>1e4){napi_throw_range_error(env,nullptr,"Invalid camera value");return Undefined(env);}
     splat::Renderer::Get().SetCamera({float(v[0]),float(v[1]),float(v[2]),float(v[3]),float(v[4]),float(v[5]),float(v[6])});return Undefined(env);
 }
+napi_value Optimize(napi_env env,napi_callback_info info) {
+    napi_value arg;size_t argc=1;bool enabled=false;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
+    if(argc!=1||napi_get_value_bool(env,arg,&enabled)!=napi_ok){napi_throw_type_error(env,nullptr,"Expected boolean");return Undefined(env);}
+    splat::Renderer::Get().SetOptimized(enabled);return Undefined(env);
+}
 napi_value Chunks(napi_env env,napi_callback_info info) {
     napi_value args[3];size_t argc=3;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
     bool array=false;uint32_t n=0;
@@ -65,7 +70,7 @@ void Number(napi_env env,napi_value object,const char *key,double value){napi_va
 napi_value Status(napi_env env,napi_callback_info) {
     const auto s=splat::Renderer::Get().GetStatus();napi_value result;napi_create_object(env,&result);
     String(env,result,"state",s.state);String(env,result,"message",s.message);String(env,result,"graphics",s.graphics);
-    Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);return result;
+    Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);return result;
 }
 struct PickWork { napi_async_work work; napi_deferred deferred; float x,y;std::vector<float> point;std::string error; };
 napi_value Pick(napi_env env,napi_callback_info info) {
@@ -86,6 +91,7 @@ napi_value Init(napi_env env,napi_value exports) {
         {"pick",nullptr,Pick,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"load",nullptr,Load,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"chunks",nullptr,Chunks,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"optimize",nullptr,Optimize,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"camera",nullptr,Camera,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"setActive",nullptr,Active,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"status",nullptr,Status,nullptr,nullptr,nullptr,napi_default,nullptr}

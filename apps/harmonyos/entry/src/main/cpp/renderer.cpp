@@ -19,18 +19,20 @@ uniform mat4 view;
 uniform vec2 viewport;
 uniform float nearPlane;
 uniform float farPlane;
+uniform bool optimized;
 out vec2 gaussian;
 out vec4 tint;
 void main() {
-    vec4 t0=readSplat(0u),t1=readSplat(1u),t2=readSplat(2u),t3=readSplat(3u);
+    vec4 t0=readSplat(0u),t1=readSplat(1u);
     vec3 position=t0.xyz;vec4 color=vec4(t0.w,t1.xyz);
-    vec3 covA=vec3(t1.w,t2.xy),covB=vec3(t2.zw,t3.x);
     tint=color;
     vec3 center=(view*vec4(position,1.0)).xyz;
     float z=-center.z;
     if(z<=nearPlane || z>=farPlane || color.a<0.0039) {
         gl_Position=vec4(2.0,2.0,2.0,1.0); gaussian=vec2(0.0); return;
     }
+    vec4 t2=readSplat(2u),t3=readSplat(3u);
+    vec3 covA=vec3(t1.w,t2.xy),covB=vec3(t2.zw,t3.x);
     float focal=viewport.y*1.20710678; // 45 degree vertical field of view
     mat3 covariance=mat3(covA.x,covA.y,covA.z,covA.y,covB.x,covB.y,covA.z,covB.y,covB.z);
     mat3 rotation=mat3(view);
@@ -49,9 +51,22 @@ void main() {
     float l1=max(mid+delta,0.3), l2=max(mid-delta,0.3);
     vec2 axis=abs(b)>0.000001?normalize(vec2(b,l1-a)):(a>=d?vec2(1,0):vec2(0,1));
     vec2 corners[4]=vec2[4](vec2(-1,-1),vec2(1,-1),vec2(-1,1),vec2(1,1));
-    gaussian=corners[gl_VertexID]*3.0;
-    vec2 offset=axis*min(sqrt(l1),4096.0)*gaussian.x+vec2(-axis.y,axis.x)*min(sqrt(l2),4096.0)*gaussian.y;
-    vec2 ndc=(focal*center.xy/z+offset)*2.0/viewport;
+    // The fragment cutoff is 1/255. Tightening support to this contour
+    // removes only fragments which the original shader would discard.
+    float support=optimized?min(3.0,sqrt(max(0.0,2.0*log(255.0*color.a)))):3.0;
+    // Match the reference viewer's screen-space major/minor radius ceiling.
+    // The old 4096-sigma ceiling allowed a single sky splat to cover 12k pixels.
+    float sigmaLimit=optimized?min(1024.0,min(viewport.x,viewport.y))/3.0:4096.0;
+    vec2 major=axis*min(sqrt(l1),sigmaLimit);
+    vec2 minor=vec2(-axis.y,axis.x)*min(sqrt(l2),sigmaLimit);
+    vec2 projected=focal*center.xy/z;
+    vec2 extent=(abs(major)+abs(minor))*support;
+    if(optimized && any(greaterThan(abs(projected)-extent,viewport*0.5))) {
+        gl_Position=vec4(0.0,0.0,2.0,1.0);gaussian=vec2(0.0);return;
+    }
+    gaussian=corners[gl_VertexID]*support;
+    vec2 offset=major*gaussian.x+minor*gaussian.y;
+    vec2 ndc=(projected+offset)*2.0/viewport;
     float depth=(farPlane+nearPlane)/(farPlane-nearPlane)-2.0*farPlane*nearPlane/((farPlane-nearPlane)*z);
     gl_Position=vec4(ndc,depth,1.0);
 })GLSL";
@@ -139,10 +154,17 @@ void Renderer::InitGL(void *window) {
     eglSwapInterval(display_,1);
     const auto *version=glGetString(GL_VERSION), *renderer=glGetString(GL_RENDERER);
     {std::lock_guard<std::mutex> lock(mutex_);status_.graphics=std::string(version?reinterpret_cast<const char*>(version):"unknown")+" / "+(renderer?reinterpret_cast<const char*>(renderer):"unknown");}
+    // Optional, asynchronous hardware timing. Never wait for query completion.
+    const char *extensions=reinterpret_cast<const char*>(glGetString(GL_EXTENSIONS));
+    if(extensions && std::string(extensions).find("GL_EXT_disjoint_timer_query")!=std::string::npos) {
+        timerResult_=reinterpret_cast<TimerResult>(eglGetProcAddress("glGetQueryObjectui64vEXT"));
+        if(timerResult_)glGenQueries(4,timerQueries_);
+    }
     GLuint vertex=Compile(GL_VERTEX_SHADER,Vertex), fragment=0;
     try {fragment=Compile(GL_FRAGMENT_SHADER,Fragment);} catch(...) {glDeleteShader(vertex);throw;}
     program_=glCreateProgram();glAttachShader(program_,vertex);glAttachShader(program_,fragment);glLinkProgram(program_);glDeleteShader(vertex);glDeleteShader(fragment);
     GLint ok;glGetProgramiv(program_,GL_LINK_STATUS,&ok);if(!ok) throw std::runtime_error("Gaussian shader link failed");
+    viewLocation_=glGetUniformLocation(program_,"view");viewportLocation_=glGetUniformLocation(program_,"viewport");nearLocation_=glGetUniformLocation(program_,"nearPlane");farLocation_=glGetUniformLocation(program_,"farPlane");dataLocation_=glGetUniformLocation(program_,"splatData");optimizedLocation_=glGetUniformLocation(program_,"optimized");
     glGenVertexArrays(1,&vao_);glBindVertexArray(vao_);glGenBuffers(1,&buffer_);glBindBuffer(GL_ARRAY_BUFFER,buffer_);
     glEnableVertexAttribArray(0);glVertexAttribIPointer(0,1,GL_UNSIGNED_INT,sizeof(uint32_t),nullptr);glVertexAttribDivisor(0,1);
     GLint maxTexture=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxTexture);if(maxTexture<4096)throw std::runtime_error("4096-wide data textures unavailable");
@@ -155,13 +177,20 @@ void Renderer::DestroyGL() {
     if(display_==EGL_NO_DISPLAY)return;
     if(context_!=EGL_NO_CONTEXT && surface_!=EGL_NO_SURFACE){
         eglMakeCurrent(display_,surface_,surface_,context_);
+        if(timerQueries_[0])glDeleteQueries(4,timerQueries_);
         if(dataTexture_)glDeleteTextures(1,&dataTexture_);
         if(buffer_)glDeleteBuffers(1,&buffer_);if(vao_)glDeleteVertexArrays(1,&vao_);if(program_)glDeleteProgram(program_);
     }
+    timerResult_=nullptr;timerSlot_=0;
+    std::fill_n(timerQueries_,4,0);std::fill_n(timerPending_,4,false);std::fill_n(timerInvalid_,4,false);
+    {std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=-1;}
     dataTexture_=buffer_=vao_=program_=0;eglMakeCurrent(display_,EGL_NO_SURFACE,EGL_NO_SURFACE,EGL_NO_CONTEXT);
     if(surface_!=EGL_NO_SURFACE)eglDestroySurface(display_,surface_);
     if(context_!=EGL_NO_CONTEXT)eglDestroyContext(display_,context_);
     eglTerminate(display_);display_=EGL_NO_DISPLAY;surface_=EGL_NO_SURFACE;context_=EGL_NO_CONTEXT;
+}
+void Renderer::SetOptimized(bool enabled) {
+    optimized_=enabled;{std::lock_guard<std::mutex> lock(mutex_);dirty_=true;}changed_.notify_one();
 }
 void Renderer::Draw(const View &view,int width,int height) {
     if(bufferWidth_!=width || bufferHeight_!=height) {
@@ -189,10 +218,11 @@ void Renderer::Draw(const View &view,int width,int height) {
     }
     const auto drawStart=Clock::now();
     glViewport(0,0,width,height);glClearColor(.035f,.045f,.065f,1);glClear(GL_COLOR_BUFFER_BIT);glUseProgram(program_);
-    glUniformMatrix4fv(glGetUniformLocation(program_,"view"),1,GL_FALSE,view.matrix.data());
-    glUniform2f(glGetUniformLocation(program_,"viewport"),float(width),float(height));
-    glUniform1f(glGetUniformLocation(program_,"nearPlane"),view.nearPlane);glUniform1f(glGetUniformLocation(program_,"farPlane"),view.farPlane);
-    glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,dataTexture_);glUniform1i(glGetUniformLocation(program_,"splatData"),0);
+    glUniform1i(optimizedLocation_,optimized_.load());
+    glUniformMatrix4fv(viewLocation_,1,GL_FALSE,view.matrix.data());
+    glUniform2f(viewportLocation_,float(width),float(height));
+    glUniform1f(nearLocation_,view.nearPlane);glUniform1f(farLocation_,view.farPlane);
+    glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,dataTexture_);glUniform1i(dataLocation_,0);
     if(uploadDirty_) {
         const size_t height=std::max(size_t(1),(scene_->points.size()*4+4095)/4096);
         std::vector<float> pixels(height*4096*4,0);
@@ -201,7 +231,19 @@ void Renderer::Draw(const View &view,int width,int height) {
         glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA32F,4096,height,0,GL_RGBA,GL_FLOAT,pixels.data());
     }
     glBindVertexArray(vao_);glBindBuffer(GL_ARRAY_BUFFER,buffer_);if(resort){glBufferData(GL_ARRAY_BUFFER,sorted.size()*sizeof(uint32_t),sorted.data(),GL_DYNAMIC_DRAW);uploadDirty_=false;}
+    bool timed=false;
+    if(timerResult_) {
+        GLint disjoint=0;glGetIntegerv(0x8FBB,&disjoint); // GPU_DISJOINT_EXT
+        if(disjoint)std::fill_n(timerInvalid_,4,true);
+        for(int i=0;i<4;++i)if(timerPending_[i]) {
+            GLuint available=0;glGetQueryObjectuiv(timerQueries_[i],GL_QUERY_RESULT_AVAILABLE,&available);
+            if(available){GLuint64 ns=0;timerResult_(timerQueries_[i],GL_QUERY_RESULT,&ns);timerPending_[i]=false;
+                std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=timerInvalid_[i]?-1:double(ns)/1e6;}
+        }
+        if(!timerPending_[timerSlot_]){timerInvalid_[timerSlot_]=false;glBeginQuery(0x88BF,timerQueries_[timerSlot_]);timed=true;}
+    }
     glDrawArraysInstanced(GL_TRIANGLE_STRIP,0,4,GLsizei(scene_->points.size()));
+    if(timed){glEndQuery(0x88BF);timerPending_[timerSlot_]=true;timerSlot_=(timerSlot_+1)%4;}
     const GLenum error=glGetError();if(error!=GL_NO_ERROR)throw std::runtime_error("OpenGL error: "+std::to_string(error));
     if(!eglSwapBuffers(display_,surface_))throw std::runtime_error("EGL swap failed");
     std::lock_guard<std::mutex> lock(mutex_);status_.frames++;status_.sortMs=sortMs;status_.frameMs=Ms(drawStart);status_.fps=1000.0/std::max(Ms(start),.001);size_t cached=0;for(const auto &item:decoded_)cached+=item.second->points.capacity();for(const auto &item:selected_)cached+=item.second.second->points.capacity();status_.bytes=(cached+scene_->points.capacity())*sizeof(Gaussian)+scene_->points.size()*68+sorted.capacity()*sizeof(uint32_t);

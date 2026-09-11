@@ -6,6 +6,7 @@ export class OrbitControls {
   width: number = 1;
   height: number = 1;
   fly: boolean = false;
+  speed: number = 1;
   keys: string[] = [];
   private previous: OrbitTouch[] = [];
   reset(): void {
@@ -95,7 +96,7 @@ export class OrbitControls {
   }
   tick(elapsedMs: number): boolean {
     if (this.fly) {
-      const speed = Math.min(64, elapsedMs) / 1000;
+      const speed = this.speed * Math.min(64, elapsedMs) / 1000;
       this.move((Number(this.keys.includes('d')) - Number(this.keys.includes('a'))) * speed,
         (Number(this.keys.includes('e')) - Number(this.keys.includes('q'))) * speed,
         (Number(this.keys.includes('w')) - Number(this.keys.includes('s'))) * speed);

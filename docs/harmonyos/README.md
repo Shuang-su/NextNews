@@ -135,3 +135,26 @@ WASD move and Q/E change elevation while the viewport has focus. On-screen
 forward/back buttons are also available. Flight has no collision or walking physics.
 See [streaming.md](streaming.md) for the HTTP chunk manifest, offline converter,
 local server commands and the limits of this first streaming implementation.
+
+## Overlay controls and GPU diagnostics
+
+The bottom icon toolbar offers orbit, fly, reset, auto-orbit, model library,
+settings and help. Models/settings are overlays, so opening them preserves the
+render viewport and camera. Right-side buttons zoom; fly mode adds a touch
+joystick and elevation buttons. Settings include flight speed and splat budget.
+F toggles immersive application UI, H opens help, and Space toggles auto-orbit.
+
+The diagnostics panel offers a GPU optimization A/B switch and a fixed ten-second
+trajectory. Optional disjoint timer queries report real GPU time when supported;
+the current emulator reports unavailable. See verification.md for measured
+results and interaction-parity.md for features still absent from the native app.
+
+After a fresh application launch, run the toolbar device regression:
+
+```bash
+source scripts/harmonyos/env.sh
+python3 scripts/harmonyos/verify_toolbar.py
+```
+
+It checks immersive/help shortcuts and double-click mode changes, and saves
+fresh screenshots/layouts under an ignored timestamped artifacts directory.

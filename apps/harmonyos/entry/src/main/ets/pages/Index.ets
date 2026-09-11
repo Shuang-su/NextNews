@@ -6,6 +6,26 @@ import nativeRender from 'libsplat.so';
 import { StreamSession } from './StreamSession';
 import { OrbitControls, OrbitTouch } from './OrbitControls';
 
+@Component
+struct ViewerTool {
+  @Prop icon: Resource = $r('app.media.viewer_help');
+  @Prop label: string = '';
+  @Prop selected: boolean = false;
+  action: () => void = () => {};
+  onHoverChange: (label: string) => void = () => {};
+  onKey: (event: KeyEvent) => boolean = () => false;
+  build() {
+    Button({ type: ButtonType.Normal }) {
+      Image(this.icon).width(22).height(22).objectFit(ImageFit.Contain)
+    }.width(42).height(42).borderRadius(12).backgroundColor(this.selected ? '#3969C6' : '#DD1C283B')
+      .accessibilityText(this.label).id(this.label).onClick(() => {
+        this.action(); setTimeout(() => { this.getUIContext().getFocusController().requestFocus('viewer-surface'); }, 0);
+      })
+      .onKeyEvent((event: KeyEvent) => this.onKey(event))
+      .onHover((hover: boolean) => { this.onHoverChange(hover ? this.label : ''); })
+  }
+}
+
 @Entry
 @Component
 struct Index {
@@ -32,6 +52,14 @@ struct Index {
   private generation: number = 0;
   private visible: boolean = true;
   @State toolsVisible: boolean = true;
+  @State settingsVisible: boolean = false;
+  @State modelsVisible: boolean = false;
+  @State autoOrbit: boolean = false;
+  @State flySpeed: number = 1;
+  @State gpuOptimized: boolean = true;
+  @State hint: string = '';
+  @State joyX: number = 0;
+  @State joyY: number = 0;
   @State helpVisible: boolean = false;
   @State diagnosticsVisible: boolean = false;
   private controls: OrbitControls = new OrbitControls();
@@ -57,7 +85,14 @@ struct Index {
         } else {
           this.controls.current = [elapsed * .0003, .2, 1, 0, 0, 0]; this.controls.target = this.controls.current.slice(); this.updateCamera();
         }
-      } else if (this.active && this.controls.tick(dt)) { this.updateCamera(); }
+      } else if (this.active) {
+        if (this.autoOrbit && !this.flyMode) { this.controls.target[0] += Math.min(dt, 64) * .0002; }
+        if (this.flyMode && (this.joyX !== 0 || this.joyY !== 0)) {
+          const speed = Math.min(dt, 64) * .0006 * this.flySpeed;
+          this.controls.move(this.joyX * speed, 0, -this.joyY * speed);
+        }
+        if (this.controls.tick(dt)) { this.updateCamera(); }
+      }
     }, 16);
     this.timer = setInterval(() => {
       this.stream?.tick(this.controls.current, this.controls.fly);
@@ -67,7 +102,7 @@ struct Index {
         this.message = state.state === 'ready' ? '单击聚焦 · 双击环绕 / 飞行 · 拖动旋转' : state.message;
       }
       this.graphics = state.graphics;
-      this.details = `${state.count.toLocaleString()} 个高斯 · SH0\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\n单帧 ${state.frameMs.toFixed(1)} ms · 渲染耗时折算 ${state.fps.toFixed(1)} fps\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
+      this.details = `${state.count.toLocaleString()} 个高斯 · SH0\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\n单帧 ${state.frameMs.toFixed(1)} ms · 渲染耗时折算 ${state.fps.toFixed(1)} fps\nGPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
     }, 500);
   }
   aboutToDisappear(): void {
@@ -75,11 +110,11 @@ struct Index {
     this.generation++;
     if (this.timer !== -1) { clearInterval(this.timer); this.timer = -1; }
     if (this.motionTimer !== -1) { clearInterval(this.motionTimer); this.motionTimer = -1; }
-    this.controls.cancel();
+    this.controls.cancel(); this.joyX = 0; this.joyY = 0;
     nativeRender.setActive(false);
   }
   onPageShow(): void { this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); nativeRender.setActive(true); }
-  onPageHide(): void { this.pickGeneration++; this.benchmarkStart = 0; this.active = false; if (this.stream) { this.stream.active = false; } this.controls.cancel(); nativeRender.setActive(false); }
+  onPageHide(): void { this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.joyX = 0; this.joyY = 0; if (this.stream) { this.stream.active = false; } this.controls.cancel(); nativeRender.setActive(false); }
   private updateCamera(): void {
     const c = this.controls.current;
     nativeRender.camera(c[0], c[1], c[2], c[3], c[4], c[5], this.controls.fly ? 1 : 0);
@@ -89,17 +124,18 @@ struct Index {
     if (s.state !== 'ready' || !s.count) { return; }
     this.benchmarkFrames = s.frames; this.benchmarkCount = s.count; this.benchmarkStart = Date.now(); this.benchmarkResult = '测量中：固定环绕轨迹，10 秒';
   }
-  private toggleMode(): void { this.pickGeneration++; this.flyMode = !this.flyMode; this.controls.setFly(this.flyMode); this.updateCamera(); }
+  private toggleMode(): void { this.autoOrbit = false; this.joyX = 0; this.joyY = 0; this.pickGeneration++; this.flyMode = !this.flyMode; this.controls.setFly(this.flyMode); this.updateCamera(); }
   private async focusAt(x: number, y: number): Promise<void> {
     const request = ++this.pickGeneration;
     try { const point = await nativeRender.pick(x / this.controls.width, y / this.controls.height);
       if (request === this.pickGeneration && this.active) { this.controls.focus(point); this.updateCamera(); }
     } catch (error) { console.warn(`Focus: ${String(error)}`); }
   }
-  private reset(): void { this.pickGeneration++; this.benchmarkStart = 0; this.benchmarkResult = '';  this.flyMode = false; this.controls.reset(); this.updateCamera(); }
+  private reset(): void { this.autoOrbit = false; this.joyX = 0; this.joyY = 0; this.pickGeneration++; this.benchmarkStart = 0; this.benchmarkResult = '';  this.flyMode = false; this.controls.reset(); if (this.title === '流式场景') { this.controls.current[1] = .35; this.controls.target[1] = .35; } this.updateCamera(); }
   private touch(event: TouchEvent): void {
     if (event.source === SourceType.Mouse) { return; }
     if (event.type === TouchType.Cancel) { this.controls.cancel(); return; }
+    this.autoOrbit = false;
     const points: OrbitTouch[] = [];
     for (const touch of event.touches) {
       if (event.type === TouchType.Up && event.changedTouches.some((ended: TouchObject) => ended.id === touch.id)) {
@@ -111,6 +147,7 @@ struct Index {
   }
   private mouse(event: MouseEvent): void {
     if (event.action === MouseAction.Press) {
+      this.autoOrbit = false;
       this.getUIContext().getFocusController().requestFocus('viewer-surface');
       this.mouseButton = event.button; this.mouseX = event.x; this.mouseY = event.y;
     } else if (event.action === MouseAction.Release) {
@@ -134,8 +171,14 @@ struct Index {
       case KeyCode.KEYCODE_Q: key = 'q'; break;
       case KeyCode.KEYCODE_E: key = 'e'; break;
       case KeyCode.KEYCODE_R: key = 'r'; break;
+      case KeyCode.KEYCODE_F: key = 'f'; break;
+      case KeyCode.KEYCODE_H: key = 'h'; break;
+      case KeyCode.KEYCODE_SPACE: key = ' '; break;
     }
     console.info(`ViewerKey ${event.keyCode} type=${event.type} key=${key}`);
+    if (event.type === KeyType.Down && key === 'h') { this.helpVisible = !this.helpVisible; return true; }
+    if (event.type === KeyType.Down && key === 'f') { this.toolsVisible = !this.toolsVisible; return true; }
+    if (event.type === KeyType.Down && key === ' ') { this.autoOrbit = !this.autoOrbit && !this.flyMode; return true; }
     if (key === 'r' && event.type === KeyType.Down) { this.reset(); return true; }
     if ('wasdqe'.includes(key) && key.length === 1) {
       this.controls.key(key, event.type === KeyType.Down); return true;
@@ -149,7 +192,7 @@ struct Index {
     this.streamMessage = '';
   }
   private async startStream(): Promise<void> {
-    this.stopStream(); this.localError = ''; this.reset(); this.title = '流式场景';
+    this.stopStream(); this.localError = ''; this.title = '流式场景'; this.reset();
     const session = new StreamSession((message: string) => { if (this.stream === session) { this.streamMessage = message; } });
     this.stream = session; session.budget = this.quality;
     try {
@@ -180,7 +223,7 @@ struct Index {
         }
       } finally { await fs.close(file); }
       if (this.visible && request === this.generation) {
-        this.reset(); this.title = label; this.loading = true; nativeRender.load(path);
+        this.title = label; this.reset(); this.loading = true; nativeRender.load(path);
       }
     } catch (error) {
       this.localError = (error as BusinessError).message;
@@ -206,23 +249,22 @@ struct Index {
         await fs.copyFile(source.fd, destination);
       } finally { await fs.close(source); }
       if (this.visible && request === this.generation) {
-        this.reset(); this.title = '本地模型'; this.loading = true; nativeRender.load(destination);
+        this.title = '本地模型'; this.reset(); this.loading = true; nativeRender.load(destination);
       }
     } catch (error) {
       this.localError = (error as BusinessError).message;
       this.message = this.localError;
     } finally { this.busy = false; }
   }
+  private joystick(event: TouchEvent): void {
+    if (event.type === TouchType.Up || event.type === TouchType.Cancel || event.touches.length === 0) {
+      this.joyX = 0; this.joyY = 0; return;
+    }
+    const x = (event.touches[0].x - 48) / 30; const y = (event.touches[0].y - 48) / 30;
+    const length = Math.max(1, Math.hypot(x, y)); this.joyX = x / length; this.joyY = y / length;
+  }
   build() {
-    Column({ space: 10 }) {
-      Row() {
-        Text(this.title).fontSize(23).fontWeight(FontWeight.Bold).fontColor('#EDF6FC').layoutWeight(1);
-        Button(this.toolsVisible ? '收起工具' : '显示工具').fontSize(12)
-          .onClick(() => { this.toolsVisible = !this.toolsVisible; });
-      }.width('100%');
-      if (this.streamMessage) { Text(this.streamMessage).fontSize(11).fontColor('#EBC478').width('100%'); }
-      Text(this.message).fontSize(13).fontColor('#AFC6D8').width('100%');
-      Stack() {
+    Stack({ alignContent: Alignment.TopStart }) {
       XComponent({ id: 'nextnews-splat', type: XComponentType.SURFACE, libraryname: 'splat' })
         .width('100%').height('100%')
         .onLoad(() => { nativeRender.setActive(true); if (nativeRender.status().count === 0) { this.sample('tripo.ply', 'Tripo Splat'); } });
@@ -242,58 +284,114 @@ struct Index {
         ))
         .onKeyEvent((event: KeyEvent) => this.handleKey(event))
         .onAxisEvent((event: AxisEvent) => { this.controls.zoom(Math.exp(Math.max(-1, Math.min(1, event.getVerticalAxisValue() * 0.002)))); });
-      }.width('100%').layoutWeight(1)
+
+      Column({ space: 6 }) {
+        Row() {
+          Column({ space: 3 }) {
+            Text('NEXTNEWS / 3DGS').fontSize(10).fontColor('#8CA7CB').letterSpacing(2).width('100%')
+            Text(this.title).fontSize(18).fontWeight(FontWeight.Medium).fontColor('#EEF4FF').width('100%')
+          }.layoutWeight(1)
+          ViewerTool({ icon: this.toolsVisible ? $r('app.media.viewer_expand') : $r('app.media.viewer_collapse'), label: this.toolsVisible ? '沉浸显示' : '显示工具', selected: !this.toolsVisible, action: () => { this.toolsVisible = !this.toolsVisible; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+        }.width('100%')
+        if (this.loading || this.busy || this.localError) {
+          Row({ space: 8 }) {
+            if (this.loading || this.busy) { LoadingProgress().width(18).height(18).color('#90B7FF') }
+            Text(this.localError || this.message).fontSize(12).fontColor('#E7C78C').layoutWeight(1)
+          }.padding(8).backgroundColor('#D9162233').borderRadius(8)
+        }
+        if (this.streamMessage && this.toolsVisible) {
+          Text(this.streamMessage).fontSize(10).fontColor('#B7C9DE').maxLines(2).width('100%')
+        }
+      }.padding(16).width('100%').backgroundColor('#B3091322')
       if (this.toolsVisible) {
-      Row({ space: 6 }) {
-        Button(this.quality === 1000000 ? '画质：100 万' : this.quality === 2000000 ? '画质：200 万' : '画质：400 万').fontSize(12).onClick(() => {
-          this.quality = this.quality === 1000000 ? 2000000 : this.quality === 2000000 ? 4000000 : 1000000;
-          if (this.stream) { this.stream.budget = this.quality; }
-        });
-        Button(this.flyMode ? '模式：飞行' : '模式：环绕').fontSize(12).onClick(() => {
-          this.toggleMode();
-        });
-        if (this.flyMode) {
-          Button('前进').fontSize(12).onClick(() => { this.controls.move(0, 0, 0.25); });
-          Button('后退').fontSize(12).onClick(() => { this.controls.move(0, 0, -0.25); });
+        Column({ space: 8 }) {
+          if (this.hint) { Text(this.hint).fontSize(12).fontColor('#EEF4FF').padding(6).backgroundColor('#DD1C283B').borderRadius(6) }
+          if (this.settingsVisible || this.modelsVisible || this.helpVisible || this.diagnosticsVisible) {
+            Scroll() {
+              Column({ space: 12 }) {
+                if (this.modelsVisible) {
+                  Text('模型库').fontColor('#EEF4FF').fontSize(16).width('100%')
+                  Row({ space: 6 }) {
+                    Button('公开样例').fontSize(12).enabled(!this.busy).onClick(() => { this.sample('public.ply', '公开样例'); })
+                    Button('Tripo').fontSize(12).enabled(!this.busy).onClick(() => { this.sample('tripo.ply', 'Tripo Splat'); })
+                    Button('转换样例').fontSize(12).enabled(!this.busy).onClick(() => { this.sample('converted.ply', '转换样例'); })
+                  }
+                  Button('打开本地 PLY / SOG').fontSize(13).width('100%').enabled(!this.busy).onClick(() => { this.importModel(); })
+                  Button('流式').fontSize(12).onClick(() => { this.streamPanel = !this.streamPanel; })
+                  if (this.streamPanel) {
+                    TextInput({ text: this.streamUrl, placeholder: 'HTTP(S) scene.json' }).selectAll(true).fontSize(12)
+                      .fontColor('#EEF4FF').backgroundColor('#28354A').onChange((value: string) => { this.streamUrl = value; })
+                    Button(this.fullLoad ? '加载：全量预载' : '加载：渐进 LOD').fontSize(12).onClick(() => { this.fullLoad = !this.fullLoad; })
+                    Row({ space: 8 }) {
+                      Button('连接流式').fontSize(12).onClick(() => { this.startStream(); })
+                      Button('重试').fontSize(12).onClick(() => { if (this.stream?.manifest) { this.stream.retry(); } else { this.startStream(); } })
+                      Button('停止').fontSize(12).onClick(() => { this.stopStream(); })
+                    }
+                  }
+                }
+                if (this.settingsVisible) {
+                  Text('视图设置').fontSize(16).fontColor('#EEF4FF').width('100%')
+                  Row({ space: 8 }) {
+                    Text('高斯预算').fontSize(12).fontColor('#AFC6D8').layoutWeight(1)
+                    Button(this.quality === 1000000 ? '100 万' : this.quality === 2000000 ? '200 万' : '400 万').fontSize(12).onClick(() => {
+                      this.quality = this.quality === 1000000 ? 2000000 : this.quality === 2000000 ? 4000000 : 1000000;
+                      if (this.stream) { this.stream.budget = this.quality; }
+                    })
+                  }.width('100%')
+                  Row({ space: 8 }) {
+                    Text('单指 / 左键').fontSize(12).fontColor('#AFC6D8').layoutWeight(1)
+                    Button(this.panMode ? '平移' : '旋转').fontSize(12).onClick(() => { this.panMode = !this.panMode; })
+                  }.width('100%')
+                  Text('飞行速度 ×' + this.flySpeed.toFixed(1)).fontSize(12).fontColor('#AFC6D8').width('100%')
+                  Slider({ value: this.flySpeed, min: 0.2, max: 5, step: 0.2 }).onChange((value: number) => { this.flySpeed = value; this.controls.speed = value; })
+                  Button(this.diagnosticsVisible ? '关闭性能信息' : '性能信息').fontSize(12).onClick(() => { this.diagnosticsVisible = !this.diagnosticsVisible; this.settingsVisible = false; })
+                }
+                if (this.helpVisible) {
+                  Text('浏览操作').fontSize(16).fontColor('#EEF4FF').width('100%')
+                  Text('单击聚焦 · 双击切换环绕 / 飞行\n左键或单指旋转 · 右键 / 中键平移\n双指同时平移与缩放 · 滚轮缩放\n飞行：WASD 移动，Q/E 升降；触屏使用摇杆\nR 复位 · F 沉浸显示 · H 帮助 · 空格自动环绕\n播放图标开启自动环绕；拖动会停止自动环绕。')
+                    .fontSize(12).fontColor('#B7C9DE').width('100%').lineHeight(22)
+                }
+                if (this.diagnosticsVisible) {
+                  Button(this.gpuOptimized ? 'GPU 裁剪：开' : 'GPU 裁剪：关').fontSize(12).onClick(() => { this.gpuOptimized = !this.gpuOptimized; nativeRender.optimize(this.gpuOptimized); })
+                  Button('测量 10 秒').fontSize(12).enabled(this.benchmarkStart === 0).onClick(() => { this.benchmark(); })
+                  if (this.benchmarkResult) { Text(this.benchmarkResult).fontSize(11).fontColor('#EBC478') }
+                  Text(this.details).fontSize(11).fontColor('#99B1C4').width('100%')
+                  Text(this.graphics).fontSize(10).fontColor('#6F899F').width('100%')
+                }
+              }.padding(16).width('100%')
+            }.constraintSize({ maxHeight: 330 }).width('100%').backgroundColor('#F0162233').borderRadius(18)
+          }
+          Row({ space: 5 }) {
+            ViewerTool({ icon: $r('app.media.viewer_orbit'), label: '环绕', selected: !this.flyMode, action: () => { if (this.flyMode) { this.toggleMode(); } }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+            ViewerTool({ icon: $r('app.media.viewer_fly'), label: '飞行', selected: this.flyMode, action: () => { if (!this.flyMode) { this.toggleMode(); } }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+            ViewerTool({ icon: $r('app.media.viewer_reset'), label: '复位', selected: false, action: () => { this.reset(); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+            ViewerTool({ icon: this.autoOrbit ? $r('app.media.viewer_pause') : $r('app.media.viewer_play'), label: '自动环绕', selected: this.autoOrbit, action: () => {
+              if (this.flyMode) { this.toggleMode(); } this.autoOrbit = !this.autoOrbit;
+            }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+            ViewerTool({ icon: $r('app.media.viewer_folder'), label: '模型', selected: this.modelsVisible, action: () => { this.modelsVisible = !this.modelsVisible; this.settingsVisible = false; this.helpVisible = false; this.diagnosticsVisible = false; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+            ViewerTool({ icon: $r('app.media.viewer_settings'), label: '设置', selected: this.settingsVisible, action: () => { this.settingsVisible = !this.settingsVisible; this.modelsVisible = false; this.helpVisible = false; this.diagnosticsVisible = false; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+            ViewerTool({ icon: $r('app.media.viewer_help'), label: '帮助', selected: this.helpVisible, action: () => { this.helpVisible = !this.helpVisible; this.settingsVisible = false; this.modelsVisible = false; this.diagnosticsVisible = false; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+          }.padding(8).backgroundColor('#CC101A29').borderRadius(18)
+          Text(this.flyMode ? '飞行 · 拖动转头' : '环绕 · 单击聚焦').fontSize(10).fontColor('#AFC6D8')
+        }.padding(16).width('100%').position({ x: 0, y: '100%' }).translate({ y: '-100%' })
+        if (!this.settingsVisible && !this.modelsVisible && !this.helpVisible && !this.diagnosticsVisible) {
+          Column({ space: 8 }) {
+            ViewerTool({ icon: $r('app.media.viewer_plus'), label: '放大', selected: false, action: () => { this.controls.zoom(1 / 1.2); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+            ViewerTool({ icon: $r('app.media.viewer_minus'), label: '缩小', selected: false, action: () => { this.controls.zoom(1.2); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+          }.padding(16).position({ x: '100%', y: '50%' }).translate({ x: '-100%', y: '-50%' })
+          if (this.flyMode) {
+            Stack() {
+              Circle().width(96).height(96).fill('#9928354A').stroke('#7794BD').strokeWidth(1)
+              Circle().width(34).height(34).fill('#B0CFFF').translate({ x: this.joyX * 30, y: this.joyY * 30 })
+            }.width(96).height(96).position({ x: 20, y: '100%' }).translate({ y: -206 })
+              .accessibilityText('飞行摇杆').id('飞行摇杆').onTouch((event: TouchEvent) => { this.joystick(event); })
+            Column({ space: 8 }) {
+              ViewerTool({ icon: $r('app.media.viewer_up'), label: '上升', selected: false, action: () => { this.controls.move(0, .12 * this.flySpeed, 0); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+              ViewerTool({ icon: $r('app.media.viewer_down'), label: '下降', selected: false, action: () => { this.controls.move(0, -.12 * this.flySpeed, 0); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+            }.position({ x: '100%', y: '100%' }).translate({ x: -62, y: -206 })
+          }
         }
       }
-      Row({ space: 6 }) {
-        Button(this.panMode ? '拖动：平移' : '拖动：旋转').onClick(() => { this.panMode = !this.panMode; });
-        Button('−').onClick(() => { this.controls.zoom(1.2); });
-        Button('+').onClick(() => { this.controls.zoom(1 / 1.2); });
-        Button('复位').onClick(() => { this.reset(); });
-      }
-      Row({ space: 8 }) {
-        Button('公开样例').enabled(!this.busy).onClick(() => { this.sample('public.ply', '公开样例'); });
-        Button('Tripo').enabled(!this.busy).onClick(() => { this.sample('tripo.ply', 'Tripo Splat'); });
-        Button('转换样例').enabled(!this.busy).onClick(() => { this.sample('converted.ply', '转换样例'); });
-      }
-      Button('打开本地 PLY / SOG').width('100%').enabled(!this.busy).onClick(() => { this.importModel(); });
-      Row({ space: 8 }) {
-        Button('流式').fontSize(12).onClick(() => { this.streamPanel = !this.streamPanel; });
-        Button('操作说明').fontSize(12).onClick(() => { this.helpVisible = !this.helpVisible; });
-        Button('性能信息').fontSize(12).onClick(() => { this.diagnosticsVisible = !this.diagnosticsVisible; });
-      }
-      if (this.streamPanel) {
-        TextInput({ text: this.streamUrl, placeholder: 'HTTP(S) scene.json' }).selectAll(true).fontColor('#EDF6FC').backgroundColor('#233044').onChange((value: string) => { this.streamUrl = value; });
-        Row({ space: 6 }) {
-          Button(this.fullLoad ? '加载：全量预载' : '加载：渐进 LOD').fontSize(12).onClick(() => { this.fullLoad = !this.fullLoad; });
-          Button('连接流式').fontSize(12).onClick(() => { this.startStream(); });
-          Button('重试').fontSize(12).onClick(() => { if (this.stream?.manifest) { this.stream.retry(); } else { this.startStream(); } });
-          Button('停止').fontSize(12).onClick(() => { this.stopStream(); });
-        }
-      }
-      if (this.helpVisible) {
-        Text('单击：聚焦；双击：环绕 / 飞行\n左键 / 单指拖动：环绕或飞行转头\n右键拖动：平移；滚轮：缩放 / 前进\n飞行：WASD 移动，Q/E 升降，R 复位\n双指拖动：平移；张合：缩放，可同时进行\n拖动模式按钮：单指平移辅助\n复位：回到初始视角；收起工具：扩大画面')
-          .fontSize(12).fontColor('#AFC6D8').width('100%');
-      }
-      if (this.diagnosticsVisible) {
-        Button('测量 10 秒').fontSize(12).enabled(this.benchmarkStart === 0).onClick(() => { this.benchmark(); });
-        if (this.benchmarkResult) { Text(this.benchmarkResult).fontSize(11).fontColor('#EBC478'); }
-        Text(this.details).fontSize(11).fontColor('#99B1C4').width('100%');
-        Text(this.graphics).fontSize(10).fontColor('#6F899F').maxLines(2).width('100%');
-      }
-      }
-    }.padding({ left: 16, right: 16, top: 18, bottom: 18 }).width('100%').height('100%').backgroundColor('#091322');
+    }.width('100%').height('100%').backgroundColor('#091322')
   }
 }

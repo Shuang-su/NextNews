@@ -9,6 +9,7 @@ export interface RenderStatus {
   bytes: number;
   loadMs: number;
   sortMs: number;
+  gpuMs: number;
   frameMs: number;
   fps: number;
 }
@@ -20,3 +21,5 @@ export const status: () => RenderStatus;
 export const chunks: (paths: string[], bounds: number[], ranges?: number[]) => void;
 
 export const pick: (x: number, y: number) => Promise<number[]>;
+
+export const optimize: (enabled: boolean) => void;
