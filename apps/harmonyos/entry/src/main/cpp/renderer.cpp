@@ -177,7 +177,7 @@ void Renderer::Loop(void *window) {
                     auto loaded=ReadPly(path,&cancel_);
                     std::lock_guard<std::mutex> lock(mutex_);
                     if(cancel_.load())continue;
-                    scene_=std::move(loaded);camera_=Camera{};camera=camera_;
+                    scene_=std::move(loaded);camera_=Camera{3.14159265358979323846f};camera=camera_;
                     status_.count=scene_.points.size();status_.loadMs=Ms(start);status_.state="ready";status_.message="Model loaded";
                 } catch(const std::exception &e) {
                     std::lock_guard<std::mutex> lock(mutex_);if(!cancel_){status_.state="error";status_.message=e.what();}

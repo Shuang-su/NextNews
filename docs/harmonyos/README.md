@@ -90,7 +90,7 @@ is outside this task. Public example attribution is in THIRD_PARTY_NOTICES.md.
 ## Controls and diagnostics
 
 Drag to orbit; use two fingers to pan and pinch simultaneously, or switch the single-finger drag mode for panning. Use +/− to zoom; reset
-returns to the bounding-box center. Choose a built-in sample or use the system
+returns to the bounding-box center with a default 180° yaw around the vertical axis. Choose a built-in sample or use the system
 file picker to copy a prepared PLY into the app sandbox.
 
 The UI reports loading and sorting times, frame submission/swap time, buffer

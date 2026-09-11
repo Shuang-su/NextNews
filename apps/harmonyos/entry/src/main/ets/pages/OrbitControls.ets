@@ -1,15 +1,15 @@
 // Original controller implementation; interaction reference recorded in docs/harmonyos/interaction-parity.md.
 export interface OrbitTouch { id: number; x: number; y: number; }
 export class OrbitControls {
-  current: number[] = [0, 0, 1, 0, 0, 0];
-  target: number[] = [0, 0, 1, 0, 0, 0];
+  current: number[] = [Math.PI, 0, 1, 0, 0, 0];
+  target: number[] = [Math.PI, 0, 1, 0, 0, 0];
   width: number = 1;
   height: number = 1;
   fly: boolean = false;
   keys: string[] = [];
   private previous: OrbitTouch[] = [];
   reset(): void {
-    this.current = [0, 0, 1, 0, 0, 0]; this.target = [0, 0, 1, 0, 0, 0]; this.fly = false; this.keys = []; this.cancel();
+    this.current = [Math.PI, 0, 1, 0, 0, 0]; this.target = [Math.PI, 0, 1, 0, 0, 0]; this.fly = false; this.keys = []; this.cancel();
   }
   cancel(): void { this.previous = []; this.keys = []; }
   resize(width: number, height: number): void {

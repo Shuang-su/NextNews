@@ -40,7 +40,7 @@ private:
     std::vector<std::string> chunkPaths_;
     std::array<float,4> chunkBounds_{};
     bool chunksDirty_ = false;
-    Camera camera_;
+    Camera camera_{3.14159265358979323846f};
     Status status_;
     Scene scene_;
     EGLDisplay display_ = EGL_NO_DISPLAY;

@@ -68,3 +68,23 @@ SpatialReconKit 暂停模拟器排障，源码和最小测试保留；后续有�
 - 构建、控制器/飞行数学测试、原生相机断言、32 个分块的完整性及解析验证通过。运行证据、失败尝试和最终结果均留在 artifacts/harmonyos。
 
 详见 [流式说明](../harmonyos/streaming.md) 与更新后的[交互清单](../harmonyos/interaction-parity.md)。
+
+## Default 180° viewing direction
+
+User requested default 180° rotation alongside the pending SuperSplat parity work.
+Applied as camera yaw π around the vertical axis (source model data is unchanged).
+ArkTS initial/reset pose and Native initial/post-load pose now agree, preventing
+asynchronous model loading from resetting the rendered camera back to yaw zero.
+
+Validation: controller regression checks passed; unsigned and signed HAP builds
+passed; installed and launched on NextNews_API26 (127.0.0.1:5555). Device UI
+confirmed initial yaw 3.142 and, after dragging and resetting,
+`3.142,0.000,1.000,0.000,0.000,0.000 · orbit`. Local screenshots:
+`artifacts/harmonyos/stream/default180-initial.png` and `default180-reset.png`.
+Build logs: `default180-build.log`, `default180-signed.log`, `default180-run.log`
+under `artifacts/harmonyos`.
+
+Outstanding larger request remains: single-click scene picking/focus, double-click
+orbit/flight toggle, native SOG loading and complete hierarchical scene coverage,
+and controlled same-scene Web Viewer performance comparison. The default-angle
+change does not complete those mechanisms or establish performance parity.
