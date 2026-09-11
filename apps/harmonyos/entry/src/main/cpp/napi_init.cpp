@@ -23,10 +23,31 @@ napi_value Load(napi_env env,napi_callback_info info) {
     splat::Renderer::Get().Load(std::string(path.data(),length));return Undefined(env);
 }
 napi_value Camera(napi_env env,napi_callback_info info) {
-    napi_value args[6];size_t argc=6;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);double v[6];
-    if(argc!=6){napi_throw_type_error(env,nullptr,"Expected six camera values");return Undefined(env);}
-    for(int i=0;i<6;++i)if(napi_get_value_double(env,args[i],&v[i])!=napi_ok||!std::isfinite(v[i])||std::abs(v[i])>1e4){napi_throw_range_error(env,nullptr,"Invalid camera value");return Undefined(env);}
-    splat::Renderer::Get().SetCamera({float(v[0]),float(v[1]),float(v[2]),float(v[3]),float(v[4]),float(v[5])});return Undefined(env);
+    napi_value args[7];size_t argc=7;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);double v[7];
+    if(argc!=7){napi_throw_type_error(env,nullptr,"Expected seven camera values");return Undefined(env);}
+    for(int i=0;i<7;++i)if(napi_get_value_double(env,args[i],&v[i])!=napi_ok||!std::isfinite(v[i])||std::abs(v[i])>1e4){napi_throw_range_error(env,nullptr,"Invalid camera value");return Undefined(env);}
+    splat::Renderer::Get().SetCamera({float(v[0]),float(v[1]),float(v[2]),float(v[3]),float(v[4]),float(v[5]),float(v[6])});return Undefined(env);
+}
+napi_value Chunks(napi_env env,napi_callback_info info) {
+    napi_value args[2];size_t argc=2;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+    bool array=false;uint32_t n=0;
+    if(argc!=2||napi_is_array(env,args[0],&array)!=napi_ok||!array||napi_get_array_length(env,args[0],&n)!=napi_ok||n>8) {
+        napi_throw_type_error(env,nullptr,"Expected 0-8 chunk paths");return Undefined(env);
+    }
+    std::vector<std::string> paths;
+    for(uint32_t i=0;i<n;++i) {
+        napi_value v;napi_get_element(env,args[0],i,&v);size_t len=0;
+        if(napi_get_value_string_utf8(env,v,nullptr,0,&len)!=napi_ok||len==0||len>4096){napi_throw_type_error(env,nullptr,"Invalid chunk path");return Undefined(env);}
+        std::vector<char> p(len+1);napi_get_value_string_utf8(env,v,p.data(),p.size(),&len);
+        if(std::string(p.data()).size()!=len){napi_throw_type_error(env,nullptr,"Invalid chunk path");return Undefined(env);}
+        paths.emplace_back(p.data(),len);
+    }
+    uint32_t boundCount=0;
+    if(napi_is_array(env,args[1],&array)!=napi_ok||!array||napi_get_array_length(env,args[1],&boundCount)!=napi_ok||boundCount!=4){napi_throw_type_error(env,nullptr,"Expected center and radius");return Undefined(env);}
+    std::array<float,4> bounds{};
+    for(int i=0;i<4;++i){napi_value v;napi_get_element(env,args[1],i,&v);double d=0;
+        if(napi_get_value_double(env,v,&d)!=napi_ok||!std::isfinite(d)||std::abs(d)>1e6||(i==3&&d<=0)){napi_throw_range_error(env,nullptr,"Invalid scene bounds");return Undefined(env);}bounds[i]=float(d);}
+    splat::Renderer::Get().SetChunks(std::move(paths),bounds);return Undefined(env);
 }
 napi_value Active(napi_env env,napi_callback_info info) {
     napi_value arg;size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);bool active;
@@ -43,11 +64,12 @@ napi_value Status(napi_env env,napi_callback_info) {
 napi_value Init(napi_env env,napi_value exports) {
     napi_property_descriptor methods[]={
         {"load",nullptr,Load,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"chunks",nullptr,Chunks,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"camera",nullptr,Camera,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"setActive",nullptr,Active,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"status",nullptr,Status,nullptr,nullptr,nullptr,napi_default,nullptr}
     };
-    napi_define_properties(env,exports,4,methods);
+    napi_define_properties(env,exports,sizeof(methods)/sizeof(methods[0]),methods);
     napi_value value;bool has=false;napi_has_named_property(env,exports,OH_NATIVE_XCOMPONENT_OBJ,&has);
     if(has&&napi_get_named_property(env,exports,OH_NATIVE_XCOMPONENT_OBJ,&value)==napi_ok){
         OH_NativeXComponent *component=nullptr;

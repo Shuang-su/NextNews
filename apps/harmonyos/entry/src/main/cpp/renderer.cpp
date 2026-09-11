@@ -77,6 +77,7 @@ Renderer::~Renderer() { Stop(); }
 void Renderer::Start(void *window,int width,int height) {
     Stop();
     { std::lock_guard<std::mutex> lock(mutex_); stop_=false; cancel_=false; dirty_=true; width_=std::max(1,width); height_=std::max(1,height);
+      if(!chunkPaths_.empty())chunksDirty_=true;
       if(status_.state=="loading"&&pendingPath_.empty())pendingPath_=requestedPath_;
     }
     worker_=std::thread(&Renderer::Loop,this,window);
@@ -87,7 +88,13 @@ void Renderer::Stop() {
 }
 void Renderer::Resize(int width,int height) { {std::lock_guard<std::mutex> lock(mutex_);width_=std::max(1,width);height_=std::max(1,height);dirty_=true;}changed_.notify_one(); }
 void Renderer::Load(std::string path) {
-    {std::lock_guard<std::mutex> lock(mutex_);requestedPath_=path;pendingPath_=std::move(path);cancel_=true;status_.state="loading";status_.message="Loading model";}
+    {std::lock_guard<std::mutex> lock(mutex_);chunkPaths_.clear();chunksDirty_=false;requestedPath_=path;pendingPath_=std::move(path);cancel_=true;status_.state="loading";status_.message="Loading model";}
+    changed_.notify_one();
+}
+void Renderer::SetChunks(std::vector<std::string> paths, std::array<float,4> bounds) {
+    {std::lock_guard<std::mutex> lock(mutex_);chunkPaths_=std::move(paths);chunkBounds_=bounds;
+     pendingPath_.clear();requestedPath_.clear();chunksDirty_=!chunkPaths_.empty();cancel_=true;dirty_=true;
+     status_.state=chunkPaths_.empty()?"ready":"loading";status_.message=chunkPaths_.empty()?"Stream stopped":"Streaming chunks";}
     changed_.notify_one();
 }
 void Renderer::SetCamera(Camera camera) {
@@ -155,13 +162,14 @@ void Renderer::Loop(void *window) {
     try {
         InitGL(window);
         for(;;) {
-            std::string path;Camera camera;int width,height;
+            std::string path;Camera camera;int width,height;std::vector<std::string> chunks;std::array<float,4> bounds{};
             {
                 std::unique_lock<std::mutex> lock(mutex_);
-                changed_.wait(lock,[&]{return stop_||(active_&&(dirty_||!pendingPath_.empty()));});
+                changed_.wait(lock,[&]{return stop_||(active_&&(dirty_||!pendingPath_.empty()||chunksDirty_));});
                 if(stop_)break;
                 path=std::move(pendingPath_);pendingPath_.clear();camera=camera_;width=width_;height=height_;dirty_=false;
-                if(!path.empty())cancel_=false;
+                if(chunksDirty_){chunks=chunkPaths_;bounds=chunkBounds_;chunksDirty_=false;}
+                if(!path.empty()||!chunks.empty())cancel_=false;
             }
             if(!path.empty()) {
                 const auto start=Clock::now();
@@ -171,6 +179,23 @@ void Renderer::Loop(void *window) {
                     if(cancel_.load())continue;
                     scene_=std::move(loaded);camera_=Camera{};camera=camera_;
                     status_.count=scene_.points.size();status_.loadMs=Ms(start);status_.state="ready";status_.message="Model loaded";
+                } catch(const std::exception &e) {
+                    std::lock_guard<std::mutex> lock(mutex_);if(!cancel_){status_.state="error";status_.message=e.what();}
+                }
+            }
+            if(!chunks.empty()) {
+                const auto start=Clock::now();
+                try {
+                    Scene combined;combined.center={bounds[0],bounds[1],bounds[2]};combined.radius=bounds[3];
+                    for(const auto &chunk:chunks) {
+                        auto part=ReadPly(chunk,&cancel_);
+                        if(combined.points.size()+part.points.size()>MaxGaussians)throw std::runtime_error("Resident Gaussian budget exceeded");
+                        combined.points.insert(combined.points.end(),part.points.begin(),part.points.end());
+                    }
+                    std::lock_guard<std::mutex> lock(mutex_);
+                    if(cancel_)continue;
+                    scene_=std::move(combined);camera=camera_;status_.count=scene_.points.size();
+                    status_.loadMs=Ms(start);status_.state="ready";status_.message="Stream resident set ready";
                 } catch(const std::exception &e) {
                     std::lock_guard<std::mutex> lock(mutex_);if(!cancel_){status_.state="error";status_.message=e.what();}
                 }

@@ -21,6 +21,7 @@ public:
     void Resize(int width, int height);
     void Load(std::string path);
     void SetCamera(Camera camera);
+    void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds);
     void SetActive(bool active);
     Status GetStatus();
 private:
@@ -36,6 +37,9 @@ private:
     int width_ = 1, height_ = 1;
     std::string pendingPath_;
     std::string requestedPath_;
+    std::vector<std::string> chunkPaths_;
+    std::array<float,4> chunkBounds_{};
+    bool chunksDirty_ = false;
     Camera camera_;
     Status status_;
     Scene scene_;

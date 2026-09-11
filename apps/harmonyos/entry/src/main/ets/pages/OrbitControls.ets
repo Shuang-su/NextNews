@@ -5,13 +5,15 @@ export class OrbitControls {
   target: number[] = [0, 0, 1, 0, 0, 0];
   width: number = 1;
   height: number = 1;
+  fly: boolean = false;
+  keys: string[] = [];
   private previous: OrbitTouch[] = [];
   reset(): void {
-    this.current = [0, 0, 1, 0, 0, 0]; this.target = [0, 0, 1, 0, 0, 0]; this.cancel();
+    this.current = [0, 0, 1, 0, 0, 0]; this.target = [0, 0, 1, 0, 0, 0]; this.fly = false; this.keys = []; this.cancel();
   }
-  cancel(): void { this.previous = []; }
+  cancel(): void { this.previous = []; this.keys = []; }
   resize(width: number, height: number): void {
-    if (this.height > 1 && height > 1) {
+    if (!this.fly && this.height > 1 && height > 1) {
       // Preserve apparent model size when panels change the vertical-FOV viewport.
       const ratio = height / this.height;
       this.current[2] = Math.max(0.05, Math.min(20, this.current[2] * ratio));
@@ -19,7 +21,30 @@ export class OrbitControls {
     }
     this.width = Math.max(1, width); this.height = Math.max(1, height); this.cancel();
   }
+  setFly(fly: boolean): void {
+    if (fly === this.fly) { return; }
+    this.target = this.current.slice();
+    const y = this.current[0]; const p = this.current[1];
+    const d = 3 * this.current[2] * (fly ? 1 : -1);
+    this.current[3] += Math.sin(y) * Math.cos(p) * d;
+    this.current[4] += Math.sin(p) * d;
+    this.current[5] += Math.cos(y) * Math.cos(p) * d;
+    this.target = this.current.slice(); this.fly = fly; this.cancel();
+  }
+  move(right: number, up: number, forward: number): void {
+    const y = this.current[0]; const p = this.current[1];
+    this.target[3] += Math.cos(y) * right - Math.sin(y) * Math.cos(p) * forward;
+    this.target[4] += up - Math.sin(p) * forward;
+    this.target[5] -= Math.sin(y) * right + Math.cos(y) * Math.cos(p) * forward;
+    for (let i = 3; i < 6; i++) { this.target[i] = Math.max(-100, Math.min(100, this.target[i])); }
+  }
+  key(key: string, down: boolean): void {
+    this.keys = this.keys.filter((k: string) => k !== key);
+    if (down) { this.keys.push(key); }
+  }
   zoom(factor: number): void {
+    if (this.fly) { this.move(0, 0, -Math.log(Math.max(0.01, factor))); return; }
+
     this.target[2] = Math.max(0.05, Math.min(20, this.target[2] * factor));
   }
   pan(dx: number, dy: number): void {
@@ -61,6 +86,12 @@ export class OrbitControls {
     }
   }
   tick(elapsedMs: number): boolean {
+    if (this.fly) {
+      const speed = Math.min(64, elapsedMs) / 1000;
+      this.move((Number(this.keys.includes('d')) - Number(this.keys.includes('a'))) * speed,
+        (Number(this.keys.includes('e')) - Number(this.keys.includes('q'))) * speed,
+        (Number(this.keys.includes('w')) - Number(this.keys.includes('s'))) * speed);
+    }
     const alpha = 1 - Math.pow(0.95, Math.max(0, Math.min(64, elapsedMs)));
     let changed = false;
     for (let i = 0; i < 6; i++) {

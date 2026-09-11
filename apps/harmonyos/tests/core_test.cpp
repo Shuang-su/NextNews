@@ -25,6 +25,11 @@ int main(int argc,char **argv) {
                 const float expected=row==2 ? -scene.radius*3.f*orbit.zoom : 0.f;
                 assert(std::abs(value-expected)<1e-4f);
             }
+            orbit.fly=1;
+            const auto flyView=splat::MakeView(scene,orbit);
+            for(int row=0;row<3;++row){float v=flyView.matrix[12+row];
+                for(int k=0;k<3;++k)v+=flyView.matrix[k*4+row]*target[k];
+                assert(std::abs(v)<1e-4f);}
             const auto &g=scene.points[0];
             assert(std::abs(g.color[0]-.5f)<1e-6);
             assert(std::abs(g.color[3]-.5f)<1e-6);

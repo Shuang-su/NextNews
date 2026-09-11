@@ -9,7 +9,7 @@ projected anisotropic covariance and back-to-front premultiplied alpha blending.
 The first version uses SH0 color, a 45° vertical field of view and orbit controls.
 This is a native renderer; there is no ArkWeb dependency.
 
-`libsplat.so` exports `load(path)`, `camera(yaw,pitch,zoom,targetX,targetY,targetZ)`,
+`libsplat.so` exports `load(path)`, `camera(yaw,pitch,zoom,targetX,targetY,targetZ,fly)`,
 `setActive(boolean)`, and `status()`. Model parsing is asynchronous relative to
 ArkUI. The latest pending model supersedes prior loading; surface destruction
 cancels work, joins the worker and releases the EGL resources. CPU scene data
@@ -125,3 +125,11 @@ comparison page and the separate future AR placement path.
 
 See [interaction-parity.md](interaction-parity.md) for the SuperSplat Viewer orbit
 comparison and [work log](../worklog/2026-09-11-harmonyos.md) for deployment and troubleshooting history.
+
+## Flight and streaming
+
+The mode button switches between orbit and free flight. Left drag looks around;
+WASD move and Q/E change elevation while the viewport has focus. On-screen
+forward/back buttons are also available. Flight has no collision or walking physics.
+See [streaming.md](streaming.md) for the HTTP chunk manifest, offline converter,
+local server commands and the limits of this first streaming implementation.
