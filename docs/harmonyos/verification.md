@@ -10,4 +10,10 @@ This is a development checkpoint, not completed runtime acceptance.
 - Signing, HDC connection, installation, EGL rendering, visual comparison, gestures, lifecycle and device metrics remain pending.
 - Linter reported zero files checked, so its empty findings are not counted as validation.
 
+## Follow-up: two renderers and network diagnosis
+
+- Added `pages/SpatialViewer`: capability check, asynchronous SpatialReconKit plugin/model load, ArkGraphics3D camera, three shared SH0 samples, orbit/pan/pinch/reset, error display and scene disposal. Both renderer routes compile using the installed Studio SDK. Neither has runtime acceptance yet.
+- Configured IDE HTTP proxy to the already configured local system proxy `127.0.0.1:1082`. IDE Check Connection to `https://developer.huawei.com` returned success. Retrying the image through IDE returned `HTTP/1.1 503 Service Unavailable` from the proxy tunnel. The simulator CLI still reported connection refused. This narrows the failure to the download connection; it does not prove the image server itself is down.
+- Repository created and verified private: `https://github.com/Shuang-su/NextNews`. SDKs, installers, build artifacts and signing material are excluded.
+
 Build/test/download logs remain in ignored `artifacts/harmonyos`. Full simulator agreements remain local; user authorized acceptance.

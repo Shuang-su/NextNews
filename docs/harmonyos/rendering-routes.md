@@ -21,9 +21,9 @@ and tiled Gaussian import since 26.0.0. Required capability is
 `SystemCapability.Graphics.SpatialRender`. API presence alone does not prove
 support on the selected emulator or phone.
 
-Next implementation: an independent ArkGraphics3D comparison page with capability
+Implemented a separate `pages/SpatialViewer` ArkGraphics3D comparison page with capability
 checks, asynchronous plugin/model loading, camera controls, error reporting and
-resource disposal. Use the same prepared SH0 models to compare orientation,
+resource disposal. It compiles with API 26; rendering remains unverified. Use the same prepared SH0 models to compare orientation,
 scale, color, occlusion and loading behavior. Keep the existing renderer usable
 when the device lacks SpatialRender. Native reconstruction C APIs are a separate
 generation capability, not required for the viewer milestone.

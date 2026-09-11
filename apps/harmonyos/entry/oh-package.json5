@@ -7,4 +7,3 @@
   "license": "",
   "dependencies": { "libsplat.so": "file:./src/main/cpp/types/libsplat" }
 }
-

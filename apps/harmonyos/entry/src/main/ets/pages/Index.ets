@@ -110,7 +110,11 @@ struct Index {
     Column({ space: 10 }) {
       Row() {
         Text(this.title).fontSize(23).fontWeight(FontWeight.Bold).fontColor('#EDF6FC').layoutWeight(1);
-        Text('原生').fontSize(12).fontColor('#72DCCB');
+        Button('华为原生对照').fontSize(12).onClick(() => {
+          this.getUIContext().getRouter().pushUrl({ url: 'pages/SpatialViewer' }).catch((error: BusinessError) => {
+            this.localError = error.message; this.message = error.message;
+          });
+        });
       }.width('100%');
       Text(this.message).fontSize(13).fontColor('#AFC6D8').width('100%');
       XComponent({ id: 'nextnews-splat', type: XComponentType.SURFACE, libraryname: 'splat' })
