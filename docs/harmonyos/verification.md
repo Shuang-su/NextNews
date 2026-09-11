@@ -69,3 +69,7 @@
 - `spatial-final.png`、`spatial-isolated-errors.log`、`route-return.png`。
 
 源文件 provenance、许可及转换命令见各 rawfile 模型旁 manifest 和 `THIRD_PARTY_NOTICES.md`。模型预处理输出独立副本；普通点云不会被当作 3DGS 接受。
+
+## SpatialReconKit 后续定位
+
+最小基础 Scene.load 在不加载 GS 插件、模型及 C++ 上下文时仍失败。官网明确暂不支持模拟器；详情与可复现诊断见 [spatial-investigation.md](spatial-investigation.md)。当前调试包已补充阶段日志和官方支持范围提示，C++ 渲染代码未改动。

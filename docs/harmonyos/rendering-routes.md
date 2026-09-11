@@ -28,6 +28,11 @@ scale, color, occlusion and loading behavior. Keep the existing renderer usable
 when the device lacks SpatialRender. Native reconstruction C APIs are a separate
 generation capability, not required for the viewer milestone.
 
+The official kit introduction explicitly states that simulators are not supported.
+Our emulator also fails a minimal ArkGraphics3D Scene.load without the GS plugin.
+See [spatial-investigation.md](spatial-investigation.md) for isolation results and
+physical-device reproduction steps.
+
 Track runtime results separately for each backend. Tiled loading is an optional
 future experiment, not part of the current small-model acceptance requirement.
 

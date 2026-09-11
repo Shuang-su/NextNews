@@ -60,14 +60,19 @@ struct SpatialViewer {
     let stage: string = '初始化渲染上下文';
     try {
       const context = Scene.getDefaultRenderContext();
+      console.info(`SpatialViewer contextAvailable=${context !== null}`);
       if (!context || !await context.loadPlugin(spatialRender.GSPlugin.PLUGIN_ID)) {
         throw new Error('SpatialRender 插件不可用');
       }
+      console.info(`SpatialViewer pluginLoaded elapsedMs=${Date.now() - start}`);
       stage = '创建 ArkGraphics3D 场景';
       pending = await Scene.load();
+      console.info(`SpatialViewer sceneCreated elapsedMs=${Date.now() - start}`);
       stage = '加载 3DGS 模型';
       await spatialRender.GSPlugin.loadGSNode(pending,
         { uri: `OhosRawFile://models/${SAMPLE_BOUNDS[index].file}` }, pending.root ?? undefined);
+      console.info(`SpatialViewer modelLoaded file=${SAMPLE_BOUNDS[index].file} elapsedMs=${Date.now() - start}`);
+      stage = '创建相机';
       const camera = await pending.getResourceFactory().createCamera({ name: 'comparisonCamera' });
       if (!this.visible || request !== this.generation) { return; }
       this.bounds = SAMPLE_BOUNDS[index];
@@ -81,7 +86,7 @@ struct SpatialViewer {
       if (this.visible && request === this.generation) {
         const detail = (error as BusinessError)?.message ?? String(error);
         this.message = `${stage}失败：${detail || '引擎未提供错误详情'}。可返回 C++ 查看器。`;
-        console.error(`SpatialViewer ${stage}: ${detail}`);
+        console.error(`SpatialViewer ${stage}: code=${(error as BusinessError)?.code ?? -1} ${detail}`);
       }
     } finally {
       pending?.destroy();
@@ -95,6 +100,8 @@ struct SpatialViewer {
         Text('Spatial Recon 原生对照').fontSize(20).fontColor('#EDF6FC');
       }.width('100%');
       Text(this.message).fontSize(13).fontColor('#AFC6D8').width('100%');
+      Text('华为官方暂不支持在模拟器运行此套件；请在受支持真机验证。')
+        .fontSize(12).fontColor('#EBC478').width('100%');
       if (this.scene) {
         Component3D({ scene: this.scene, modelType: ModelType.SURFACE })
           .width('100%').layoutWeight(1)
