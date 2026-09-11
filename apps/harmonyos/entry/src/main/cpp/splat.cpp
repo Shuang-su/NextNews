@@ -120,7 +120,8 @@ View MakeView(const Scene &scene, const Camera &camera) {
     const float up[] = {-std::sin(y)*std::sin(p), std::cos(p), -std::cos(y)*std::sin(p)};
     const float back[] = {std::sin(y)*std::cos(p), std::sin(p), std::cos(y)*std::cos(p)};
     const float distance = scene.radius * 3.f * std::clamp(camera.zoom, .05f, 20.f);
-    float eye[3]; for (int k=0;k<3;++k) eye[k]=scene.center[k]+back[k]*distance+right[k]*camera.panX*scene.radius+up[k]*camera.panY*scene.radius;
+    const float target[] = {camera.panX, camera.panY, camera.panZ};
+    float eye[3]; for (int k=0;k<3;++k) eye[k]=scene.center[k]+back[k]*distance+target[k]*scene.radius;
     View v{}; auto &m = v.matrix;
     for(int k=0;k<3;++k) { m[k*4]=right[k]; m[k*4+1]=up[k]; m[k*4+2]=back[k]; }
     for(int k=0;k<3;++k) { m[12]-=right[k]*eye[k]; m[13]-=up[k]*eye[k]; m[14]-=back[k]*eye[k]; }

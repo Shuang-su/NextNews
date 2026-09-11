@@ -2,6 +2,7 @@ import { common } from '@kit.AbilityKit';
 import { fileIo as fs, picker } from '@kit.CoreFileKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import nativeRender from 'libsplat.so';
+import { OrbitControls, OrbitTouch } from './OrbitControls';
 
 @Entry
 @Component
@@ -17,22 +18,26 @@ struct Index {
   private timer: number = -1;
   private generation: number = 0;
   private visible: boolean = true;
-  private yaw: number = 0;
-  private pitch: number = 0;
-  private zoom: number = 1;
-  private panX: number = 0;
-  private panY: number = 0;
-  private lastX: number = 0;
-  private lastY: number = 0;
-  private pinchStart: number = 1;
+  @State toolsVisible: boolean = true;
+  @State helpVisible: boolean = false;
+  @State diagnosticsVisible: boolean = false;
+  private controls: OrbitControls = new OrbitControls();
+  private motionTimer: number = -1;
+  private motionTime: number = 0;
+  private active: boolean = true;
 
   aboutToAppear(): void {
     this.visible = true;
+    this.motionTime = Date.now();
+    this.motionTimer = setInterval(() => {
+      const now = Date.now(); const dt = now - this.motionTime; this.motionTime = now;
+      if (this.active && this.controls.tick(dt)) { this.updateCamera(); }
+    }, 32);
     this.timer = setInterval(() => {
       const state = nativeRender.status();
       this.loading = state.state === 'loading';
       if (!this.busy && this.localError.length === 0) {
-        this.message = state.state === 'ready' ? '可旋转、平移和缩放' : state.message;
+        this.message = state.state === 'ready' ? '单指旋转 · 双指平移 / 缩放' : state.message;
       }
       this.graphics = state.graphics;
       this.details = `${state.count.toLocaleString()} 个高斯 · SH0\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\n单帧 ${state.frameMs.toFixed(1)} ms · 渲染耗时折算 ${state.fps.toFixed(1)} fps\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB`;
@@ -42,16 +47,27 @@ struct Index {
     this.visible = false;
     this.generation++;
     if (this.timer !== -1) { clearInterval(this.timer); this.timer = -1; }
+    if (this.motionTimer !== -1) { clearInterval(this.motionTimer); this.motionTimer = -1; }
+    this.controls.cancel();
     nativeRender.setActive(false);
   }
-  onPageShow(): void { nativeRender.setActive(true); }
-  onPageHide(): void { nativeRender.setActive(false); }
+  onPageShow(): void { this.active = true; this.motionTime = Date.now(); nativeRender.setActive(true); }
+  onPageHide(): void { this.active = false; this.controls.cancel(); nativeRender.setActive(false); }
   private updateCamera(): void {
-    nativeRender.camera(this.yaw, this.pitch, this.zoom, this.panX, this.panY);
+    const c = this.controls.current;
+    nativeRender.camera(c[0], c[1], c[2], c[3], c[4], c[5]);
   }
-  private reset(): void {
-    this.yaw = 0; this.pitch = 0; this.zoom = 1; this.panX = 0; this.panY = 0;
-    this.updateCamera();
+  private reset(): void { this.controls.reset(); this.updateCamera(); }
+  private touch(event: TouchEvent): void {
+    if (event.type === TouchType.Cancel) { this.controls.cancel(); return; }
+    const points: OrbitTouch[] = [];
+    for (const touch of event.touches) {
+      if (event.type === TouchType.Up && event.changedTouches.some((ended: TouchObject) => ended.id === touch.id)) {
+        continue;
+      }
+      points.push({ id: touch.id, x: touch.x, y: touch.y });
+    }
+    this.controls.touch(points, this.panMode);
   }
   private async sample(name: string, label: string): Promise<void> {
     if (this.busy || this.loading) { return; }
@@ -110,43 +126,20 @@ struct Index {
     Column({ space: 10 }) {
       Row() {
         Text(this.title).fontSize(23).fontWeight(FontWeight.Bold).fontColor('#EDF6FC').layoutWeight(1);
-        Button('华为原生对照').fontSize(12).onClick(() => {
-          this.getUIContext().getRouter().pushUrl({ url: 'pages/SpatialViewer' }).catch((error: BusinessError) => {
-            this.localError = error.message; this.message = error.message;
-          });
-        });
+        Button(this.toolsVisible ? '收起工具' : '显示工具').fontSize(12)
+          .onClick(() => { this.toolsVisible = !this.toolsVisible; });
       }.width('100%');
       Text(this.message).fontSize(13).fontColor('#AFC6D8').width('100%');
       XComponent({ id: 'nextnews-splat', type: XComponentType.SURFACE, libraryname: 'splat' })
         .width('100%').layoutWeight(1)
         .onLoad(() => { nativeRender.setActive(true); if (nativeRender.status().count === 0) { this.sample('tripo.ply', 'Tripo Splat'); } })
-        .gesture(GestureGroup(GestureMode.Exclusive,
-          PinchGesture({ fingers: 2 })
-            .onActionStart(() => { this.pinchStart = this.zoom; })
-            .onActionUpdate((event: GestureEvent) => {
-              this.zoom = Math.max(0.05, Math.min(20, this.pinchStart / Math.max(event.scale, 0.01)));
-              this.updateCamera();
-            }),
-          PanGesture({ fingers: 1 })
-            .onActionStart(() => { this.lastX = 0; this.lastY = 0; })
-            .onActionUpdate((event: GestureEvent) => {
-              const dx = event.offsetX - this.lastX;
-              const dy = event.offsetY - this.lastY;
-              this.lastX = event.offsetX; this.lastY = event.offsetY;
-              if (this.panMode) {
-                this.panX = Math.max(-10, Math.min(10, this.panX - dx * 0.005 * this.zoom));
-                this.panY = Math.max(-10, Math.min(10, this.panY + dy * 0.005 * this.zoom));
-              } else {
-                this.yaw = (this.yaw - dx * 0.008) % (Math.PI * 2);
-                this.pitch = Math.max(-1.5, Math.min(1.5, this.pitch + dy * 0.008));
-              }
-              this.updateCamera();
-            })
-        ));
+        .onAreaChange((_old: Area, area: Area) => { this.controls.resize(Number(area.width), Number(area.height)); this.updateCamera(); })
+        .onTouch((event: TouchEvent) => { this.touch(event); });
+      if (this.toolsVisible) {
       Row({ space: 6 }) {
         Button(this.panMode ? '拖动：平移' : '拖动：旋转').onClick(() => { this.panMode = !this.panMode; });
-        Button('−').onClick(() => { this.zoom = Math.min(20, this.zoom * 1.2); this.updateCamera(); });
-        Button('+').onClick(() => { this.zoom = Math.max(0.05, this.zoom / 1.2); this.updateCamera(); });
+        Button('−').onClick(() => { this.controls.zoom(1.2); });
+        Button('+').onClick(() => { this.controls.zoom(1 / 1.2); });
         Button('复位').onClick(() => { this.reset(); });
       }
       Row({ space: 8 }) {
@@ -155,8 +148,19 @@ struct Index {
         Button('转换样例').enabled(!this.busy && !this.loading).onClick(() => { this.sample('converted.ply', '转换样例'); });
       }
       Button('打开本地 PLY').width('100%').enabled(!this.busy && !this.loading).onClick(() => { this.importModel(); });
-      Text(this.details).fontSize(11).fontColor('#99B1C4').width('100%');
-      Text(this.graphics).fontSize(10).fontColor('#6F899F').maxLines(2).width('100%');
+      Row({ space: 8 }) {
+        Button('操作说明').fontSize(12).onClick(() => { this.helpVisible = !this.helpVisible; });
+        Button('性能信息').fontSize(12).onClick(() => { this.diagnosticsVisible = !this.diagnosticsVisible; });
+      }
+      if (this.helpVisible) {
+        Text('单指拖动：环绕旋转\n双指拖动：平移；张合：缩放，可同时进行\n拖动模式按钮：单指平移辅助\n复位：回到初始视角；收起工具：扩大画面')
+          .fontSize(12).fontColor('#AFC6D8').width('100%');
+      }
+      if (this.diagnosticsVisible) {
+        Text(this.details).fontSize(11).fontColor('#99B1C4').width('100%');
+        Text(this.graphics).fontSize(10).fontColor('#6F899F').maxLines(2).width('100%');
+      }
+      }
     }.padding({ left: 16, right: 16, top: 18, bottom: 18 }).width('100%').height('100%').backgroundColor('#091322');
   }
 }

@@ -1,0 +1,56 @@
+# 2026-09-11 · NextNews 鸿蒙开发工作记录
+
+## 目标与当前决定
+
+为 NextNews 建立独立的 `apps/harmonyos` 原生应用和 `docs/harmonyos` 文档，后续平台各用独立目录。已部署 HarmonyOS 7 / API 26 工具链，完成 C++ / XComponent / OpenGL ES 3.0 的 3DGS 查看器。按用户最新决定，暂停 SpatialReconKit 模拟器尝试，继续 OpenGL 路线并逐步对齐 SuperSplat Viewer 的浏览交互。
+
+这是一份实际工作记录。未通过的运行项目不以“编译通过”替代；测试数量、耗时与限制见[验证报告](../harmonyos/verification.md)。
+
+## 工作经过
+
+| 阶段 | 操作及遇到的情况 | 处理与结果 |
+|---|---|---|
+| 官方工具下载 | 端内浏览器点击下载未获得可靠下载完成证据，链接变灰不能说明下载完成或失败 | 用户在 Safari 登录并允许网站下载，提供正在下载的 Mac ARM Studio、CLI 和插件文件；未断言端内浏览器完全不支持下载 |
+| 安装与校验 | 部分文件仍带 `.download` 后缀；存在 Windows 安装包 | 等待可用的 Mac ARM 安装文件，安装 Studio 26.0.0.821；校验 DMG 与应用代码签名；不使用 Windows 包；本地 SHA 未与官网 SHA 比对 |
+| 工具隔离 | NextNews 后续还有其他平台任务 | 使用 IDE 配套 Node/OHPM/Hvigor/Native SDK/CMake/HDC；CLI 在忽略的 `.tools` 下，环境脚本不修改全局 shell 或 Xcode 选择 |
+| 镜像网络故障 | CLI 连接拒绝；IDE SSL 握手失败；代理隧道返回 503 | 参照用户打开的官方代理文档，将 IDE 指向已有本机代理 127.0.0.1:1082；连接测试通过；用户再次下载后成功。未关闭 TLS 校验，未将网络错误认定为华为服务器宕机 |
+| 模拟器部署 | 用户明确同意协议、下载与启动 | API 26 手机镜像 7.0.0.106 安装完成，创建 NextNews_API26，HDC 连接 127.0.0.1:5555；空白 Stage 工程签名、安装并显示 Hello World |
+| 平板镜像 | IDE 平板镜像向导显示安装完成 | 尚未创建平板模拟器或验收；不能沿用手机运行结论 |
+| 账号与签名 | DevEco CLI 需要开发者授权 | 用户完成 OAuth；签名配置保存在忽略的本机副本，证书和账号材料不进 Git；源工程 IDE 构建未签名，调试脚本单独生成签名 HAP |
+| 原生渲染 | 实现协方差投影、SH0、实例化椭圆、透明混合和后台 CPU 排序 | 三类内置样例及 260k 导入模型实际显示；保留系统文件选择导入、错误提示及前后台行为 |
+| 数据准备 | 普通 PLY 不一定是 3DGS；Tripo 输出存在 opacity 的 -Inf 端点 | 严格验证字段；压缩数据在 Mac 解码；仅明确的 opacity 无限端点有限化，其他非法数值拒绝；输出独立副本和 provenance |
+| 画面比例问题 | 与 PlayCanvas SH0 参考画面比较时，转换模型比例不一致 | 发现 XComponent 原生窗口缓冲几何未同步，增加 SET_BUFFER_GEOMETRY 后修复 |
+| 参考画面特征 | biker 倒置、Tripo smoke 很暗 | 参考与原生均有相同特征，保留源坐标和颜色；未当作渲染修复随意旋转或提亮 |
+| 主机测试挂起 | macOS 27 上旧 Xcode 16 ASan 在 dyld 初始化挂起 | 单条命令指定本机 Xcode 27，ASan/UBSan 测试通过；系统 Xcode 选择未修改 |
+| IDE 检查 | IDE 存在内部错误及快捷键冲突提示；linter 显示 0 文件 | IDE 构建确实成功；零文件 lint 不计为验证通过，不宣称整个 IDE 完全兼容 |
+| 稳定性与压力 | 损坏文件、普通点云、NaN、截断、超数量、超体积 | 六类非法文件经系统文件选择器均拒绝，合法 260k 通过；三模型循环 3 轮共 9 次通过；持续帧率和长期内存泄漏未测量 |
+| SpatialReconKit 尝试 | 插件加载后 SceneManager 创建失败，独立首屏也失败 | 继续隔离，最小 Scene.load 不导入 GS/模型/C++ 上下文仍失败；历史日志含 EGL 上下文失败；官网明确 Kit 暂不支持模拟器，详情见专项报告 |
+| 当前交互迭代 | 原版需按钮切换平移，双指缩放与平移互斥，调试信息占据画面 | 按 SuperSplat Viewer 触屏 orbit 交互调整，双指并行平移/缩放、相机阻尼、固定世界环绕中心、可收起工具及按需显示诊断。差异见对齐清单；面板尺寸变化时补绘 EGL 新缓冲，并保持模型屏幕尺度 |
+
+## 关键提交
+
+- `522c21b`：初始项目及原生查看器基础。
+- `513e892`：两条原生渲染路线。
+- `16a8ab7`：解析/文档完善。
+- `cd9235f`：工具版本记录。
+- `6777f54`：XComponent 缓冲几何修复与隔离签名构建。
+- `2a01724`：模拟器渲染、导入测试及限制报告。
+- `2eb4410`：最小 ArkGraphics3D 隔离测试与官方支持限制。
+
+这些记录描述阶段快照；后续变更以本仓库提交历史及最新验证记录为准。
+
+## 结果与后续项
+
+C++ 路线运行可用，模拟器 260k 时 CPU 排序约 140 ms，是下一步性能优化点。UI 折算 fps 不代表持续交互帧率，PSS 为单次进程快照，不能推断真机表现。双指完整设备注入、鼠标/键盘完整映射、点选焦点、fly/walk、窗口重建与长时间压力仍需按项推进。
+
+SpatialReconKit 暂停模拟器排障，源码和最小测试保留；后续有受支持真机时可复测。离线 SOG/SPZ/KSPLAT 解码、流式 LOD、模型生成及业务页面不属于本轮实现。
+
+## 索引
+
+- [工具版本](../harmonyos/toolchain.md)
+- [构建与模型准备](../harmonyos/README.md)
+- [运行验证](../harmonyos/verification.md)
+- [SpatialReconKit 专项排查](../harmonyos/spatial-investigation.md)
+- [SuperSplat Viewer 交互对齐](../harmonyos/interaction-parity.md)
+
+完整日志、调试 HAP、原始截图和签名材料保留本机，未将账户材料或 SDK 上传仓库。样例许可与来源单独记录于 THIRD_PARTY_NOTICES 和模型 manifest。

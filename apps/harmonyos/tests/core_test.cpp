@@ -14,6 +14,17 @@ int main(int argc,char **argv) {
         float previous=-INFINITY;
         for(const auto &g:sorted){auto &m=view.matrix;float depth=m[2]*g.position[0]+m[6]*g.position[1]+m[10]*g.position[2]+m[14];assert(depth>=previous);previous=depth;}
         if(mode=="analytic") {
+            // A panned target stays at the orbit center after rotation (world-space target).
+            splat::Camera orbit{.7f, .4f, 1.2f, .2f, -.3f, .6f};
+            const auto orbitView = splat::MakeView(scene, orbit);
+            const float target[] = {scene.center[0]+orbit.panX*scene.radius,
+                scene.center[1]+orbit.panY*scene.radius, scene.center[2]+orbit.panZ*scene.radius};
+            for (int row=0; row<3; ++row) {
+                float value=orbitView.matrix[12+row];
+                for (int k=0;k<3;++k) value+=orbitView.matrix[k*4+row]*target[k];
+                const float expected=row==2 ? -scene.radius*3.f*orbit.zoom : 0.f;
+                assert(std::abs(value-expected)<1e-4f);
+            }
             const auto &g=scene.points[0];
             assert(std::abs(g.color[0]-.5f)<1e-6);
             assert(std::abs(g.color[3]-.5f)<1e-6);

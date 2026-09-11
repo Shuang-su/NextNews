@@ -20,7 +20,7 @@ struct Scene {
 };
 Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel = nullptr);
 struct Camera {
-    float yaw = 0, pitch = 0, zoom = 1, panX = 0, panY = 0;
+    float yaw = 0, pitch = 0, zoom = 1, panX = 0, panY = 0, panZ = 0;
 };
 struct View {
     std::array<float, 16> matrix;

@@ -10,6 +10,6 @@ export interface RenderStatus {
   fps: number;
 }
 export const load: (path: string) => void;
-export const camera: (yaw: number, pitch: number, zoom: number, panX: number, panY: number) => void;
+export const camera: (yaw: number, pitch: number, zoom: number, panX: number, panY: number, panZ: number) => void;
 export const setActive: (active: boolean) => void;
 export const status: () => RenderStatus;

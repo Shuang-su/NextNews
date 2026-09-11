@@ -9,7 +9,7 @@ projected anisotropic covariance and back-to-front premultiplied alpha blending.
 The first version uses SH0 color, a 45° vertical field of view and orbit controls.
 This is a native renderer; there is no ArkWeb dependency.
 
-`libsplat.so` exports `load(path)`, `camera(yaw,pitch,zoom,panX,panY)`,
+`libsplat.so` exports `load(path)`, `camera(yaw,pitch,zoom,targetX,targetY,targetZ)`,
 `setActive(boolean)`, and `status()`. Model parsing is asynchronous relative to
 ArkUI. The latest pending model supersedes prior loading; surface destruction
 cancels work, joins the worker and releases the EGL resources. CPU scene data
@@ -89,7 +89,7 @@ is outside this task. Public example attribution is in THIRD_PARTY_NOTICES.md.
 
 ## Controls and diagnostics
 
-Drag to orbit; switch the drag mode for panning. Pinch or use +/− to zoom; reset
+Drag to orbit; use two fingers to pan and pinch simultaneously, or switch the single-finger drag mode for panning. Use +/− to zoom; reset
 returns to the bounding-box center. Choose a built-in sample or use the system
 file picker to copy a prepared PLY into the app sandbox.
 
@@ -122,3 +122,6 @@ build, EGL rendering and gesture/lifecycle acceptance are separate checks.
 See verification.md for the actual completed checks and outstanding work.
 See toolchain.md for versions and rendering-routes.md for the SpatialReconKit
 comparison page and the separate future AR placement path.
+
+See [interaction-parity.md](interaction-parity.md) for the SuperSplat Viewer orbit
+comparison and [work log](../worklog/2026-09-11-harmonyos.md) for deployment and troubleshooting history.

@@ -23,10 +23,10 @@ napi_value Load(napi_env env,napi_callback_info info) {
     splat::Renderer::Get().Load(std::string(path.data(),length));return Undefined(env);
 }
 napi_value Camera(napi_env env,napi_callback_info info) {
-    napi_value args[5];size_t argc=5;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);double v[5];
-    if(argc!=5){napi_throw_type_error(env,nullptr,"Expected five camera values");return Undefined(env);}
-    for(int i=0;i<5;++i)if(napi_get_value_double(env,args[i],&v[i])!=napi_ok||!std::isfinite(v[i])||std::abs(v[i])>1e4){napi_throw_range_error(env,nullptr,"Invalid camera value");return Undefined(env);}
-    splat::Renderer::Get().SetCamera({float(v[0]),float(v[1]),float(v[2]),float(v[3]),float(v[4])});return Undefined(env);
+    napi_value args[6];size_t argc=6;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);double v[6];
+    if(argc!=6){napi_throw_type_error(env,nullptr,"Expected six camera values");return Undefined(env);}
+    for(int i=0;i<6;++i)if(napi_get_value_double(env,args[i],&v[i])!=napi_ok||!std::isfinite(v[i])||std::abs(v[i])>1e4){napi_throw_range_error(env,nullptr,"Invalid camera value");return Undefined(env);}
+    splat::Renderer::Get().SetCamera({float(v[0]),float(v[1]),float(v[2]),float(v[3]),float(v[4]),float(v[5])});return Undefined(env);
 }
 napi_value Active(napi_env env,napi_callback_info info) {
     napi_value arg;size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);bool active;

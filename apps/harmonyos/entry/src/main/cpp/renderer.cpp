@@ -135,6 +135,9 @@ void Renderer::Draw(const View &view,int width,int height) {
         const int result=OH_NativeWindow_NativeWindowHandleOpt(static_cast<OHNativeWindow*>(window_),SET_BUFFER_GEOMETRY,width,height);
         if(result!=0)throw std::runtime_error("Native window buffer resize failed: "+std::to_string(result));
         bufferWidth_=width;bufferHeight_=height;
+        // The currently acquired EGL buffer may still have the previous size.
+        // Swap it out, then render once more even if the camera is idle.
+        std::lock_guard<std::mutex> lock(mutex_);dirty_=true;
     }
     const auto start=Clock::now();auto sorted=Sort(scene_,view);const double sortMs=Ms(start);
     const auto drawStart=Clock::now();

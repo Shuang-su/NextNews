@@ -73,3 +73,7 @@
 ## SpatialReconKit 后续定位
 
 最小基础 Scene.load 在不加载 GS 插件、模型及 C++ 上下文时仍失败。官网明确暂不支持模拟器；详情与可复现诊断见 [spatial-investigation.md](spatial-investigation.md)。当前调试包已补充阶段日志和官方支持范围提示，C++ 渲染代码未改动。
+
+## OpenGL 交互迭代
+
+继续以 C++/OpenGL 为主路线。已加入触点 ID 跟踪、双指同时平移/缩放、指数阻尼、世界坐标环绕中心和可收起工具。新增控制器回归测试及 C++ 相机中心断言通过，HAP 重新构建安装通过。工具面板改变窗口尺寸时的旧 EGL 缓冲问题已通过补绘修复；收起时保持模型屏幕尺度，最终截图见本机 `artifacts/harmonyos/orbit/accepted-immersive.png`。完整功能差异与验证边界见 [interaction-parity.md](interaction-parity.md)。

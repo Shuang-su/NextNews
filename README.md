@@ -8,3 +8,8 @@ Native application experiments for multiple operating systems.
 
 See [HarmonyOS development](docs/harmonyos/README.md). Platform-specific SDKs,
 signing materials and generated outputs remain outside source control.
+
+## Work records
+
+- [2026-09-11 HarmonyOS development and troubleshooting](docs/worklog/2026-09-11-harmonyos.md)
+- [SuperSplat Viewer interaction alignment](docs/harmonyos/interaction-parity.md)
