@@ -55,7 +55,7 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
                 if (n != 0) throw std::runtime_error("Only vertex-only Gaussian PLY is supported");
                 vertex = false; continue;
             }
-            if (seenVertex || n == 0 || n > MaxGaussians) throw std::runtime_error("Invalid vertex count (limit 300000)");
+            if (seenVertex || n == 0 || n > MaxGaussians) throw std::runtime_error("Invalid vertex count (limit 4000000)");
             seenVertex = vertex = true; count = size_t(n);
         } else if (key == "property") {
             if (!vertex) throw std::runtime_error("Unexpected property outside vertices");
@@ -114,6 +114,11 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
     return scene;
 }
 
+void ApplyViewerTransform(Scene &scene) {
+    // SuperSplat viewer's import entity: setLocalEulerAngles(0, 0, 180).
+    for(auto &g:scene.points) {g.position[0]=-g.position[0];g.position[1]=-g.position[1];g.covariance[2]=-g.covariance[2];g.covariance[4]=-g.covariance[4];}
+    scene.center[0]=-scene.center[0];scene.center[1]=-scene.center[1];
+}
 View MakeView(const Scene &scene, const Camera &camera) {
     const float y = camera.yaw, p = std::clamp(camera.pitch, -1.5f, 1.5f);
     const float right[] = {std::cos(y), 0, -std::sin(y)};
@@ -127,11 +132,55 @@ View MakeView(const Scene &scene, const Camera &camera) {
     for(int k=0;k<3;++k) { m[12]-=right[k]*eye[k]; m[13]-=up[k]*eye[k]; m[14]-=back[k]*eye[k]; }
     m[15]=1; v.nearPlane=scene.radius*.001f; v.farPlane=scene.radius*100.f; return v;
 }
-std::vector<Gaussian> Sort(const Scene &scene, const View &view) {
-    std::vector<uint32_t> order(scene.points.size()); std::iota(order.begin(), order.end(), 0);
+std::vector<float> Pick(const Scene &scene,const View &view,float x,float y,int width,int height) {
+    struct Hit { float depth,alpha; size_t index; }; std::vector<Hit> hits;
+    const auto &m=view.matrix;const float f=height*1.20710678f;
+    const float px=(x-.5f)*width,py=(.5f-y)*height;
+    for(size_t i=0;i<scene.points.size();++i) {
+        const auto &g=scene.points[i];float v[3]={m[12],m[13],m[14]};
+        for(int r=0;r<3;++r)for(int k=0;k<3;++k)v[r]+=m[k*4+r]*g.position[k];
+        const float z=-v[2];if(z<=view.nearPlane||z>=view.farPlane||g.color[3]<.004f)continue;
+        const float c[3][3]={{g.covariance[0],g.covariance[1],g.covariance[2]},
+            {g.covariance[1],g.covariance[3],g.covariance[4]}, {g.covariance[2],g.covariance[4],g.covariance[5]}};
+        float j[2][3]{};
+        const float limit=.54f*width/height;
+        for(int k=0;k<3;++k){j[0][k]=f/z*(m[k*4]+std::clamp(v[0]/z,-limit,limit)*m[k*4+2]);
+            j[1][k]=f/z*(m[k*4+1]+std::clamp(v[1]/z,-.54f,.54f)*m[k*4+2]);}
+        float a=.3f,b=0,d=.3f;
+        for(int r=0;r<3;++r)for(int k=0;k<3;++k){a+=j[0][r]*c[r][k]*j[0][k];b+=j[0][r]*c[r][k]*j[1][k];d+=j[1][r]*c[r][k]*j[1][k];}
+        const float dx=px-f*v[0]/z,dy=py-f*v[1]/z,det=a*d-b*b;
+        if(det<=0)continue;
+        const float power=(d*dx*dx-2*b*dx*dy+a*dy*dy)/det;
+        const float alpha=std::min(.99f,g.color[3]*std::exp(-.5f*power));
+        if(power<=9&&alpha>=1.f/255)hits.push_back({z,alpha,i});
+    }
+    std::stable_sort(hits.begin(),hits.end(),[](const Hit &a,const Hit &b){return a.depth<b.depth;});
+    float transmittance=1;size_t chosen=0;bool found=false;
+    for(const auto &h:hits){transmittance*=1-h.alpha;chosen=h.index;if(transmittance<=.5f){found=true;break;}}
+    if(!found)return {};
+    std::vector<float> result(3);for(int k=0;k<3;++k)result[k]=(scene.points[chosen].position[k]-scene.center[k])/scene.radius;
+    return result;
+}
+std::vector<uint32_t> SortIndices(const Scene &scene, const View &view) {
+    struct Item {uint32_t key,index;};
+    std::vector<Item> order(scene.points.size()),temp(scene.points.size());
     const auto &m=view.matrix;
-    const auto depth=[&](uint32_t i) { const auto *p=scene.points[i].position; return m[2]*p[0]+m[6]*p[1]+m[10]*p[2]+m[14]; };
-    std::stable_sort(order.begin(), order.end(), [&](auto a, auto b){return depth(a)<depth(b);});
-    std::vector<Gaussian> result; result.reserve(order.size()); for(auto i:order) result.push_back(scene.points[i]); return result;
+    for(uint32_t i=0;i<order.size();++i) {
+        const auto *p=scene.points[i].position;
+        float depth=m[2]*p[0]+m[6]*p[1]+m[10]*p[2]; // Translation cannot change depth order.
+        if(depth==0)depth=0;uint32_t bits;std::memcpy(&bits,&depth,4);
+        order[i]={bits^((bits&0x80000000u)?0xffffffffu:0x80000000u),i};
+    }
+    for(unsigned shift=0;shift<32;shift+=8) {
+        size_t counts[256]{};for(const auto &v:order)++counts[(v.key>>shift)&255];
+        size_t offset=0;for(auto &c:counts){const auto n=c;c=offset;offset+=n;}
+        for(const auto &v:order)temp[counts[(v.key>>shift)&255]++]=v;
+        order.swap(temp);
+    }
+    std::vector<uint32_t> result;result.reserve(order.size());for(auto i:order)result.push_back(i.index);return result;
+}
+std::vector<Gaussian> Sort(const Scene &scene,const View &view) {
+    const auto indices=SortIndices(scene,view);std::vector<Gaussian> result;result.reserve(indices.size());
+    for(auto i:indices)result.push_back(scene.points[i]);return result;
 }
 }

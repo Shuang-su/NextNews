@@ -17,3 +17,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+## Native SOG decoder dependencies
+
+- libwebp 1.6.0, https://github.com/webmproject/libwebp/tree/v1.6.0. BSD license, AUTHORS and PATENTS retained under `apps/harmonyos/entry/src/main/cpp/third_party/libwebp`. Only the decoder is linked.
+- nlohmann/json 3.12.0, https://github.com/nlohmann/json/tree/v3.12.0. MIT license retained beside the single header.
+- zlib is supplied by the paired HarmonyOS Native SDK.
+
+SOG v2 formulas were checked against PlayCanvas engine's GSplatSogIterator and independent splat-transform output. The Web benchmark uses upstream Viewer 1.31.2 (96f62515b99a28a20579041a656f7b1911c2964c), engine 2.22.1 (73787b3), both MIT. The native viewer does not embed the PlayCanvas JavaScript runtime.

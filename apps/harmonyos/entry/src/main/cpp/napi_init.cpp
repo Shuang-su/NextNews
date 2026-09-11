@@ -29,10 +29,10 @@ napi_value Camera(napi_env env,napi_callback_info info) {
     splat::Renderer::Get().SetCamera({float(v[0]),float(v[1]),float(v[2]),float(v[3]),float(v[4]),float(v[5]),float(v[6])});return Undefined(env);
 }
 napi_value Chunks(napi_env env,napi_callback_info info) {
-    napi_value args[2];size_t argc=2;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+    napi_value args[3];size_t argc=3;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
     bool array=false;uint32_t n=0;
-    if(argc!=2||napi_is_array(env,args[0],&array)!=napi_ok||!array||napi_get_array_length(env,args[0],&n)!=napi_ok||n>8) {
-        napi_throw_type_error(env,nullptr,"Expected 0-8 chunk paths");return Undefined(env);
+    if((argc!=2&&argc!=3)||napi_is_array(env,args[0],&array)!=napi_ok||!array||napi_get_array_length(env,args[0],&n)!=napi_ok||n>1024) {
+        napi_throw_type_error(env,nullptr,"Expected 0-1024 chunk paths");return Undefined(env);
     }
     std::vector<std::string> paths;
     for(uint32_t i=0;i<n;++i) {
@@ -47,7 +47,13 @@ napi_value Chunks(napi_env env,napi_callback_info info) {
     std::array<float,4> bounds{};
     for(int i=0;i<4;++i){napi_value v;napi_get_element(env,args[1],i,&v);double d=0;
         if(napi_get_value_double(env,v,&d)!=napi_ok||!std::isfinite(d)||std::abs(d)>1e6||(i==3&&d<=0)){napi_throw_range_error(env,nullptr,"Invalid scene bounds");return Undefined(env);}bounds[i]=float(d);}
-    splat::Renderer::Get().SetChunks(std::move(paths),bounds);return Undefined(env);
+    std::vector<uint32_t> ranges;
+    if(argc==3){uint32_t size=0;
+        if(napi_is_array(env,args[2],&array)!=napi_ok||!array||napi_get_array_length(env,args[2],&size)!=napi_ok||size>60000||size%3){napi_throw_type_error(env,nullptr,"Invalid LOD ranges");return Undefined(env);}
+        for(uint32_t i=0;i<size;++i){napi_value v;napi_get_element(env,args[2],i,&v);double d;
+            if(napi_get_value_double(env,v,&d)!=napi_ok||!std::isfinite(d)||d<0||d>4000000||d!=std::floor(d)||(i%3==0&&d>=n)){napi_throw_range_error(env,nullptr,"Invalid LOD range");return Undefined(env);}ranges.push_back(uint32_t(d));}
+    }
+    splat::Renderer::Get().SetChunks(std::move(paths),bounds,std::move(ranges));return Undefined(env);
 }
 napi_value Active(napi_env env,napi_callback_info info) {
     napi_value arg;size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);bool active;
@@ -59,10 +65,25 @@ void Number(napi_env env,napi_value object,const char *key,double value){napi_va
 napi_value Status(napi_env env,napi_callback_info) {
     const auto s=splat::Renderer::Get().GetStatus();napi_value result;napi_create_object(env,&result);
     String(env,result,"state",s.state);String(env,result,"message",s.message);String(env,result,"graphics",s.graphics);
-    Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);return result;
+    Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);return result;
+}
+struct PickWork { napi_async_work work; napi_deferred deferred; float x,y;std::vector<float> point;std::string error; };
+napi_value Pick(napi_env env,napi_callback_info info) {
+    napi_value args[2];size_t argc=2;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);double x,y;
+    if(argc!=2||napi_get_value_double(env,args[0],&x)!=napi_ok||napi_get_value_double(env,args[1],&y)!=napi_ok||
+        !std::isfinite(x)||!std::isfinite(y)||x<0||x>1||y<0||y>1){napi_throw_range_error(env,nullptr,"Invalid pick coordinates");return Undefined(env);}
+    auto *job=new PickWork{};job->x=x;job->y=y;napi_value promise,name;napi_create_promise(env,&job->deferred,&promise);
+    napi_create_string_utf8(env,"GaussianPick",NAPI_AUTO_LENGTH,&name);
+    napi_create_async_work(env,nullptr,name,[](napi_env,void *p){auto *j=static_cast<PickWork*>(p);try{j->point=splat::Renderer::Get().Pick(j->x,j->y);}catch(const std::exception &e){j->error=e.what();}},
+        [](napi_env e,napi_status status,void *p){auto *j=static_cast<PickWork*>(p);napi_value result;
+            if(status!=napi_ok||!j->error.empty()){napi_value text;napi_create_string_utf8(e,"Picking failed",NAPI_AUTO_LENGTH,&text);napi_create_error(e,nullptr,text,&result);napi_reject_deferred(e,j->deferred,result);}
+            else{napi_create_array_with_length(e,j->point.size(),&result);for(size_t i=0;i<j->point.size();++i){napi_value v;napi_create_double(e,j->point[i],&v);napi_set_element(e,result,i,v);}napi_resolve_deferred(e,j->deferred,result);}
+            napi_delete_async_work(e,j->work);delete j;},job,&job->work);
+    napi_queue_async_work(env,job->work);return promise;
 }
 napi_value Init(napi_env env,napi_value exports) {
     napi_property_descriptor methods[]={
+        {"pick",nullptr,Pick,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"load",nullptr,Load,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"chunks",nullptr,Chunks,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"camera",nullptr,Camera,nullptr,nullptr,nullptr,napi_default,nullptr},

@@ -1,0 +1,1 @@
+PASS Rz180 covariance, translucent picking, empty-space picking, exact stable sort order; 260k radixMs=10.3152 referenceMs=105.822

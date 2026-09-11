@@ -2,8 +2,8 @@
 # Foreground development server, reachable from the connected device over HDC only.
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
-stream_dir="${1:-$NEXTNEWS_ROOT/.local/stream-huafa}"
-stream_port="${NEXTNEWS_STREAM_PORT:-8767}"
+stream_dir="${1:-$NEXTNEWS_ROOT/.local/sog-huafa}"
+stream_port="${2:-${NEXTNEWS_STREAM_PORT:-8768}}"
 [[ "$stream_port" =~ ^[0-9]+$ ]] || { echo 'Invalid port'; exit 1; }
 [[ -f "$stream_dir/scene.json" ]] || { echo 'scene.json not found'; exit 1; }
 if lsof -iTCP:"$stream_port" -sTCP:LISTEN -t >/dev/null 2>&1; then

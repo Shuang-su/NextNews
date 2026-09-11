@@ -16,3 +16,6 @@
 **/__pycache__/
 artifacts/
 docs/harmonyos/emulator-agreements.txt
+
+.playwright-cli/
+output/playwright/

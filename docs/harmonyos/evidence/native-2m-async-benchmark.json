@@ -1,0 +1,259 @@
+[
+  {
+    "bounds": [
+      0,
+      0,
+      1256,
+      2760
+    ],
+    "children": [
+      {
+        "type": "Text",
+        "text": "流式场景",
+        "bounds": [
+          56,
+          222,
+          919,
+          316
+        ],
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "收起工具",
+        "bounds": [
+          919,
+          199,
+          1200,
+          339
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Text",
+        "text": "单击聚焦 · 双击环绕 / 飞行 · 拖动旋转",
+        "bounds": [
+          56,
+          374,
+          1200,
+          427
+        ],
+        "children": []
+      },
+      {
+        "id": "viewer-surface",
+        "type": "Button",
+        "bounds": [
+          56,
+          462,
+          1200,
+          1133
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "画质：200 万",
+        "bounds": [
+          274,
+          1168,
+          639,
+          1308
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "模式：环绕",
+        "bounds": [
+          660,
+          1168,
+          983,
+          1308
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "拖动：旋转",
+        "bounds": [
+          144,
+          1343,
+          536,
+          1483
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "−",
+        "bounds": [
+          557,
+          1343,
+          702,
+          1483
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "+",
+        "bounds": [
+          723,
+          1343,
+          868,
+          1483
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "复位",
+        "bounds": [
+          889,
+          1343,
+          1113,
+          1483
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "公开样例",
+        "bounds": [
+          142,
+          1518,
+          478,
+          1658
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "Tripo",
+        "bounds": [
+          506,
+          1518,
+          750,
+          1658
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "转换样例",
+        "bounds": [
+          778,
+          1518,
+          1114,
+          1658
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "打开本地 PLY / SOG",
+        "bounds": [
+          56,
+          1693,
+          1200,
+          1833
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "流式",
+        "bounds": [
+          221,
+          1868,
+          418,
+          2008
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "操作说明",
+        "bounds": [
+          446,
+          1868,
+          727,
+          2008
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "性能信息",
+        "bounds": [
+          755,
+          1868,
+          1036,
+          2008
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "测量 10 秒",
+        "bounds": [
+          473,
+          2043,
+          783,
+          2183
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Text",
+        "text": "2,000,000 个 · 1144×671 · 391 帧 / 10.00 秒 = 39.1 fps",
+        "bounds": [
+          152,
+          2218,
+          1104,
+          2263
+        ],
+        "children": []
+      },
+      {
+        "type": "Text",
+        "text": "2,000,000 个高斯 · SH0\n加载 4152 ms · 排序 30.9 ms\n单帧 23.6 ms · 渲染耗时折算 42.4 fps\n模型缓冲估算 552.9 MiB\n相机 2.995,0.200,1.000,0.000,0.000,0.000 · orbit",
+        "bounds": [
+          56,
+          2298,
+          1200,
+          2523
+        ],
+        "children": []
+      },
+      {
+        "type": "Text",
+        "text": "OpenGL ES 3.0 (4.1 Metal - 91.7) / Mali-G77",
+        "bounds": [
+          56,
+          2558,
+          1200,
+          2599
+        ],
+        "children": []
+      }
+    ]
+  }
+]

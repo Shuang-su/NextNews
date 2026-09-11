@@ -6,7 +6,30 @@ vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleK
 const validate=box.exports.validateManifest;
 const base={version:1,bounds:[0,0,0,1],chunks:[{file:'chunk-0000.ply',count:100,bytes:6000,bounds:[0,0,0,1]}]};
 validate(base);
-for(const mutate of [m=>m.bounds[0]=NaN,m=>m.bounds[3]=0,m=>m.chunks[0].file='../secret',m=>m.chunks[0].count=32769,m=>m.chunks[0].bytes=2097153,m=>m.chunks.push(m.chunks[0]),m=>m.chunks=null]){
+for(const mutate of [m=>m.bounds[0]=NaN,m=>m.bounds[3]=0,m=>m.chunks[0].file='../secret',m=>m.chunks[0].count=4000001,m=>m.chunks[0].bytes=33554433,m=>m.chunks.push(m.chunks[0]),m=>m.chunks=null]){
  const m=JSON.parse(JSON.stringify(base));mutate(m);assert.throws(()=>validate(m));
 }
 console.log('PASS stream manifest: bounds, traversal, chunk count, byte budget, duplicate paths, invalid arrays');
+
+const m={version:2,bounds:[0,0,0,10],levels:3,chunks:[
+ {file:'chunk-0000.sog',count:1000,bytes:10000,bounds:[0,0,0,10]},
+ {file:'chunk-0001.sog',count:2000,bytes:20000,bounds:[0,0,0,10]}],leaves:[
+ {bounds:[0,0,0,1],lods:[[1,0,1000],[0,0,500],[0,500,100]]},
+ {bounds:[5,0,0,1],lods:[[1,1000,1000],[0,600,400],[-1,0,0]]}]};
+validate(m);
+for(const budget of [100,500,1000,2000]) {
+ const levels=box.exports.selectLods(m,[0,0,1,0,0,0],false,budget);
+ assert.equal(levels.length,m.leaves.length);let count=0;
+ for(let i=0;i<levels.length;i++){const r=m.leaves[i].lods[levels[i]];count+=r[2];}
+ assert.ok(count<=budget);assert.ok(count>=100);
+}
+for(const change of [m=>m.leaves[0].lods[0][1]=2001,m=>m.leaves[0].lods[0][0]=9,m=>m.leaves[0].lods[0][2]=-1]) {
+ const bad=JSON.parse(JSON.stringify(m));change(bad);assert.throws(()=>validate(bad));
+}
+console.log('PASS LOD: bounded selection, sparse coarse levels, range and file validation');
+if(process.argv[2]) {
+ const full=JSON.parse(fs.readFileSync(process.argv[2]));validate(full);
+ const chosen=box.exports.selectLods(full,[0,0,1,0,0,0],false,2000000);
+ const count=chosen.reduce((n,l,i)=>n+full.leaves[i].lods[l][2],0);assert.ok(count<=2000000);
+ console.log('PASS source hierarchy',full.leaves.length,count);
+}

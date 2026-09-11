@@ -3,6 +3,9 @@ export interface RenderStatus {
   message: string;
   graphics: string;
   count: number;
+  frames: number;
+  width: number;
+  height: number;
   bytes: number;
   loadMs: number;
   sortMs: number;
@@ -14,4 +17,6 @@ export const camera: (yaw: number, pitch: number, zoom: number, panX: number, pa
 export const setActive: (active: boolean) => void;
 export const status: () => RenderStatus;
 
-export const chunks: (paths: string[], bounds: number[]) => void;
+export const chunks: (paths: string[], bounds: number[], ranges?: number[]) => void;
+
+export const pick: (x: number, y: number) => Promise<number[]>;

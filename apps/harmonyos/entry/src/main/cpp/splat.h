@@ -6,7 +6,7 @@
 #include <vector>
 
 namespace splat {
-constexpr size_t MaxGaussians = 300000;
+constexpr size_t MaxGaussians = 4000000;
 constexpr size_t MaxFileBytes = 128 * 1024 * 1024;
 struct Gaussian {
     float position[3];
@@ -18,6 +18,9 @@ struct Scene {
     std::array<float, 3> center{};
     float radius = 1;
 };
+Scene ReadSog(const std::string &path, const std::atomic<bool> *cancel = nullptr);
+Scene ReadModel(const std::string &path, const std::atomic<bool> *cancel = nullptr);
+void ApplyViewerTransform(Scene &scene);
 Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel = nullptr);
 struct Camera {
     float yaw = 0, pitch = 0, zoom = 1, panX = 0, panY = 0, panZ = 0, fly = 0;
@@ -27,5 +30,7 @@ struct View {
     float nearPlane, farPlane;
 };
 View MakeView(const Scene &scene, const Camera &camera);
+std::vector<float> Pick(const Scene &scene, const View &view, float x, float y, int width, int height);
+std::vector<uint32_t> SortIndices(const Scene &scene, const View &view);
 std::vector<Gaussian> Sort(const Scene &scene, const View &view);
 }

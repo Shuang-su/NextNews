@@ -26,7 +26,7 @@ fixtures={'analytic':('analytic',model(v)), 'truncated':('invalid',model(v)[:-1]
           'nan':('invalid',model([float('nan')]+v[1:])),
           'inf':('invalid',model(v[:7]+[float('inf')]+v[8:])),
           'scale_overflow':('invalid',model(v[:7]+[1000]+v[8:])),
-          'too_many':('invalid',model(v,count=300001)),
+          'too_many':('invalid',model(v,count=4000001)),
           'negative_count':('invalid',model(v,count=-1)),
           'high_order_sh':('invalid',model(v+[0],FIELDS+['f_rest_0'])),
           'duplicate':('invalid',model(v+[0],FIELDS+['x'])),

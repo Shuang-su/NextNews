@@ -88,3 +88,28 @@ Outstanding larger request remains: single-click scene picking/focus, double-cli
 orbit/flight toggle, native SOG loading and complete hierarchical scene coverage,
 and controlled same-scene Web Viewer performance comparison. The default-angle
 change does not complete those mechanisms or establish performance parity.
+
+## Native Viewer parity, SOG and orientation correction
+
+The user's screenshot showed the biker still upside down. Upstream `src/index.ts` uses `entity.setLocalEulerAngles(0, 0, 180)`. The earlier c17b23d camera yaw π implementation passed its pose assertion but did not implement this import transform. Corrected to model Rz(180°): negate position x/y and covariance xz/yz, transform scene/LOD bounds, restore camera yaw zero. `stream/rz180-public.png` shows the biker upright. Original assets are unchanged.
+
+Single-click picking accumulates projected Gaussian opacity on a background worker and preserves the camera eye when changing the orbit pivot or aiming in flight. Exclusive tap gestures map double-click to orbit/flight. Touch pan/pinch and mouse/key flight remain. Device tap/double-tap and changed focus pose are recorded in `stream/focus-double-verified.{json,png}`.
+
+Added native SOG v2 decoding with libwebp 1.6.0, nlohmann/json 3.12.0 and SDK zlib. Compared 524,598 points with independent splat-transform SH0 PLY: maximum position error 0.0000305176, color 0.000001, relative covariance 0.00000293553. ASan/UBSan suite rejects truncation, CRC corruption, bad counts/codebooks/scales, inconsistent textures, JSON nesting and traversal (`final-sog-tests.log`).
+
+The full Huafa source has 148,571,989 finest-level points and 297,170,328 across 9 foreground LOD levels. The old 524,474-point file was a partial LOD8 diagnostic. The new adapter bundles 532 foreground resources plus an environment resource, retaining original leaf ranges. Missing ranges are valid sparse source levels, not a reason to copy arbitrary finer files into coarse coverage. The selector retains the complete original coarse layer and replaces available finer ranges within the budget.
+
+Added progressive/all-package preload modes, range validation, decoded/selected-range caches, and 1/2/4-million quality budgets. The reference Viewer uses 1/2 million on mobile and 2/4 million on desktop. This is a budget correspondence, not identical LOD selection. `.local/sog-huafa` is served over loopback/HDC on 8768. Real loading passed 1.87 million resident points during progressive refinement. Repeated decompression was identified and replaced by selected-range caching. Preload bypasses unnecessary LOD selection; unchanged camera/budget reuses it.
+
+Performance: O2 compilation, stable radix depth sort, RGBA32F Gaussian data texture, uint32 instanced indices and order reuse for translation/zoom. Host 260k sort matched reference ordering exactly: radix 1.87 ms versus comparator 67.98 ms (single host sample). Camera pacing is 16 ms. A fixed 10-second trajectory counts actual frames. At identical 80k SH0 / 1144×671 / 45° FOV: native emulator 600 frames in 10.01 s = 59.9 fps, upstream WebGL 60.1 fps. Both are refresh-limited; no claim of universal parity or superiority.
+
+Web build uses Viewer 1.31.2 and engine 2.22.1, Chrome ANGLE Metal/M3 Ultra; native is NextNews_API26 virtual Mali GLES3. Playwright npm's global-cache permission conflict was resolved using a project-local cache. First-use emulator IME setup interrupted a UI script; setup proceeded under existing authorization. Source, build scripts and worklog are versioned; signing files, generated model bundles and artifacts remain local.
+
+### 最后回归：模型方向与视口
+
+- 用户指出人物仍然倒置后，对照 Viewer 的实体 Rz180，纠正了旧版仅修改 yaw 的错误。位置 x/y 与协方差 xz/yz 同步变换，原始模型文件保持不变。公开人物正立，真实鼠标单击改变焦点，反复切换三个模型通过。
+- 异步排序后的 200 万高斯固定轨迹实测 391 帧 / 10.00 秒，即 39.1 fps；之前同类轨迹为 17.9 fps。两次 LOD 选集不能视为完全相同，因此不声明精确倍数或全面超过 Web。400 万高斯已观察到实际选入；未完成其持续帧率测试。
+- 后台返回保留 200 万场景。模拟器旋转命令返回成功但图像仍为竖屏，不能作为横屏验收。收起面板曾自动按高度改变相机距离，导致大场景视点异常；移除这一行为，视口改变保持世界相机位置。
+- 最终源码、签名构建与模拟器安装记录为 final-orientation-build / signed / run.log。签名、原始素材和体积较大的测试产物继续留在本机忽略目录中。
+
+- 最后大场景截图仍有模糊环境和默认平视下薄片状前景。视口修复只消除隐式移动相机，尚未证明解决完整场景画质；该项明确保持未验收。流式机制和帧率记录不能替代与 Web 的同视角图像对照。

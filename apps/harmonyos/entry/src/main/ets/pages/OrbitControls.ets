@@ -1,24 +1,19 @@
 // Original controller implementation; interaction reference recorded in docs/harmonyos/interaction-parity.md.
 export interface OrbitTouch { id: number; x: number; y: number; }
 export class OrbitControls {
-  current: number[] = [Math.PI, 0, 1, 0, 0, 0];
-  target: number[] = [Math.PI, 0, 1, 0, 0, 0];
+  current: number[] = [0, 0, 1, 0, 0, 0];
+  target: number[] = [0, 0, 1, 0, 0, 0];
   width: number = 1;
   height: number = 1;
   fly: boolean = false;
   keys: string[] = [];
   private previous: OrbitTouch[] = [];
   reset(): void {
-    this.current = [Math.PI, 0, 1, 0, 0, 0]; this.target = [Math.PI, 0, 1, 0, 0, 0]; this.fly = false; this.keys = []; this.cancel();
+    this.current = [0, 0, 1, 0, 0, 0]; this.target = [0, 0, 1, 0, 0, 0]; this.fly = false; this.keys = []; this.cancel();
   }
   cancel(): void { this.previous = []; this.keys = []; }
   resize(width: number, height: number): void {
-    if (!this.fly && this.height > 1 && height > 1) {
-      // Preserve apparent model size when panels change the vertical-FOV viewport.
-      const ratio = height / this.height;
-      this.current[2] = Math.max(0.05, Math.min(20, this.current[2] * ratio));
-      this.target[2] = Math.max(0.05, Math.min(20, this.target[2] * ratio));
-    }
+    // Viewport layout changes must preserve the world-space camera pose.
     this.width = Math.max(1, width); this.height = Math.max(1, height); this.cancel();
   }
   setFly(fly: boolean): void {
@@ -30,6 +25,19 @@ export class OrbitControls {
     this.current[4] += Math.sin(p) * d;
     this.current[5] += Math.cos(y) * Math.cos(p) * d;
     this.target = this.current.slice(); this.fly = fly; this.cancel();
+  }
+  focus(point: number[]): void {
+    if (point.length !== 3 || !point.every((v: number) => Number.isFinite(v))) { return; }
+    const y = this.current[0]; const p = this.current[1]; const d = this.fly ? 0 : this.current[2] * 3;
+    const eye = [this.current[3] + Math.sin(y) * Math.cos(p) * d,
+      this.current[4] + Math.sin(p) * d, this.current[5] + Math.cos(y) * Math.cos(p) * d];
+    const dx = eye[0] - point[0]; const dy = eye[1] - point[1]; const dz = eye[2] - point[2];
+    const distance = Math.hypot(dx, dy, dz); if (distance < 0.15 || distance > 60) { return; }
+    const yaw = Math.atan2(dx, dz);
+    this.target = [y + Math.atan2(Math.sin(yaw - y), Math.cos(yaw - y)),
+      Math.max(-1.5, Math.min(1.5, Math.asin(dy / distance))), distance / 3,
+      ...(this.fly ? eye : point)];
+    this.current = this.target.slice(); this.cancel();
   }
   move(right: number, up: number, forward: number): void {
     const y = this.current[0]; const p = this.current[1];

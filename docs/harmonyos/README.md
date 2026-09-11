@@ -3,14 +3,14 @@
 ## Architecture
 
 The application uses ArkTS/ArkUI (Stage model), a surface XComponent, a C++17
-native library and OpenGL ES 3.0. Models are parsed and depth-sorted on a worker
-thread that owns its EGL context. Rendering uses instanced Gaussian ellipses,
+native library and OpenGL ES 3.0. Models are parsed off the ArkUI thread. A render worker owns its EGL context;
+a separate worker sorts camera updates. Rendering uses instanced Gaussian ellipses,
 projected anisotropic covariance and back-to-front premultiplied alpha blending.
 The first version uses SH0 color, a 45° vertical field of view and orbit controls.
 This is a native renderer; there is no ArkWeb dependency.
 
 `libsplat.so` exports `load(path)`, `camera(yaw,pitch,zoom,targetX,targetY,targetZ,fly)`,
-`setActive(boolean)`, and `status()`. Model parsing is asynchronous relative to
+`pick(x,y)`, `chunks(paths,bounds,ranges)`, `setActive(boolean)`, and `status()`. Model parsing is asynchronous relative to
 ArkUI. The latest pending model supersedes prior loading; surface destruction
 cancels work, joins the worker and releases the EGL resources. CPU scene data
 is retained so a recreated surface can render it again.
@@ -54,11 +54,13 @@ certificate material or account-specific signing configuration.
 
 ## Model preparation
 
+The app also decodes bundled SOG v2 (ZIP + lossless WebP) natively, with SH0 colors and full Gaussian covariance. No Mac PLY conversion is required for these SOG files.
+
 The app accepts vertex-only binary little-endian 3DGS PLY with float32 fields:
 `x/y/z`, `f_dc_0..2`, `opacity` (logit), `scale_0..2` (log scale), and
 `rot_0..3` (wxyz quaternion). Normal vectors and other scalar properties may be
 present. High-order SH, ordinary RGB point clouds, list properties, malformed
-payloads and non-finite values are rejected. Limits: 300,000 Gaussians and
+payloads and non-finite values are rejected. Limits: 4,000,000 Gaussians and
 128 MiB. This is an interchange subset, not a general-purpose PLY importer.
 
 Use the already-installed local splat-transform to decompress a copy:
@@ -90,7 +92,7 @@ is outside this task. Public example attribution is in THIRD_PARTY_NOTICES.md.
 ## Controls and diagnostics
 
 Drag to orbit; use two fingers to pan and pinch simultaneously, or switch the single-finger drag mode for panning. Use +/− to zoom; reset
-returns to the bounding-box center with a default 180° yaw around the vertical axis. Choose a built-in sample or use the system
+returns to the bounding-box center. Models receive the Viewer import transform Rz(180°); this is not a camera yaw rotation. Choose a built-in sample or use the system
 file picker to copy a prepared PLY into the app sandbox.
 
 The UI reports loading and sorting times, frame submission/swap time, buffer
