@@ -11,6 +11,7 @@ Host: Apple Silicon, macOS 27.0 (26A5388g), 512 GB RAM. Installation date: 2026-
 | Hvigor | 6.26.4 | `tools/hvigor` |
 | OHOS Clang | 15.0.4, commit 329916b990b43824d4b7e67de911fee7a966b1c8 | `sdk/default/openharmony/native/llvm/bin/clang` |
 | CMake | 3.28.2 | `sdk/default/openharmony/native/build-tools/cmake/bin/cmake` |
+| Phone system image | HarmonyOS 7.0.0.106 / API 26 | `/Users/szmg/Library/Huawei/Sdk/system-image/HarmonyOS-7.0.0/phone_all_arm` |
 | HDC | 3.2.0f | `sdk/default/openharmony/toolchains/hdc` |
 | DevEco CLI | 1.3.0-stable | project `.tools/deveco/node_modules/.bin/devecocli` |
 | Command Line Tools | 26.0.0.821 | project `.tools/command-line-tools` |
