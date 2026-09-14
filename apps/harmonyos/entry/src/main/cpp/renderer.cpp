@@ -1,3 +1,5 @@
+#include <qos/qos.h>
+#include <hilog/log.h>
 #include "renderer.h"
 #include <algorithm>
 #include <chrono>
@@ -105,10 +107,12 @@ void Renderer::Start(void *window,int width,int height) {
 void Renderer::Stop() {
     { std::lock_guard<std::mutex> lock(mutex_); stop_=true; cancel_=true; }
     changed_.notify_all();sortChanged_.notify_all();loadChanged_.notify_all(); if(worker_.joinable()) worker_.join();if(sorter_.joinable())sorter_.join();if(loader_.joinable())loader_.join();
-    preparedScene_.reset();preparedPixels_.clear();preparedIndices_.clear();
+    preparedScene_.reset();preparedPage_.reset();preparedPixels_.clear();preparedIndices_.clear();
     sortPending_=sortReady_=false;sortScene_.reset();sortedScene_.reset();sortedIndices_.clear();
 }
 void Renderer::SortLoop() {
+    const int qos=OH_QoS_SetThreadQoS(QOS_USER_INITIATED);
+    OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","Thread QoS SortLoop() result=%{public}d",qos);
     for(;;) {
         std::shared_ptr<Scene> scene;View view;
         {std::unique_lock<std::mutex> lock(mutex_);sortChanged_.wait(lock,[&]{return stop_||sortPending_;});
@@ -124,15 +128,16 @@ void Renderer::SortLoop() {
 }
 void Renderer::Resize(int width,int height) { {std::lock_guard<std::mutex> lock(mutex_);width_=std::max(1,width);height_=std::max(1,height);dirty_=true;}changed_.notify_one(); }
 void Renderer::Load(std::string path) {
-    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();chunkPaths_.clear();chunksDirty_=false;requestedPath_=path;pendingPath_=std::move(path);cancel_=true;status_.state="loading";status_.message="Loading model";}
+    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();preparedPage_.reset();chunksPaged_=false;chunkPaths_.clear();chunksDirty_=false;requestedPath_=path;pendingPath_=std::move(path);cancel_=true;status_.state="loading";status_.message="Loading model";}
     loadChanged_.notify_one();
 }
-void Renderer::SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges) {
-    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();chunkPaths_=std::move(paths);chunkBounds_=bounds;chunkRanges_=std::move(ranges);
+void Renderer::SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges,bool paged,uint64_t revision) {
+    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();preparedPage_.reset();chunksPaged_=paged;requestRevision_=revision;requestAt_=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count();status_.requestRevision=revision;chunkPaths_=std::move(paths);chunkBounds_=bounds;chunkRanges_=std::move(ranges);
      pendingPath_.clear();requestedPath_.clear();chunksDirty_=!chunkPaths_.empty();cancel_=true;dirty_=true;
      status_.state=chunkPaths_.empty()?"ready":"loading";status_.message=chunkPaths_.empty()?"Stream stopped":"Streaming chunks";}
     loadChanged_.notify_one();changed_.notify_one();
 }
+void Renderer::DropCaches(){std::lock_guard<std::mutex> lock(mutex_);dropCaches_=true;}
 void Renderer::SetCamera(Camera camera) {
     {std::lock_guard<std::mutex> lock(mutex_);camera_=camera;dirty_=true;}changed_.notify_one();
 }
@@ -170,13 +175,15 @@ void Renderer::InitGL(void *window) {
     viewLocation_=glGetUniformLocation(program_,"view");viewportLocation_=glGetUniformLocation(program_,"viewport");nearLocation_=glGetUniformLocation(program_,"nearPlane");farLocation_=glGetUniformLocation(program_,"farPlane");dataLocation_=glGetUniformLocation(program_,"splatData");optimizedLocation_=glGetUniformLocation(program_,"optimized");
     glGenVertexArrays(1,&vao_);glBindVertexArray(vao_);glGenBuffers(1,&buffer_);glBindBuffer(GL_ARRAY_BUFFER,buffer_);
     glEnableVertexAttribArray(0);glVertexAttribIPointer(0,1,GL_UNSIGNED_INT,sizeof(uint32_t),nullptr);glVertexAttribDivisor(0,1);
-    GLint maxTexture=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxTexture);if(maxTexture<4096)throw std::runtime_error("4096-wide data textures unavailable");
+    GLint maxTexture=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxTexture);atlasRows_=std::min(maxTexture,8192);atlas_.Reset(atlasRows_*4);
+    if(maxTexture<4096)throw std::runtime_error("4096-wide data textures unavailable");
     glGenTextures(1,&dataTexture_);glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,dataTexture_);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
     glEnable(GL_BLEND);glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA);glDisable(GL_DEPTH_TEST);glDepthMask(GL_FALSE);glDisable(GL_CULL_FACE);
 }
 void Renderer::DestroyGL() {
+    if(atlasTexture_)glDeleteTextures(1,&atlasTexture_);atlasTexture_=0;atlasDrawable_=false;atlas_.Reset(0);activePages_.clear();stagingPage_.reset();
     if(stagingTexture_)glDeleteTextures(1,&stagingTexture_);stagingTexture_=0;
     if(spareTexture_)glDeleteTextures(1,&spareTexture_);spareTexture_=0;spareCapacity_=dataCapacity_=0;
     stagingScene_.reset();stagingPixels_.clear();stagingIndices_.clear();preuploaded_=false;
@@ -241,7 +248,7 @@ void Renderer::AdvanceUpload() {
     if(stagingRow_==rows){
         std::lock_guard<std::mutex> lock(mutex_);
         if(stagingGeneration_==loadGeneration_){
-            retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);initialIndices_=std::move(stagingIndices_);
+            activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);initialIndices_=std::move(stagingIndices_);
             spareTexture_=dataTexture_;spareCapacity_=dataCapacity_;
             spareRows_=std::move(dataRows_);dataRows_=std::move(stagingRows_);stagingPreviousRows_.clear();
             status_.uploadedRows=stagingUploadedRows_;status_.reusedRows=stagingReusedRows_;
@@ -250,7 +257,7 @@ void Renderer::AdvanceUpload() {
             sortScene_.reset();sortedScene_.reset();sortedIndices_.clear();
             if(stagingResetCamera_)camera_=Camera{};
             sortScene_=scene_;sortView_=MakeView(*scene_,camera_);sortPending_=true;sortChanged_.notify_one();
-            status_.count=scene_->points.size();status_.state="ready";status_.message="Resident set ready";
+            status_.count=scene_->Count();status_.state="ready";status_.message="Resident set ready";
         }
     }
     std::lock_guard<std::mutex> lock(mutex_);
@@ -270,7 +277,7 @@ void Renderer::Draw(const View &view,int width,int height) {
     const std::array<float,3> direction={view.matrix[2],view.matrix[6],view.matrix[10]};
     bool resort=uploadDirty_;std::vector<uint32_t> sorted;double sortMs=0;
     if(uploadDirty_) {
-        if(initialIndices_.size()==scene_->points.size())sorted=std::move(initialIndices_);
+        if(initialIndices_.size()==scene_->Count())sorted=std::move(initialIndices_);
         else sorted=SortIndices(*scene_,view);
         sortMs=Ms(start);sortDirection_=direction;
     }
@@ -291,17 +298,18 @@ void Renderer::Draw(const View &view,int width,int height) {
     glUniformMatrix4fv(viewLocation_,1,GL_FALSE,view.matrix.data());
     glUniform2f(viewportLocation_,float(width),float(height));
     glUniform1f(glGetUniformLocation(program_,"tanHalfFov"),view.tanHalfFov);glUniform1f(nearLocation_,view.nearPlane);glUniform1f(farLocation_,view.farPlane);
-    glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,dataTexture_);glUniform1i(dataLocation_,0);
-    if(uploadDirty_ && !preuploaded_) {
-        const size_t height=std::max(size_t(1),(scene_->points.size()*4+4095)/4096);
+    glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,scene_->paged?atlasTexture_:dataTexture_);glUniform1i(dataLocation_,0);
+    if(uploadDirty_ && !preuploaded_ && !scene_->paged) {
+        const size_t height=std::max(size_t(1),(scene_->Count()*4+4095)/4096);
         if(uploadPixels_.empty()) {
             uploadPixels_.resize(height*4096*4,0);
-            for(size_t i=0;i<scene_->points.size();++i) {const auto &g=scene_->points[i];float *p=uploadPixels_.data()+i*16;
+            for(size_t i=0;i<scene_->Count();++i) {const auto &g=scene_->points[i];float *p=uploadPixels_.data()+i*16;
                 std::copy_n(g.position,3,p);std::copy_n(g.color,4,p+3);std::copy_n(g.covariance,6,p+7);}
         }
         glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA32F,4096,height,0,GL_RGBA,GL_FLOAT,uploadPixels_.data());dataCapacity_=height;
         std::vector<float>().swap(uploadPixels_);
     }
+    if(resort && scene_->paged)for(auto &index:sorted)index=scene_->addresses.at(index);
     glBindVertexArray(vao_);glBindBuffer(GL_ARRAY_BUFFER,buffer_);if(resort){glBufferData(GL_ARRAY_BUFFER,sorted.size()*sizeof(uint32_t),sorted.data(),GL_DYNAMIC_DRAW);uploadDirty_=false;preuploaded_=false;}
     bool timed=false;
     if(timerResult_) {
@@ -314,28 +322,37 @@ void Renderer::Draw(const View &view,int width,int height) {
         }
         if(!timerPending_[timerSlot_]){timerInvalid_[timerSlot_]=false;glBeginQuery(0x88BF,timerQueries_[timerSlot_]);timed=true;}
     }
-    glDrawArraysInstanced(GL_TRIANGLE_STRIP,0,4,GLsizei(scene_->points.size()));
+    glDrawArraysInstanced(GL_TRIANGLE_STRIP,0,4,GLsizei(scene_->paged && !atlasDrawable_ ? 0 : scene_->Count()));
     if(timed){glEndQuery(0x88BF);timerPending_[timerSlot_]=true;timerSlot_=(timerSlot_+1)%4;}
     const GLenum error=glGetError();if(error!=GL_NO_ERROR)throw std::runtime_error("OpenGL error: "+std::to_string(error));
     if(!eglSwapBuffers(display_,surface_))throw std::runtime_error("EGL swap failed");
-    std::lock_guard<std::mutex> lock(mutex_);status_.frames++;status_.sortMs=sortMs;status_.frameMs=Ms(drawStart);status_.fps=1000.0/std::max(Ms(start),.001);status_.bytes=(preparedPixels_.capacity()+stagingPixels_.capacity())*sizeof(float)+cacheBytes_.load()+scene_->points.capacity()*sizeof(Gaussian)+scene_->points.size()*68+sorted.capacity()*sizeof(uint32_t);
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(pendingDisplayRevision_ && scene_->paged && atlasDrawable_){
+        status_.displayRevision=pendingDisplayRevision_;status_.refineMs=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count()-pendingDisplayAt_;
+        OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","PageDisplay revision=%{public}llu count=%{public}zu prepareMs=%{public}.2f sortMs=%{public}.2f refineMs=%{public}.2f uploadedBytes=%{public}.0f pageHits=%{public}.0f frameMs=%{public}.2f",(unsigned long long)pendingDisplayRevision_,scene_->Count(),pendingPrepareMs_,pendingSortMs_,status_.refineMs,status_.uploadedBytes,status_.pageHits,Ms(drawStart));
+        pendingDisplayRevision_=0;
+    }
+    status_.frames++;status_.sortMs=sortMs;status_.frameMs=Ms(drawStart);status_.fps=1000.0/std::max(Ms(start),.001);status_.bytes=(preparedPixels_.capacity()+stagingPixels_.capacity())*sizeof(float)+cacheBytes_.load()+scene_->points.capacity()*sizeof(Gaussian)+scene_->Count()*68+sorted.capacity()*sizeof(uint32_t);
 }
 void Renderer::LoadLoop() {
+    const int qos=OH_QoS_SetThreadQoS(QOS_USER_INITIATED);
+    OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","Thread QoS LoadLoop() result=%{public}d",qos);
     for (;;) {
         std::vector<std::vector<float>> retiredPixels;std::vector<std::shared_ptr<Scene>> retiredScenes;
-        std::string path;std::vector<std::string> chunks;std::array<float,4> bounds{};std::vector<uint32_t> ranges;uint64_t generation;
+        std::string path;std::vector<std::string> chunks;std::array<float,4> bounds{};std::vector<uint32_t> ranges;uint64_t generation,revision=0;bool paged=false,dropCaches=false;double requestAt=0;
         {
             std::unique_lock<std::mutex> lock(mutex_);
             loadChanged_.wait(lock,[&]{return stop_||!retiredPixels_.empty()||!retiredScenes_.empty()||(active_&&(!pendingPath_.empty()||chunksDirty_));});
             retiredPixels.swap(retiredPixels_);retiredScenes.swap(retiredScenes_);
             if(stop_)return;
             if(!active_)continue;
-            generation=loadGeneration_;path=std::move(pendingPath_);pendingPath_.clear();
+            generation=loadGeneration_;paged=chunksPaged_;revision=requestRevision_;requestAt=requestAt_;path=std::move(pendingPath_);pendingPath_.clear();
             if(chunksDirty_){chunks=chunkPaths_;bounds=chunkBounds_;ranges=chunkRanges_;chunksDirty_=false;}
-            cancel_=false;
+            if(!path.empty()||!chunks.empty()){dropCaches=dropCaches_;dropCaches_=false;}cancel_=false;
         }
         retiredPixels.clear();retiredScenes.clear();
         if(path.empty()&&chunks.empty())continue;
+        if(dropCaches){decoded_.Clear();selected_.Clear();pageCache_.Clear();sourceIds_.clear();}
         // Prepare CPU uploads and the first sorted index buffer without occupying EGL.
         auto publish=[&](std::shared_ptr<Scene> loaded,bool reset,double loadMs,const std::vector<SourceSpan> &spans) {
             Camera camera;{std::lock_guard<std::mutex> lock(mutex_);camera=reset?Camera{}:camera_;}
@@ -366,7 +383,11 @@ void Renderer::LoadLoop() {
                     std::lock_guard<std::mutex> lock(mutex_);if(!cancel_){status_.state="error";status_.message=e.what();}
                 }
             }
-            if(!chunks.empty()) {
+            if(!chunks.empty() && paged){
+                try{PreparePages(chunks,bounds,ranges,generation,revision,requestAt);}
+                catch(const std::exception &e){std::lock_guard<std::mutex> lock(mutex_);if(!cancel_ && generation==loadGeneration_){status_.state="error";status_.message=e.what();}}
+            }
+            if(!chunks.empty() && !paged) {
                 const auto start=Clock::now();
                 try {
                     size_t decodedFiles=0,subsetHits=0;
@@ -405,17 +426,19 @@ void Renderer::LoadLoop() {
                 }
             }
 
-        cacheBytes_=decoded_.Bytes()+selected_.Bytes();changed_.notify_one();
+        cacheBytes_=decoded_.Bytes()+selected_.Bytes()+pageCache_.Bytes();changed_.notify_one();
     }
 }
 void Renderer::Loop(void *window) {
+    const int qos=OH_QoS_SetThreadQoS(QOS_USER_INTERACTIVE);
+    OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","Thread QoS Loop(void *window) result=%{public}d",qos);
     try {
         InitGL(window);
         for(;;) {
             Camera camera;int width,height;
             {
                 std::unique_lock<std::mutex> lock(mutex_);
-                changed_.wait(lock,[&]{return stop_||(active_&&(dirty_||preparedScene_));});
+                changed_.wait(lock,[&]{return stop_||(active_&&(dirty_||preparedScene_||preparedPage_));});
                 if(stop_)break;
                 if(preparedScene_ && !stagingScene_){
                     stagingScene_=std::move(preparedScene_);stagingPixels_=std::move(preparedPixels_);
@@ -424,9 +447,11 @@ void Renderer::Loop(void *window) {
                     stagingRows_=std::move(preparedRows_);stagingPreviousRows_.clear();
                     stagingUploadedRows_=stagingReusedRows_=0;
                 }
+                if(preparedPage_ && !stagingPage_)stagingPage_=std::move(preparedPage_);
                 camera=camera_;width=width_;height=height_;dirty_=false;
             }
             AdvanceUpload();
+            AdvancePages();
             {std::lock_guard<std::mutex> lock(mutex_);camera=camera_;}
             Draw(MakeView(*scene_,camera),width,height);
             {std::lock_guard<std::mutex> lock(mutex_);if(status_.state=="waiting"){status_.state="ready";status_.message="OpenGL ES surface ready";}}

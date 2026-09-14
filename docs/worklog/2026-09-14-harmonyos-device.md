@@ -67,3 +67,35 @@ still rebuilt most data. Recorded the limitation instead of claiming complete
 SuperSplat parity. 2M motion regression passed (59 intervals); process PSS
 sampled 1.54 GiB. Host ASan/UBSan row/cache/parser/math tests and signed
 deployment passed. “Upload” means CPU-to-GPU, not network re-download.
+
+### Stable pages and multitouch follow-up
+
+Implemented the experimental stable source-page renderer, AABB/FOV/rear-penalty
+selector, byte-counted LRU caches, persistent SHA-256-checked file caching,
+versioned first-swap records and a 20-pose full-target-coverage benchmark.
+`docs/harmonyos/stable-pages-20260914.md` records the intermediate 2M results and
+known differences from SuperSplat. Default rendering remains the compatibility
+route. The single-SOG Huawei comparison is separate from native tiled loading.
+
+The user reported right-thumb contact stealing the left-thumb flight stick.
+Root cause: reading global `touches[0]`, and resetting on any pointer-up. Added
+independent stick/viewport pointer ownership and suppressed tap gestures after
+combined input. Host regression covers both arrival orders, array reordering,
+unrelated releases, owner release/cancel, no automatic ownership transfer and
+subsequent independent taps.
+
+Installed the fix on Mate 80 Pro Max/API26 and injected simultaneous two-finger
+motion using the system `uinput -T -m` interface. Right-first held stick geometry
+was exactly unchanged ([173,2163,288,2278]); left-first upward movement changed
+only vertical geometry ([173,2116,288,2231]). Owner-up and system-cancel logs both
+reported owner=-1 and zero x/y. A long two-finger hold invoked system recognition;
+that cancellation is recorded separately from the shorter normal release.
+Evidence: `evidence/stable-pages-20260914/multitouch.json`.
+
+Registered LOD selection in native C++ after profiling ArkTS selection at tens
+of milliseconds. Verified exact parity against the ArkTS selector for 3,443
+leaves and eight pose/budget pairs, then observed 1–4 ms selection on device.
+The latest 20-trial native-selector results are preserved alongside the earlier
+AABB measurements. All trials still require full target coverage and report actual
+Gaussian data uploads. Performance remains experimental rather than a passed
+comparison with SuperSplat.

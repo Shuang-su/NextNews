@@ -15,6 +15,12 @@ export interface RenderStatus {
   reusedRows: number;
   decodedFiles: number;
   subsetHits: number;
+  requestRevision: number;
+  displayRevision: number;
+  prepareMs: number;
+  refineMs: number;
+  uploadedBytes: number;
+  pageHits: number;
   frameMs: number;
   fps: number;
 }
@@ -28,3 +34,10 @@ export const chunks: (paths: string[], bounds: number[], ranges?: number[]) => v
 export const pick: (x: number, y: number) => Promise<number[]>;
 
 export const optimize: (enabled: boolean) => void;
+
+export const selectPages: (paths: string[], bounds: number[], ranges: ArrayBuffer, revision: number) => void;
+
+export const dropCaches: () => void;
+
+export const registerLods: (bounds: ArrayBuffer, boxes: ArrayBuffer, lods: ArrayBuffer, levels: number) => void;
+export const selectLods: (camera: ArrayBuffer, budget: number, fov: number, aspect: number) => ArrayBuffer;

@@ -1,3 +1,5 @@
+import { PointerInput } from './PointerInput';
+import { comparisonSog } from './ComparisonSog';
 import { KeyCode } from '@kit.InputKit';
 import { common } from '@kit.AbilityKit';
 import { fileIo as fs, picker } from '@kit.CoreFileKit';
@@ -32,16 +34,17 @@ struct ViewerTool {
 @Entry
 @Component
 struct Index {
+  private comparisonBounds: number[] | undefined = undefined;
   private profile: ViewerProfile | undefined = undefined;
   @State profilePlaying: boolean = false;
   private applyProfilePose(pose: ViewerPose): void {
     const sample = SAMPLE_BOUNDS[2];
-    const bounds = this.stream?.manifest?.bounds ?? [-sample.center[0], -sample.center[1], sample.center[2], sample.radius];
+    const bounds = this.stream?.manifest?.bounds ?? (this.title === '同源 SOG' ? this.comparisonBounds : undefined) ?? [-sample.center[0], -sample.center[1], sample.center[2], sample.radius];
     this.controls.current = normalizedPose(pose, bounds); this.controls.target = this.controls.current.slice();
     this.controls.fly = true; this.flyMode = true; this.controls.fov = pose.fov; this.updateCamera();
   }
   private async profileCamera(play: boolean): Promise<void> {
-    if (this.title !== '转换样例' && this.title !== '流式场景') { this.localError = '请先加载华发转换样例或流式场景'; return; }
+    if (this.title !== '转换样例' && this.title !== '流式场景' && this.title !== '同源 SOG') { this.localError = '请先加载华发转换样例或流式场景'; return; }
     try {
       if (!play || !this.profile) { this.profile = await ViewerProfile.load(this.getUIContext().getHostContext() as common.UIAbilityContext); }
       this.autoOrbit = false; this.benchmarkStart = 0; this.profilePlaying = play;
@@ -64,6 +67,7 @@ struct Index {
   @State streamUrl: string = 'http://127.0.0.1:8768/scene.json';
   @State streamMessage: string = '';
   @State quality: number = 2000000;
+  @State paged: boolean = false;
   @State fullLoad: boolean = false;
   @State streamPanel: boolean = false;
   private stream: StreamSession | undefined = undefined;
@@ -81,9 +85,12 @@ struct Index {
   @State joyY: number = 0;
   @State helpVisible: boolean = false;
   @State diagnosticsVisible: boolean = false;
+  private pointers: PointerInput = new PointerInput();
   private controls: OrbitControls = new OrbitControls();
   private motionTimer: number = -1;
   private motionTime: number = 0;
+  private streamTime: number = 0;
+  @State streamMeasuring: boolean = false;
   @State benchmarkResult: string = '';
   private benchmarkStart: number = 0;
   private benchmarkFrames: number = 0;
@@ -95,6 +102,10 @@ struct Index {
     this.motionTime = Date.now();
     this.motionTimer = setInterval(() => {
       const now = Date.now(); const dt = now - this.motionTime; this.motionTime = now;
+      if (this.active && now - this.streamTime >= 50) {
+        this.streamTime = now;
+        this.stream?.tick(this.controls.current, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
+      }
       if (this.active && this.profilePlaying && this.profile) {
         this.applyProfilePose(this.profile.advance(dt / 1000));
       } else if (this.active && this.benchmarkStart > 0) {
@@ -116,10 +127,9 @@ struct Index {
       }
     }, 16);
     this.timer = setInterval(() => {
-      this.stream?.tick(this.controls.current, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
       const state = nativeRender.status();
       this.loading = state.state === 'loading';
-      if (this.stream) { console.info(`StreamFrame state=${state.state} frames=${state.frames} count=${state.count} loadMs=${state.loadMs.toFixed(0)} frameMs=${state.frameMs.toFixed(1)} uploadMs=${state.uploadMs.toFixed(1)} uploadedRows=${state.uploadedRows} reusedRows=${state.reusedRows} decodedFiles=${state.decodedFiles} subsetHits=${state.subsetHits}`); }
+      if (this.stream) { console.info(`StreamFrame state=${state.state} frames=${state.frames} count=${state.count} loadMs=${state.loadMs.toFixed(0)} frameMs=${state.frameMs.toFixed(1)} uploadMs=${state.uploadMs.toFixed(1)} uploadedRows=${state.uploadedRows} reusedRows=${state.reusedRows} decodedFiles=${state.decodedFiles} subsetHits=${state.subsetHits} request=${state.requestRevision} display=${state.displayRevision} prepareMs=${state.prepareMs.toFixed(1)} refineMs=${state.refineMs.toFixed(1)} uploadedBytes=${state.uploadedBytes} pageHits=${state.pageHits}`); }
       if (!this.busy && this.localError.length === 0) {
         this.message = state.state === 'ready' ? '单击聚焦 · 双击环绕 / 飞行 · 拖动旋转' : state.message;
       }
@@ -132,11 +142,11 @@ struct Index {
     this.generation++;
     if (this.timer !== -1) { clearInterval(this.timer); this.timer = -1; }
     if (this.motionTimer !== -1) { clearInterval(this.motionTimer); this.motionTimer = -1; }
-    this.controls.cancel(); this.joyX = 0; this.joyY = 0;
+    this.controls.cancel(); this.pointers.cancel(); this.resetJoystick();
     nativeRender.setActive(false);
   }
   onPageShow(): void { this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); nativeRender.setActive(true); }
-  onPageHide(): void { this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.joyX = 0; this.joyY = 0; if (this.stream) { this.stream.active = false; } this.controls.cancel(); nativeRender.setActive(false); }
+  onPageHide(): void { this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); nativeRender.setActive(false); }
   private updateCamera(): void {
     const c = this.controls.current;
     nativeRender.camera(c[0], c[1], c[2], c[3], c[4], c[5], this.controls.fly ? 1 : 0, this.controls.fov);
@@ -146,32 +156,63 @@ struct Index {
     if (s.state !== 'ready' || !s.count) { return; }
     this.benchmarkFrames = s.frames; this.benchmarkCount = s.count; this.benchmarkStart = Date.now(); this.benchmarkResult = '测量中：固定环绕轨迹，10 秒';
   }
-  private toggleMode(): void { this.autoOrbit = false; this.joyX = 0; this.joyY = 0; this.pickGeneration++; this.flyMode = !this.flyMode; this.controls.setFly(this.flyMode); this.updateCamera(); }
+  private async measureStream(fileOnly: boolean = false): Promise<void> {
+    const stream = this.stream;
+    if (!stream || !stream.paged || this.streamMeasuring) { return; }
+    this.streamMeasuring = true; this.autoOrbit = false; this.profilePlaying = false;
+    this.resetJoystick();
+    const original = this.controls.current.slice();
+    try {
+      // Two warm-up turns, then 20 identical alternating poses. No LOD reduction.
+      for (let trial = -2; trial < 20 && this.active && this.stream === stream; trial++) {
+        const pose = original.slice(); pose[0] += trial % 2 === 0 ? -.65 : .65;
+        this.controls.current = pose; this.controls.target = pose.slice(); this.updateCamera();
+        if (fileOnly && trial >= 0) { nativeRender.dropCaches(); stream.retry(); }
+        const start = Date.now();
+        stream.tick(pose, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
+        let complete = false;
+        while (Date.now() - start < 45000 && this.active && this.stream === stream) {
+          const status = nativeRender.status();
+          if (stream.selectionSubmitted && stream.coverage === 1 && status.state === 'ready' && status.displayRevision === stream.submittedRevision && status.count === stream.requestedCount) {
+            console.info(`StreamTrial trial=${trial} cache=${fileOnly ? 'file' : 'gpu'} budget=${this.quality} revision=${stream.submittedRevision} target=${stream.targetRevision} elapsedMs=${Date.now() - start} refineMs=${status.refineMs.toFixed(2)} uploadedBytes=${status.uploadedBytes} count=${status.count} coverage=${stream.coverage}`);
+            this.benchmarkResult = `流式测量 ${Math.max(0, trial + 1)}/20 · ${Date.now() - start} ms`; complete = true; break;
+          }
+          if (status.state === 'error') { throw new Error(status.message); }
+          await new Promise<void>((resolve) => { setTimeout(resolve, 20); });
+        }
+        if (!complete) { throw new Error('目标细节未在 45 秒内完整显示'); }
+        await new Promise<void>((resolve) => { setTimeout(resolve, 300); });
+      }
+    } catch (error) { this.benchmarkResult = `测量未通过：${String(error)}`; console.info(`StreamTrial failure=${String(error)}`); }
+    finally { this.streamMeasuring = false; }
+  }
+  private toggleMode(): void { this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.flyMode = !this.flyMode; this.controls.setFly(this.flyMode); this.updateCamera(); }
   private async focusAt(x: number, y: number): Promise<void> {
     const request = ++this.pickGeneration;
     try { const point = await nativeRender.pick(x / this.controls.width, y / this.controls.height);
       if (request === this.pickGeneration && this.active) { this.controls.focus(point); this.updateCamera(); }
     } catch (error) { console.warn(`Focus: ${String(error)}`); }
   }
-  private reset(): void { this.profilePlaying = false; this.profile = undefined; this.controls.fov = 45; this.autoOrbit = false; this.joyX = 0; this.joyY = 0; this.pickGeneration++; this.benchmarkStart = 0; this.benchmarkResult = '';  this.flyMode = false; this.controls.reset(); if (this.title === '流式场景') { this.controls.current[1] = .35; this.controls.target[1] = .35; } this.updateCamera(); }
+  private reset(): void { this.profilePlaying = false; this.profile = undefined; this.controls.fov = 45; this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.benchmarkStart = 0; this.benchmarkResult = '';  this.flyMode = false; this.controls.reset(); if (this.title === '流式场景') { this.controls.current[1] = .35; this.controls.target[1] = .35; } this.updateCamera(); }
   private touch(event: TouchEvent): void {
     this.profilePlaying = false;
     if (event.source === SourceType.Mouse) { return; }
-    if (event.type === TouchType.Cancel) { this.controls.cancel(); return; }
     this.autoOrbit = false;
-    const points: OrbitTouch[] = [];
-    for (const touch of event.touches) {
-      if (event.type === TouchType.Up && event.changedTouches.some((ended: TouchObject) => ended.id === touch.id)) {
-        continue;
-      }
-      points.push({ id: touch.id, x: touch.x, y: touch.y });
-    }
+    const points = this.pointers.viewport(this.touchPhase(event.type), this.touchPoints(event.touches), this.touchPoints(event.changedTouches));
     this.controls.touch(points, this.panMode);
   }
+  private touchPhase(type: TouchType): string {
+    return type === TouchType.Down ? 'down' : type === TouchType.Up ? 'up' : type === TouchType.Cancel ? 'cancel' : 'move';
+  }
+  private touchPoints(points: TouchObject[]): OrbitTouch[] {
+    return points.map((p: TouchObject): OrbitTouch => { return { id: p.id, x: p.x, y: p.y }; });
+  }
+  private resetJoystick(): void { this.pointers.cancelStick(); this.joyX = 0; this.joyY = 0; }
+
   private mouse(event: MouseEvent): void {
     this.profilePlaying = false;
     if (event.action === MouseAction.Press) {
-      this.autoOrbit = false;
+      this.autoOrbit = false; if (this.pointers.stickId < 0) { this.pointers.blockTap = false; }
       this.getUIContext().getFocusController().requestFocus('viewer-surface');
       this.mouseButton = event.button; this.mouseX = event.x; this.mouseY = event.y;
     } else if (event.action === MouseAction.Release) {
@@ -219,7 +260,7 @@ struct Index {
   private async startStream(): Promise<void> {
     this.stopStream(); this.localError = ''; this.title = '流式场景'; this.reset();
     const session = new StreamSession((message: string) => { if (this.stream === session) { this.streamMessage = message; } });
-    this.stream = session; session.budget = this.quality;
+    this.stream = session; session.budget = this.quality; session.paged = this.paged;
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       await session.open(this.streamUrl, context.cacheDir, this.fullLoad);
@@ -258,6 +299,17 @@ struct Index {
       this.message = this.localError;
     } finally { this.busy = false; }
   }
+  private async loadComparison(): Promise<void> {
+    if (this.busy) { return; } this.busy = true; this.stopStream(); this.localError = '';
+    const request = ++this.generation;
+    try {
+      const asset = await comparisonSog(this.getUIContext().getHostContext() as common.UIAbilityContext);
+      if (!this.visible || request !== this.generation) { return; }
+      this.title = '同源 SOG'; this.comparisonBounds = asset.bounds;
+      nativeRender.chunks([asset.path], asset.bounds, [0, 0, asset.count]);
+      await this.profileCamera(false);
+    } catch (error) { this.localError = String(error); } finally { this.busy = false; }
+  }
   private async importModel(): Promise<void> {
     if (this.busy) { return; }
     this.stopStream();
@@ -285,12 +337,13 @@ struct Index {
     } finally { this.busy = false; }
   }
   private joystick(event: TouchEvent): void {
-    if (event.type === TouchType.Up || event.type === TouchType.Cancel || event.touches.length === 0) {
-      this.joyX = 0; this.joyY = 0; return;
-    }
-    const x = (event.touches[0].x - 48) / 30; const y = (event.touches[0].y - 48) / 30;
-    const length = Math.max(1, Math.hypot(x, y)); this.joyX = x / length; this.joyY = y / length;
+    event.stopPropagation();
+    this.profilePlaying = false;
+    this.pointers.joystick(this.touchPhase(event.type), this.touchPoints(event.touches), this.touchPoints(event.changedTouches));
+    this.joyX = this.pointers.x; this.joyY = this.pointers.y;
+    if (event.type !== TouchType.Move) { console.info(`ViewerStick phase=${this.touchPhase(event.type)} owner=${this.pointers.stickId} x=${this.joyX.toFixed(3)} y=${this.joyY.toFixed(3)}`); }
   }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       XComponent({ id: 'nextnews-splat', type: XComponentType.SURFACE, libraryname: 'splat' })
@@ -303,11 +356,11 @@ struct Index {
         .onTouch((event: TouchEvent) => { this.touch(event); })
         .onMouse((event: MouseEvent) => { this.mouse(event); })
         .onHover((hover: boolean) => { if (!hover) { this.mouseButton = MouseButton.None; } })
-        .onBlur(() => { this.controls.cancel(); this.mouseButton = MouseButton.None; })
+        .onBlur(() => { this.controls.cancel(); this.pointers.cancel(); this.resetJoystick(); this.mouseButton = MouseButton.None; })
         .parallelGesture(GestureGroup(GestureMode.Exclusive,
-          TapGesture({ count: 2 }).onAction(() => { this.toggleMode(); }),
+          TapGesture({ count: 2 }).onAction(() => { if (!this.pointers.blockTap && this.pointers.stickId < 0) { this.toggleMode(); } }),
           TapGesture({ count: 1 }).onAction((event: GestureEvent) => {
-            if (event.fingerList.length > 0) { this.focusAt(event.fingerList[0].localX, event.fingerList[0].localY); }
+            if (!this.pointers.blockTap && this.pointers.stickId < 0 && event.fingerList.length > 0) { this.focusAt(event.fingerList[0].localX, event.fingerList[0].localY); }
           })
         ))
         .onKeyEvent((event: KeyEvent) => this.handleKey(event))
@@ -349,6 +402,7 @@ struct Index {
                     Button(this.profilePlaying ? '暂停配置动画' : '播放配置动画').fontSize(12).onClick(() => { if (this.profilePlaying) { this.profilePlaying = false; } else { this.profileCamera(true); } })
                   }
                   Button('华为原生渲染').fontSize(13).width('100%').onClick(() => { this.getUIContext().getRouter().pushUrl({ url: 'pages/SpatialViewer' }).catch((error: BusinessError) => { this.localError = error.message; }); })
+                  Button('同源 SOG 对照').enabled(!this.busy).onClick(() => { this.loadComparison(); })
                   Button('打开本地 PLY / SOG').fontSize(13).width('100%').enabled(!this.busy).onClick(() => { this.importModel(); })
                   Button('流式').fontSize(12).onClick(() => { this.streamPanel = !this.streamPanel; })
                   if (this.streamPanel) {
@@ -364,6 +418,10 @@ struct Index {
                 }
                 if (this.settingsVisible) {
                   Text('视图设置').fontSize(16).fontColor('#EEF4FF').width('100%')
+                  Button(this.paged ? '流式：稳定页（实验）' : '流式：兼容').fontSize(12).onClick(() => {
+                    this.paged = !this.paged;
+                    if (this.stream) { this.stream.paged = this.paged; this.stream.retry(); }
+                  })
                   Row({ space: 8 }) {
                     Text('高斯预算').fontSize(12).fontColor('#AFC6D8').layoutWeight(1)
                     Button(this.quality === 1000000 ? '100 万' : this.quality === 2000000 ? '200 万' : '400 万').fontSize(12).onClick(() => {
@@ -386,6 +444,8 @@ struct Index {
                 }
                 if (this.diagnosticsVisible) {
                   Button(this.gpuOptimized ? 'GPU 裁剪：开' : 'GPU 裁剪：关').fontSize(12).onClick(() => { this.gpuOptimized = !this.gpuOptimized; nativeRender.optimize(this.gpuOptimized); })
+                  Button('流式测量 20 次').fontSize(12).enabled(this.paged && !this.streamMeasuring).onClick(() => { this.measureStream(); })
+                  Button('文件缓存测量 20 次').fontSize(12).enabled(this.paged && !this.streamMeasuring).onClick(() => { this.measureStream(true); })
                   Button('测量 10 秒').fontSize(12).enabled(this.benchmarkStart === 0).onClick(() => { this.benchmark(); })
                   if (this.benchmarkResult) { Text(this.benchmarkResult).fontSize(11).fontColor('#EBC478') }
                   Text(this.details).fontSize(11).fontColor('#99B1C4').width('100%')
@@ -415,8 +475,9 @@ struct Index {
           if (this.flyMode) {
             Stack() {
               Circle().width(96).height(96).fill('#9928354A').stroke('#7794BD').strokeWidth(1)
-              Circle().width(34).height(34).fill('#B0CFFF').translate({ x: this.joyX * 30, y: this.joyY * 30 })
+              Circle().width(34).height(34).id('飞行摇杆手柄').fill('#B0CFFF').translate({ x: this.joyX * 30, y: this.joyY * 30 })
             }.width(96).height(96).position({ x: 20, y: '100%' }).translate({ y: -206 })
+              .onDisAppear(() => { this.resetJoystick(); })
               .accessibilityText('飞行摇杆').id('飞行摇杆').onTouch((event: TouchEvent) => { this.joystick(event); })
             Column({ space: 8 }) {
               ViewerTool({ icon: $r('app.media.viewer_up'), label: '上升', selected: false, action: () => { this.controls.move(0, .12 * this.flySpeed, 0); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })

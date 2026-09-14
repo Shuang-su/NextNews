@@ -1,0 +1,27 @@
+{
+  "device": "Mate 80 Pro Max",
+  "api": 26,
+  "input": "system uinput two simultaneous pointers; both pointer-order variants",
+  "neutralThumbBounds": [
+    173,
+    2163,
+    288,
+    2278
+  ],
+  "rightFirstHeldThumbBounds": [
+    173,
+    2163,
+    288,
+    2278
+  ],
+  "leftFirstMovingThumbBounds": [
+    173,
+    2116,
+    288,
+    2231
+  ],
+  "rightFirstNeutralPassed": true,
+  "leftFirstIndependentMovementPassed": true,
+  "releaseAndSystemCancel": "ViewerStick owner=-1 x=0 y=0 observed",
+  "systemGesture": "Long two-finger hold triggers system recognition; cancel resets input; shorter move ends normally"
+}

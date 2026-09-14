@@ -182,3 +182,13 @@ selected ranges. Retained GPU textures skip exactly matching rows (up to
 4 MiB of changed rows per frame). This does not yet eliminate whole-scene
 CPU packing. See the streaming pipeline report for memory costs and phone
 evidence; `test_stream_cache.py` exercises row identities and LRU eviction.
+
+The experimental **流式：稳定页** switch retains source GPU pages and sends a
+versioned selection of addresses. See [stable-pages-20260914.md](stable-pages-20260914.md)
+for implementation, measured gates and current limitations. `benchmark_pages.py`
+records 20 full-coverage camera turns; `--file-only` drops reusable CPU/GPU source
+identities while retaining the previous drawable scene and cached files. The
+legacy path remains the default pending complete acceptance.
+
+Multitouch controls use independent pointer ownership for the flight stick and
+viewport. Run `node scripts/harmonyos/test_pointer_input.cjs` for the regression.

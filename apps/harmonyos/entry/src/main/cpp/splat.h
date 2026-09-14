@@ -3,6 +3,9 @@
 #include <atomic>
 #include <cstdint>
 #include <string>
+#include <memory>
+#include <algorithm>
+#include <stdexcept>
 #include <vector>
 
 namespace splat {
@@ -13,8 +16,22 @@ struct Gaussian {
     float color[4];
     float covariance[6]; // xx, xy, xz, yy, yz, zz
 };
+struct Scene;
+struct SceneRange { std::shared_ptr<const Scene> source; uint32_t offset,count,logical; };
 struct Scene {
     std::vector<Gaussian> points;
+    bool paged=false;
+    std::vector<std::array<float,3>> positions;
+    std::vector<uint32_t> addresses;
+    std::vector<SceneRange> ranges;
+    size_t Count()const{return paged?positions.size():points.size();}
+    const float *Position(size_t i)const{return paged?positions[i].data():points[i].position;}
+    const Gaussian &At(size_t i)const{
+        if(!paged)return points.at(i);
+        auto r=std::upper_bound(ranges.begin(),ranges.end(),i,[](size_t value,const SceneRange &range){return value<range.logical;});
+        if(r==ranges.begin())throw std::out_of_range("Invalid page range");--r;
+        return r->source->points.at(r->offset+i-r->logical);
+    }
     std::array<float, 3> center{};
     float radius = 1;
 };

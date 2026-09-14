@@ -136,8 +136,8 @@ std::vector<float> Pick(const Scene &scene,const View &view,float x,float y,int 
     struct Hit { float depth,alpha; size_t index; }; std::vector<Hit> hits;
     const auto &m=view.matrix;const float f=height/(2.f*view.tanHalfFov);
     const float px=(x-.5f)*width,py=(.5f-y)*height;
-    for(size_t i=0;i<scene.points.size();++i) {
-        const auto &g=scene.points[i];float v[3]={m[12],m[13],m[14]};
+    for(size_t i=0;i<scene.Count();++i) {
+        const auto &g=scene.At(i);float v[3]={m[12],m[13],m[14]};
         for(int r=0;r<3;++r)for(int k=0;k<3;++k)v[r]+=m[k*4+r]*g.position[k];
         const float z=-v[2];if(z<=view.nearPlane||z>=view.farPlane||g.color[3]<.004f)continue;
         const float c[3][3]={{g.covariance[0],g.covariance[1],g.covariance[2]},
@@ -158,21 +158,27 @@ std::vector<float> Pick(const Scene &scene,const View &view,float x,float y,int 
     float transmittance=1;size_t chosen=0;bool found=false;
     for(const auto &h:hits){transmittance*=1-h.alpha;chosen=h.index;if(transmittance<=.5f){found=true;break;}}
     if(!found)return {};
-    std::vector<float> result(3);for(int k=0;k<3;++k)result[k]=(scene.points[chosen].position[k]-scene.center[k])/scene.radius;
+    std::vector<float> result(3);for(int k=0;k<3;++k)result[k]=(scene.Position(chosen)[k]-scene.center[k])/scene.radius;
     return result;
 }
 std::vector<uint32_t> SortIndices(const Scene &scene, const View &view) {
     struct Item {uint32_t key,index;};
-    std::vector<Item> order(scene.points.size()),temp(scene.points.size());
+    // One independent workspace per loader/sorter thread, reused across cameras.
+    struct Scratch{std::vector<Item> order,temp;};
+    thread_local Scratch scratch;
+    auto &order=scratch.order;auto &temp=scratch.temp;
+    order.resize(scene.Count());temp.resize(scene.Count());
+    size_t hist[4][256]{};
     const auto &m=view.matrix;
     for(uint32_t i=0;i<order.size();++i) {
-        const auto *p=scene.points[i].position;
+        const auto *p=scene.Position(i);
         float depth=m[2]*p[0]+m[6]*p[1]+m[10]*p[2]; // Translation cannot change depth order.
         if(depth==0)depth=0;uint32_t bits;std::memcpy(&bits,&depth,4);
-        order[i]={bits^((bits&0x80000000u)?0xffffffffu:0x80000000u),i};
+        const uint32_t key=bits^((bits&0x80000000u)?0xffffffffu:0x80000000u);
+        order[i]={key,i};++hist[0][key&255];++hist[1][(key>>8)&255];++hist[2][(key>>16)&255];++hist[3][key>>24];
     }
-    for(unsigned shift=0;shift<32;shift+=8) {
-        size_t counts[256]{};for(const auto &v:order)++counts[(v.key>>shift)&255];
+    for(unsigned pass=0;pass<4;++pass) {
+        const unsigned shift=pass*8;auto &counts=hist[pass];
         size_t offset=0;for(auto &c:counts){const auto n=c;c=offset;offset+=n;}
         for(const auto &v:order)temp[counts[(v.key>>shift)&255]++]=v;
         order.swap(temp);
@@ -181,6 +187,6 @@ std::vector<uint32_t> SortIndices(const Scene &scene, const View &view) {
 }
 std::vector<Gaussian> Sort(const Scene &scene,const View &view) {
     const auto indices=SortIndices(scene,view);std::vector<Gaussian> result;result.reserve(indices.size());
-    for(auto i:indices)result.push_back(scene.points[i]);return result;
+    for(auto i:indices)result.push_back(scene.At(i));return result;
 }
 }

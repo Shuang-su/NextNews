@@ -19,14 +19,14 @@ for index,name in enumerate(meta['filenames'] + ([meta['environment']] if meta.g
     if Path(image).name!=image:raise ValueError('Texture filename must be a basename')
     z.write(f.parent/image,image)
  lo=[math.copysign(math.expm1(abs(v)),v) for v in m['means']['mins']];hi=[math.copysign(math.expm1(abs(v)),v) for v in m['means']['maxs']]
- files.append(dict(file=out.name,count=m['count'],bytes=out.stat().st_size,bounds=bounds(dict(min=lo,max=hi))))
+ files.append(dict(sha256=hashlib.sha256(out.read_bytes()).hexdigest(),file=out.name,count=m['count'],bytes=out.stat().st_size,bounds=bounds(dict(min=lo,max=hi))))
 leaves=[]
 def walk(node):
  if 'lods' in node:
   lods=[]
   for level in range(meta['lodLevels']):
    item=node['lods'].get(str(level));lods.append([item['file'],item['offset'],item['count']] if item else [-1,0,0])
-  leaves.append(dict(bounds=bounds(node['bound']),lods=lods))
+  leaves.append(dict(bounds=bounds(node['bound']),aabb=node['bound']['min']+node['bound']['max'],lods=lods))
  for child in node.get('children',[]):walk(child)
 walk(meta['tree'])
 if meta.get('environment'):

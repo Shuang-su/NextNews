@@ -1,3 +1,5 @@
+#include "lod_selection.h"
+#include <cstring>
 #include "renderer.h"
 #include <ace/xcomponent/native_interface_xcomponent.h>
 #include <napi/native_api.h>
@@ -34,10 +36,34 @@ napi_value Optimize(napi_env env,napi_callback_info info) {
     if(argc!=1||napi_get_value_bool(env,arg,&enabled)!=napi_ok){napi_throw_type_error(env,nullptr,"Expected boolean");return Undefined(env);}
     splat::Renderer::Get().SetOptimized(enabled);return Undefined(env);
 }
-napi_value Chunks(napi_env env,napi_callback_info info) {
-    napi_value args[3];size_t argc=3;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+splat::LodTree lodTree; // Accessed only by the ArkUI thread, registered once per scene.
+template<class T> bool ReadBuffer(napi_env env,napi_value value,std::vector<T>& output,size_t max){
+    size_t bytes=0;void *data=nullptr;
+    if(napi_get_arraybuffer_info(env,value,&data,&bytes)!=napi_ok||bytes%sizeof(T)||bytes/sizeof(T)>max)return false;
+    output.resize(bytes/sizeof(T));if(bytes)std::memcpy(output.data(),data,bytes);return true;
+}
+napi_value RegisterLods(napi_env env,napi_callback_info info){
+    napi_value args[4];size_t argc=4;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+    splat::LodTree tree;std::vector<double> bounds;double levels=0;
+    if(argc!=4||!ReadBuffer(env,args[0],bounds,4)||bounds.size()!=4||!ReadBuffer(env,args[1],tree.boxes,60000)||tree.boxes.size()%6||!ReadBuffer(env,args[2],tree.lods,480000)||napi_get_value_double(env,args[3],&levels)!=napi_ok||!std::isfinite(levels)||levels<1||levels>16||levels!=std::floor(levels)||tree.lods.size()!=tree.boxes.size()/6*levels*3){napi_throw_type_error(env,nullptr,"Invalid LOD tree buffers");return Undefined(env);}
+    for(auto v:bounds)if(!std::isfinite(v)||std::abs(v)>1e6){napi_throw_range_error(env,nullptr,"Invalid LOD tree bounds");return Undefined(env);}
+    if(bounds[3]<=0){napi_throw_range_error(env,nullptr,"Invalid LOD radius");return Undefined(env);}
+    for(size_t i=0;i<tree.boxes.size();++i)if(!std::isfinite(tree.boxes[i])||std::abs(tree.boxes[i])>1e6||(i%6<3&&tree.boxes[i]>tree.boxes[i+3])){napi_throw_range_error(env,nullptr,"Invalid LOD box");return Undefined(env);}
+    for(size_t i=0;i<tree.lods.size();++i)if((i%3==0&&(tree.lods[i]<-1||tree.lods[i]>=1024))||(i%3!=0&&(tree.lods[i]<0||uint32_t(tree.lods[i])>splat::MaxGaussians))){napi_throw_range_error(env,nullptr,"Invalid LOD tree range");return Undefined(env);}
+    tree.levels=uint32_t(levels);std::copy_n(bounds.begin(),4,tree.bounds.begin());lodTree=std::move(tree);return Undefined(env);
+}
+napi_value SelectLods(napi_env env,napi_callback_info info){
+    napi_value args[4];size_t argc=4;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+    std::vector<double> camera;double budget=0,fov=0,aspect=0;
+    if(argc!=4||!ReadBuffer(env,args[0],camera,7)||camera.size()!=7||napi_get_value_double(env,args[1],&budget)!=napi_ok||!std::isfinite(budget)||budget<1||budget>splat::MaxGaussians||napi_get_value_double(env,args[2],&fov)!=napi_ok||!std::isfinite(fov)||fov<=1||fov>=179||napi_get_value_double(env,args[3],&aspect)!=napi_ok||!std::isfinite(aspect)||aspect<=0||aspect>100){napi_throw_range_error(env,nullptr,"Invalid LOD camera");return Undefined(env);}
+    for(auto v:camera)if(!std::isfinite(v)||std::abs(v)>1e4){napi_throw_range_error(env,nullptr,"Invalid LOD camera value");return Undefined(env);}
+    std::array<double,7> pose;std::copy_n(camera.begin(),7,pose.begin());const auto selected=lodTree.Select(pose,uint32_t(budget),fov,aspect);
+    napi_value result;void *data;const size_t bytes=selected.size()*sizeof(uint32_t);napi_create_arraybuffer(env,bytes,&data,&result);if(bytes)std::memcpy(data,selected.data(),bytes);return result;
+}
+napi_value ChunksImpl(napi_env env,napi_callback_info info,bool paged) {
+    napi_value args[4];size_t argc=paged?4:3;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
     bool array=false;uint32_t n=0;
-    if((argc!=2&&argc!=3)||napi_is_array(env,args[0],&array)!=napi_ok||!array||napi_get_array_length(env,args[0],&n)!=napi_ok||n>1024) {
+    if(((paged&&argc!=4)||(!paged&&argc!=2&&argc!=3))||napi_is_array(env,args[0],&array)!=napi_ok||!array||napi_get_array_length(env,args[0],&n)!=napi_ok||n>1024) {
         napi_throw_type_error(env,nullptr,"Expected 0-1024 chunk paths");return Undefined(env);
     }
     std::vector<std::string> paths;
@@ -54,13 +80,27 @@ napi_value Chunks(napi_env env,napi_callback_info info) {
     for(int i=0;i<4;++i){napi_value v;napi_get_element(env,args[1],i,&v);double d=0;
         if(napi_get_value_double(env,v,&d)!=napi_ok||!std::isfinite(d)||std::abs(d)>1e6||(i==3&&d<=0)){napi_throw_range_error(env,nullptr,"Invalid scene bounds");return Undefined(env);}bounds[i]=float(d);}
     std::vector<uint32_t> ranges;
-    if(argc==3){uint32_t size=0;
+    bool typed=false;
+    if(paged)napi_is_arraybuffer(env,args[2],&typed);
+    if(typed){
+        size_t bytes=0;void *data=nullptr;
+        if(napi_get_arraybuffer_info(env,args[2],&data,&bytes)!=napi_ok||bytes>60000*sizeof(uint32_t)||bytes%(3*sizeof(uint32_t))){napi_throw_type_error(env,nullptr,"Invalid LOD range buffer");return Undefined(env);}
+        const auto *values=static_cast<const uint32_t*>(data);const size_t length=bytes/sizeof(uint32_t);
+        // Copy before any other N-API call; the engine owns the input buffer.
+        if(length)ranges.assign(values,values+length);
+        for(size_t i=0;i<length;++i)if(ranges[i]>splat::MaxGaussians||(i%3==0&&ranges[i]>=n)){napi_throw_range_error(env,nullptr,"Invalid LOD range buffer value");return Undefined(env);}
+    } else if(argc>=3){uint32_t size=0;
         if(napi_is_array(env,args[2],&array)!=napi_ok||!array||napi_get_array_length(env,args[2],&size)!=napi_ok||size>60000||size%3){napi_throw_type_error(env,nullptr,"Invalid LOD ranges");return Undefined(env);}
         for(uint32_t i=0;i<size;++i){napi_value v;napi_get_element(env,args[2],i,&v);double d;
             if(napi_get_value_double(env,v,&d)!=napi_ok||!std::isfinite(d)||d<0||d>4000000||d!=std::floor(d)||(i%3==0&&d>=n)){napi_throw_range_error(env,nullptr,"Invalid LOD range");return Undefined(env);}ranges.push_back(uint32_t(d));}
     }
-    splat::Renderer::Get().SetChunks(std::move(paths),bounds,std::move(ranges));return Undefined(env);
+    double revision=0;
+    if(paged&&(napi_get_value_double(env,args[3],&revision)!=napi_ok||!std::isfinite(revision)||revision<1||revision>9007199254740991.0||revision!=std::floor(revision))){napi_throw_range_error(env,nullptr,"Invalid selection revision");return Undefined(env);}
+    splat::Renderer::Get().SetChunks(std::move(paths),bounds,std::move(ranges),paged,uint64_t(revision));return Undefined(env);
 }
+napi_value Chunks(napi_env env,napi_callback_info info){return ChunksImpl(env,info,false);}
+napi_value SelectPages(napi_env env,napi_callback_info info){return ChunksImpl(env,info,true);}
+napi_value DropCaches(napi_env env,napi_callback_info){splat::Renderer::Get().DropCaches();return Undefined(env);}
 napi_value Active(napi_env env,napi_callback_info info) {
     napi_value arg;size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);bool active;
     if(argc!=1||napi_get_value_bool(env,arg,&active)!=napi_ok){napi_throw_type_error(env,nullptr,"Expected boolean");return Undefined(env);}
@@ -71,7 +111,7 @@ void Number(napi_env env,napi_value object,const char *key,double value){napi_va
 napi_value Status(napi_env env,napi_callback_info) {
     const auto s=splat::Renderer::Get().GetStatus();napi_value result;napi_create_object(env,&result);
     String(env,result,"state",s.state);String(env,result,"message",s.message);String(env,result,"graphics",s.graphics);
-    Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"uploadMs",s.uploadMs);Number(env,result,"uploadedRows",s.uploadedRows);Number(env,result,"reusedRows",s.reusedRows);Number(env,result,"decodedFiles",s.decodedFiles);Number(env,result,"subsetHits",s.subsetHits);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);return result;
+    Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"uploadMs",s.uploadMs);Number(env,result,"uploadedRows",s.uploadedRows);Number(env,result,"reusedRows",s.reusedRows);Number(env,result,"decodedFiles",s.decodedFiles);Number(env,result,"subsetHits",s.subsetHits);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);Number(env,result,"requestRevision",s.requestRevision);Number(env,result,"displayRevision",s.displayRevision);Number(env,result,"prepareMs",s.prepareMs);Number(env,result,"refineMs",s.refineMs);Number(env,result,"uploadedBytes",s.uploadedBytes);Number(env,result,"pageHits",s.pageHits);return result;
 }
 struct PickWork { napi_async_work work; napi_deferred deferred; float x,y;std::vector<float> point;std::string error; };
 napi_value Pick(napi_env env,napi_callback_info info) {
@@ -89,6 +129,10 @@ napi_value Pick(napi_env env,napi_callback_info info) {
 }
 napi_value Init(napi_env env,napi_value exports) {
     napi_property_descriptor methods[]={
+        {"registerLods",nullptr,RegisterLods,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"selectLods",nullptr,SelectLods,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"dropCaches",nullptr,DropCaches,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"selectPages",nullptr,SelectPages,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"pick",nullptr,Pick,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"load",nullptr,Load,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"chunks",nullptr,Chunks,nullptr,nullptr,nullptr,napi_default,nullptr},
