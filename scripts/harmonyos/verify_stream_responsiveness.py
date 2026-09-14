@@ -44,7 +44,7 @@ for line in log.splitlines():
  m=re.search(r'StreamFrame state=(\w+) frames=(\d+) count=(\d+) loadMs=([\d.]+) frameMs=([\d.]+)(?: uploadMs=([\d.]+))?',line)
  if m:rows.append([parts[1],m[1],int(m[2]),int(m[3]),float(m[4]),float(m[5]),float(m[6]) if m[6] else None])
 with (a.out/'frames.csv').open('w') as f:
- writer=csv.writer(f);writer.writerow(['time','state','frames','resident_count','last_load_ms','last_draw_ms','last_upload_batch_ms']);writer.writerows(rows)
+ writer=csv.writer(f,lineterminator="\n");writer.writerow(['time','state','frames','resident_count','last_load_ms','last_draw_ms','last_upload_batch_ms']);writer.writerows(rows)
 pairs=[(x,y) for x,y in zip(rows,rows[1:]) if x[1]==y[1]=='loading' and x[3]==y[3] and x[3]>500000 and y[2]>x[2]]
 report={'loading_intervals_with_old_scene_drawing':len(pairs),'examples':pairs[-5:],'passes':len(pairs)>=2,'not_fps_benchmark':True}
 (a.out/'result.json').write_text(json.dumps(report,indent=2));print(json.dumps(report,ensure_ascii=False))
