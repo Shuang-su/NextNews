@@ -11,7 +11,7 @@ import { SAMPLE_BOUNDS, SampleBounds } from './ModelBounds';
 @Component
 struct SpatialViewer {
   private tiled: SpatialStream | undefined = undefined;
-  @State tiledUrl: string = 'http://127.0.0.1:8768/lod-meta.json';
+  @State tiledUrl: string = 'http://127.0.0.1:8768/huafa.scene.json';
   private profile: ViewerProfile | undefined = undefined;
   private profileTimer: number = -1;
   @State profilePlaying: boolean = false;

@@ -61,3 +61,32 @@ python3 scripts/harmonyos/verify_stream_responsiveness.py
 本机测试服务增加 `bash scripts/harmonyos/serve_stream.sh .local/sog-huafa 8768 --background`，使用独立后台进程，绑定仍仅为 127.0.0.1；PID 与日志在忽略的 `.local` 目录。这样结束前台工具进程不必同时结束手机的测试数据源。手机访问仍依赖 HDC 连接，非部署公网服务。
 
 最终包还执行了一次 Home→重新进入：200 万常驻场景恢复可见，截图留在本机 `artifacts/harmonyos/loading-motion-delivery/resumed.png`。这覆盖一次前后台恢复，不代替所有窗口/中断情形的压力测试。
+
+## Follow-up: `.scene.json` suffix on the phone
+
+Copied the original PlayCanvas `lod-meta.json` byte-for-byte to
+`huafa.scene.json`; the server returned HTTP 200. The adapter now also saves
+the downloaded bytes as `stream.scene.json` before `loadTiledGSNode`, so the
+local engine URI has the same compound suffix as the official example.
+On Mate 80 Pro Max / API 26 the node promise returned, but the tile callback
+remained silent beyond 15 seconds and the viewport stayed empty. Renaming
+alone did not produce streaming rendering in this integration; this does not
+establish that Huawei does not support SOG. Schema and engine setup remain
+to be checked. Evidence: ignored `artifacts/harmonyos/spatial-scene-suffix/`.
+The adapter regression now checks the actual local URI and saved filename;
+it passes, and both build and signed phone deployment passed.
+
+## Four-million budget probe
+
+Enabled the existing 4M setting on the same phone and full Huafa stream.
+The native log reached 3,995,526 resident Gaussians; the UI selection reached
+4,000,000. Eight alternating drag gestures retained a visible scene, including
+while replacements loaded. SmartPerf sampled process PSS 1,505,718 KiB
+(about 1.44 GiB). Some preparation updates took 7.9–8.6 seconds and sampled
+Draw/swap costs reached 55–58 ms. The 12 FPS samples mix idle, drag and loading
+and must not be interpreted as sustained interactive FPS. Evidence is in
+`evidence/streaming-pipeline-20260914/budget-4m.json` and `budget-4m.png`.
+
+Keep 4M as an optional quality tier; optimize its preparation and drawing before
+raising the default. 8M remains untested and requires coordinated resident/GPU
+capacity changes. The phone is left on the 4M tier for manual evaluation.

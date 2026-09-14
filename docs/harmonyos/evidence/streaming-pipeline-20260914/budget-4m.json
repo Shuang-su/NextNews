@@ -1,0 +1,33 @@
+{
+  "budget": 4000000,
+  "max_observed_resident": 4000000,
+  "process_pss_kib_samples": [
+    1505718,
+    1505718,
+    1505718,
+    1505718,
+    1505718,
+    1505718,
+    1505718,
+    1505718,
+    1505718,
+    1505718,
+    1505718,
+    1505718
+  ],
+  "smartperf_fps_samples": [
+    18,
+    0,
+    0,
+    11,
+    7,
+    29,
+    26,
+    33,
+    29,
+    32,
+    31,
+    26
+  ],
+  "note": "Short mixed idle/drag/loading capture, not sustained FPS benchmark. GPU load is device-wide. 8M not enabled or tested."
+}

@@ -3,7 +3,7 @@ const ts=require('/Applications/DevEco-Studio.app/Contents/tools/ohpm/node_modul
 (async()=>{
  let callback,active=0,peak=0;const notified=[],saved=[],messages=[];
  const node={setCamera:()=>{},setTileRequestCallback:cb=>{callback=cb;},notifyTileReady:t=>{assert.ok(saved.includes(t.uri));notified.push(t.uri);},destroy:()=>{}};
- const box={exports:{},setTimeout,clearTimeout,console:{info:()=>{}},require:n=>n==='@kit.CoreFileKit'?{fileIo:{mkdir:async()=>{},rmdir:async()=>{}}}:n==='@kit.SpatialReconKit'?{spatialRender:{GSPlugin:{loadTiledGSNode:async()=>node}}}:{}};
+ const box={exports:{},setTimeout,clearTimeout,console:{info:()=>{}},require:n=>n==='@kit.CoreFileKit'?{fileIo:{mkdir:async()=>{},rmdir:async()=>{}}}:n==='@kit.SpatialReconKit'?{spatialRender:{GSPlugin:{loadTiledGSNode:async(scene, resource)=>{assert.ok(resource.uri.endsWith("/stream.scene.json"));assert.ok(saved.includes("stream.scene.json"));return node;}}}}:{}};
  vm.runInNewContext(ts.transpileModule(fs.readFileSync('apps/harmonyos/entry/src/main/ets/pages/SpatialStream.ets','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,box);
  const session=new box.exports.SpatialStream(m=>messages.push(m));
  session.fetch=async()=>{active++;peak=Math.max(peak,active);await new Promise(setImmediate);active--;return new ArrayBuffer(16);};

@@ -30,3 +30,16 @@
 ### 缓存阻塞修复
 
 用户反馈进入缓存即卡顿。检查发现解码、合并、首次排序及纹理打包仍在 EGL 线程，已移到独立 loader；备用纹理按帧上传并复用存储，旧常驻场景在加载期间继续响应。增加可复现实机拖动/加载并行回归和上传耗时。华为 TiledGSNode 已增加请求下载适配器，但 PlayCanvas 清单返回节点后没有瓦片请求，记录为失败而非成功。浏览器重新可用，已核对官方 API、加载指南及此前文章。完整说明见 `docs/harmonyos/streaming-pipeline-20260914.md`。
+
+### Compound scene suffix and 4M budget
+
+Tested the user's proposal with byte-identical PlayCanvas metadata renamed
+`huafa.scene.json`, also preserving `.scene.json` at the local engine URI.
+Build, adapter regression and signed phone deployment passed; the native node
+returned but no tile requests or visible scene followed. Recorded this separately
+from the working native PLY path.
+
+Enabled 4M OpenGL budget and captured eight drags, near-4M actual residency,
+1.44 GiB sampled PSS, and multi-second preparation/55–58 ms sampled draw
+pressure. Kept 8M unenabled pending optimization. Details and screenshots:
+`docs/harmonyos/streaming-pipeline-20260914.md`.

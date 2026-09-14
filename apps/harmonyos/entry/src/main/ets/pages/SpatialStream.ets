@@ -44,11 +44,11 @@ export class SpatialStream {
     this.base = url.slice(0, url.lastIndexOf('/') + 1);
     this.root = `${context.cacheDir}/spatial-stream-${Date.now()}`; await fs.mkdir(this.root);
     this.progress('下载原生流式清单');
-    await this.save('scene.json', await this.fetch(url, 4194304));
+    await this.save('stream.scene.json', await this.fetch(url, 4194304));
     if (this.stopped) { throw new Error('加载已取消'); }
     this.progress('SpatialRender 正在解析清单');
     console.info('SpatialStream loadTiledGSNode begin');
-    const node = await spatialRender.GSPlugin.loadTiledGSNode(scene, { uri: `file://${this.root}/scene.json` }, scene.root ?? undefined);
+    const node = await spatialRender.GSPlugin.loadTiledGSNode(scene, { uri: `file://${this.root}/stream.scene.json` }, scene.root ?? undefined);
     if (this.stopped) { node.destroy(); throw new Error('加载已取消'); }
     this.node = node;
     node.position = { x: 0, y: 0, z: 0 }; node.scale = { x: 1, y: 1, z: 1 }; node.visible = true;
