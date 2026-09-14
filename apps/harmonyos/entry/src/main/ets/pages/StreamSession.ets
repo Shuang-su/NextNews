@@ -94,9 +94,14 @@ export class StreamSession {
   private selectionKey: string = '';
   private selection: number[] = [];
   private loadedBytes: number = 0;
+  networkBytes: number = 0;
+  prefetchEnabled: boolean = true;
+  private previousFiles: Set<string> = new Set();
+  private targetFiles: Set<string> = new Set();
   active: boolean = true;
   budget: number = 2000000;
   paged: boolean = false;
+  encoded: boolean = false;
   private revision: number = 0;
   targetRevision: number = 0;
   private submittedTarget: number = -1;
@@ -114,6 +119,7 @@ export class StreamSession {
       const result = await request.request(url, { expectDataType: http.HttpDataType.ARRAY_BUFFER,
         usingCache: false, maxLimit: limit, connectTimeout: 10000, readTimeout: 30000 });
       if (result.responseCode !== 200 || !(result.result instanceof ArrayBuffer) || result.result.byteLength > limit) { throw new Error(`HTTP ${result.responseCode} 或数据超过预算`); }
+      this.networkBytes += result.result.byteLength;
       return result.result as ArrayBuffer;
     } finally { request.destroy(); this.requests.delete(request); }
   }
@@ -169,6 +175,13 @@ export class StreamSession {
     const m = this.manifest; if (!m) { return; }
     const key = camera.map((v: number) => v.toFixed(2)).join(',') + `${fly}:${this.budget}:${fov}:${aspect}`;
     if (key !== this.selectionKey) { this.targetAt = Date.now(); this.selection = this.paged && m.leaves ? Array.from(new Uint32Array(nativeRender.selectLods(new Float64Array([...camera, fly ? 1 : 0]).buffer, this.budget, fov, aspect))) : selectLods(m, camera, fly, this.budget, fov, aspect); this.selectionKey = key; this.targetRevision++; console.info(`StreamTarget target=${this.targetRevision} cameraAt=${this.targetAt} selectedAt=${Date.now()} budget=${this.budget} fov=${fov} aspect=${aspect}`); this.publishDirty = true; }
+    if (m.leaves && this.publishDirty) {
+      const files = new Set<string>();
+      for (let i = 0; i < m.leaves.length; i++) { const file = m.leaves[i].lods[this.selection[i]][0]; if (file >= 0) { files.add(m.chunks[file].file); } }
+      if (files.size !== this.targetFiles.size || Array.from(files).some((file: string) => !this.targetFiles.has(file))) {
+        this.previousFiles = this.targetFiles; this.targetFiles = files;
+      }
+    }
   }
   // Called on camera ticks even while downloads are pending. Cached detail must
   // not wait for unrelated network requests or use an old camera selection.
@@ -193,7 +206,7 @@ export class StreamSession {
       const key = paths.join('|') + ':' + ranges.join(',');
       this.coverage = m.leaves ? matched / m.leaves.length : 1; this.requestedCount = desiredCount || count;
       if (key !== this.published && (nativeRender.status().state !== 'loading' || (this.paged && this.submittedTarget !== this.targetRevision))) {
-        if (this.paged) { nativeRender.selectPages(paths, m.bounds, new Uint32Array(ranges).buffer, ++this.revision);
+        if (this.paged) { nativeRender.selectPages(paths, m.bounds, new Uint32Array(ranges).buffer, ++this.revision, this.encoded);
           console.info(`StreamSelection revision=${this.revision} target=${this.targetRevision} cameraAt=${this.targetAt} submittedAt=${Date.now()} coverage=${this.coverage.toFixed(6)} desiredCount=${this.requestedCount} count=${count}`);
         } else { nativeRender.chunks(paths, m.bounds, ranges); }
         this.published = key; this.submittedTarget = this.targetRevision; this.publishDirty = false;
@@ -211,8 +224,15 @@ export class StreamSession {
       if (m.leaves && m.levels) {
         for (let i = 0; i < m.leaves.length; i++) { coarseFiles.push(m.leaves[i].lods[m.levels - 1][0]); if (levels.length) { desiredFiles.push(m.leaves[i].lods[levels[i]][0]); if (levels[i] > 0) { prefetchFiles.push(m.leaves[i].lods[levels[i] - 1][0]); } } }
       } else { for (let i = 0; i < m.chunks.length; i++) { coarseFiles.push(i); } }
-      const order = Array.from(new Set(coarseFiles.concat(desiredFiles).concat(prefetchFiles).concat(this.fullLoad ? m.chunks.map((_c: StreamChunk, i: number) => i) : [])).values()).filter((i: number) => i >= 0);
-      const missing = order.filter((i: number) => !this.cache.has(m.chunks[i].file)).slice(0, 4);
+      const order = Array.from(new Set(coarseFiles.concat(desiredFiles).concat(this.prefetchEnabled ? prefetchFiles : []).concat(this.fullLoad ? m.chunks.map((_c: StreamChunk, i: number) => i) : [])).values()).filter((i: number) => i >= 0);
+      const required = new Set(coarseFiles.concat(desiredFiles));
+      let headroom = Math.max(0, 536870912 - this.loadedBytes);
+      const missing: number[] = [];
+      for (const i of order) {
+        if (this.cache.has(m.chunks[i].file)) { continue; }
+        if (!this.fullLoad && !required.has(i)) { if (m.chunks[i].bytes > headroom) { continue; } headroom -= m.chunks[i].bytes; }
+        missing.push(i); if (missing.length === 4) { break; }
+      }
       // A bounded batch overlaps network latency without decoding on the UI thread.
       // Wait for every request to settle before cleanup, even when one fails.
       let failure: string = '';
@@ -232,7 +252,11 @@ export class StreamSession {
       if (this.stopped) { return; }
       const paths = this.publishCached();
       if (!this.fullLoad) {
-        const pinned = new Set(order.map((i: number) => m.chunks[i].file));
+        // Evict prefetch before the current/previous target. Alternating warm
+        // views must not redownload a file whose GPU pages are still resident.
+        const pinned = new Set(coarseFiles.concat(desiredFiles).filter((i: number) => i >= 0).map((i: number) => m.chunks[i].file));
+        this.targetFiles.forEach((file: string) => { pinned.add(file); });
+        this.previousFiles.forEach((file: string) => { pinned.add(file); });
         for (const file of Array.from(this.cache.keys())) {
           if (this.loadedBytes <= 536870912) { break; }
           const path = this.cache.get(file) as string;

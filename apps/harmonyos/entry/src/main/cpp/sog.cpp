@@ -55,7 +55,7 @@ Bytes Pixels(const std::map<std::string,Bytes> &files,const std::string &name,si
     return out;
 }
 }
-Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel) {
+Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel,bool encoded) {
     const auto files=Unzip(path);const auto &mb=files.at("meta.json");
     if(mb.size()>1024*1024)throw std::runtime_error("SOG metadata too large");
     auto m=nlohmann::json::parse(mb.begin(),mb.end(),[](int depth,nlohmann::json::parse_event_t,nlohmann::json &){if(depth>32)throw std::runtime_error("SOG metadata nesting limit");return true;});
@@ -73,25 +73,32 @@ Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel) {
     auto quat=Pixels(files,m.at("quats").at("files").at(0).get<std::string>(),count,width,height);
     auto scale=Pixels(files,m.at("scales").at("files").at(0).get<std::string>(),count,width,height);
     auto color=Pixels(files,m.at("sh0").at("files").at(0).get<std::string>(),count,width,height);
-    Scene scene;scene.points.resize(count);float mins[3]={INFINITY,INFINITY,INFINITY},maxs[3]={-INFINITY,-INFINITY,-INFINITY};
-    for(int i=0;i<count;++i){if(cancel&&cancel->load())throw std::runtime_error("Load cancelled");auto &g=scene.points[i];
-        for(int k=0;k<3;++k){const double t=(uint16_t(high[i*4+k])<<8|low[i*4+k])/65535.;const double v=lo[k]*(1-t)+hi[k]*t;
-            g.position[k]=std::copysign(std::expm1(std::abs(v)),v);mins[k]=std::min(mins[k],g.position[k]);maxs[k]=std::max(maxs[k],g.position[k]);
-            g.color[k]=std::clamp(.5f+.28209479177387814f*sh[color[i*4+k]],0.f,1.f);}
-        g.color[3]=color[i*4+3]/255.f;
-        const float a=(quat[i*4]/255.f-.5f)*1.41421356237f,b=(quat[i*4+1]/255.f-.5f)*1.41421356237f,c=(quat[i*4+2]/255.f-.5f)*1.41421356237f;
-        const float d=std::sqrt(std::max(0.f,1-a*a-b*b-c*c));float w,x,y,z;
-        switch(quat[i*4+3]){case 252:w=d;x=a;y=b;z=c;break;case 253:w=a;x=d;y=b;z=c;break;case 254:w=a;x=b;y=d;z=c;break;case 255:w=a;x=b;y=c;z=d;break;default:throw std::runtime_error("SOG quaternion mode");}
-        const float inv=1/std::sqrt(w*w+x*x+y*y+z*z);w*=inv;x*=inv;y*=inv;z*=inv;
-        const float r[3][3]={{1-2*(y*y+z*z),2*(x*y-z*w),2*(x*z+y*w)}, {2*(x*y+z*w),1-2*(x*x+z*z),2*(y*z-x*w)}, {2*(x*z-y*w),2*(y*z+x*w),1-2*(x*x+y*y)}};
-        float cov[3][3]{};for(int u=0;u<3;++u)for(int v=0;v<3;++v)for(int k=0;k<3;++k)cov[u][v]+=r[u][k]*r[v][k]*std::exp(2*sc[scale[i*4+k]]);
-        const float packed[]={cov[0][0],cov[0][1],cov[0][2],cov[1][1],cov[1][2],cov[2][2]};std::copy_n(packed,6,g.covariance);
+    Scene scene;auto tables=std::make_shared<SogTables>();std::copy_n(sc.begin(),256,tables->scale.begin());std::copy_n(sh.begin(),256,tables->color.begin());
+    if(encoded){scene.tables=tables;scene.positions.resize(count);scene.codes.resize(count);}else scene.points.resize(count);
+    // Quantized means have only 65,536 distinct values per axis. Preserve the
+    // exact double interpolation/expm1 formula, then reuse its float result.
+    std::array<std::vector<float>,3> means;
+    if(count>65536)for(int k=0;k<3;++k){means[k].resize(65536);for(int q=0;q<65536;++q){
+        if((q&4095)==0&&cancel&&cancel->load())throw std::runtime_error("Load cancelled");
+        const double t=q/65535.,v=lo[k]*(1-t)+hi[k]*t;means[k][q]=std::copysign(std::expm1(std::abs(v)),v);
+    }}
+    float mins[3]={INFINITY,INFINITY,INFINITY},maxs[3]={-INFINITY,-INFINITY,-INFINITY};
+    for(int i=0;i<count;++i){if(cancel&&cancel->load())throw std::runtime_error("Load cancelled");
+        float position[3];
+        for(int k=0;k<3;++k){const auto quantized=uint16_t(high[i*4+k])<<8|low[i*4+k];
+            if(means[k].empty()){const double t=quantized/65535.,v=lo[k]*(1-t)+hi[k]*t;position[k]=std::copysign(std::expm1(std::abs(v)),v);}
+            else position[k]=means[k][quantized];
+            mins[k]=std::min(mins[k],position[k]);maxs[k]=std::max(maxs[k],position[k]);}
+        if(quat[i*4+3]<252)throw std::runtime_error("SOG quaternion mode");
+        const SogCodes codes{U32(quat,i*4),U32(scale,i*4)&0xffffffu,U32(color,i*4)};
+        if(encoded){std::copy_n(position,3,scene.positions[i].begin());scene.codes[i]=codes;}
+        else scene.points[i]=DecodeSog(position,codes,*tables);
     }
     double radius2=0;for(int k=0;k<3;++k){scene.center[k]=(mins[k]+maxs[k])*.5f;radius2+=double(maxs[k]-mins[k])*(maxs[k]-mins[k])*.25;}
     scene.radius=std::max(.001f,float(std::sqrt(radius2)));return scene;
 }
-Scene ReadModel(const std::string &path,const std::atomic<bool> *cancel) {
-    auto scene=path.size()>=4&&path.substr(path.size()-4)==".sog"?ReadSog(path,cancel):ReadPly(path,cancel);
+Scene ReadModel(const std::string &path,const std::atomic<bool> *cancel,bool encoded) {
+    auto scene=path.size()>=4&&path.substr(path.size()-4)==".sog"?ReadSog(path,cancel,encoded):ReadPly(path,cancel);
     ApplyViewerTransform(scene);return scene;
 }
 }

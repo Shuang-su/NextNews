@@ -1,8 +1,10 @@
 # Stable GPU pages: implementation and staged measurements
 
 This is an experimental route. The compatibility `chunks()` route remains the
-startup default. Work is continuing; 4M/8M, compressed SOG GPU sampling and the
-complete three-backend acceptance matrix must not be inferred from these results.
+startup default. This report covers the first float-page batch. Follow-up SOG
+GPU decoding, 4M/8M experiments and same-phone Web comparison are recorded in
+[encoded-pages-20260914.md](encoded-pages-20260914.md). The complete acceptance
+matrix must not be inferred from these intermediate results.
 
 ## Implementation
 
@@ -28,8 +30,8 @@ complete three-backend acceptance matrix must not be inferred from these results
 - These rules follow the local PlayCanvas 2.17.1 reference's distance and fallback
   mechanisms. Its bucket balancer and adaptive budget-scale feedback are not
   identically reproduced; matching point budgets alone does not establish parity.
-- Network concurrency remains at most four; native decoding currently uses one
-  loader (within the maximum-two limit). Hashed manifests use persistent local
+- Network concurrency remains at most four; this initial batch used one native
+  decoder (the follow-up adds bounded two-file prefetch). Hashed manifests use persistent local
   files, validated before atomic rename. Manifests without hashes use temporary
   sessions. No user source files or viewer-settings.json are modified.
 
@@ -47,7 +49,8 @@ has reached the display boundary. No LOD reduction is used to meet the timing.
 `benchmark_pages.py` makes two warm-up turns, then 20 identical alternating poses
 (+/-0.65 radians from the supplied initial camera). It records all uploads so a
 non-hot trial cannot be silently counted as GPU-hot. Continuous-interaction frame
-time is a separate check; the script does not claim to measure that gate.
+time is a separate check. These initial runs did not measure it; the later
+`--continuous` option records a separate 20-second camera trajectory.
 
 ```bash
 source scripts/harmonyos/env.sh

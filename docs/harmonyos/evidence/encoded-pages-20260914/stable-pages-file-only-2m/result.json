@@ -1,0 +1,13 @@
+{
+  "cache": "file",
+  "budget": 2000000,
+  "trials": 20,
+  "endToEndP50Ms": 7787.0,
+  "endToEndP95Ms": 8004.0,
+  "nativeSubmitToSwapP95Ms": 7923.62,
+  "allUploadsZero": false,
+  "fileOnlyFreshTargetPages": true,
+  "fullCoverage": true,
+  "frameTimeGateTested": false,
+  "failure": []
+}

@@ -31,8 +31,8 @@ def prepare(source, destination, limit=100000, label='', license_note='Private l
     source, destination = Path(source).resolve(), Path(destination).resolve()
     if source == destination or destination.exists() or destination.with_suffix('.manifest.json').exists():
         raise ValueError('Refusing to overwrite an existing model')
-    if not 1 <= limit <= 300000:
-        raise ValueError('Limit must be between 1 and 300000')
+    if not 1 <= limit <= 4000000:
+        raise ValueError('Limit must be between 1 and 4000000')
     with source.open('rb') as stream:
         if stream.readline().strip() != b'ply':
             raise ValueError('Not PLY; decompress with splat-transform first')

@@ -115,6 +115,7 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
 }
 
 void ApplyViewerTransform(Scene &scene) {
+    if(scene.tables){for(auto &p:scene.positions){p[0]=-p[0];p[1]=-p[1];}scene.tables->viewerTransform=!scene.tables->viewerTransform;}
     // SuperSplat viewer's import entity: setLocalEulerAngles(0, 0, 180).
     for(auto &g:scene.points) {g.position[0]=-g.position[0];g.position[1]=-g.position[1];g.covariance[2]=-g.covariance[2];g.covariance[4]=-g.covariance[4];}
     scene.center[0]=-scene.center[0];scene.center[1]=-scene.center[1];

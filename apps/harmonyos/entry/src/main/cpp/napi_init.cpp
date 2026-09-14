@@ -55,15 +55,15 @@ napi_value RegisterLods(napi_env env,napi_callback_info info){
 napi_value SelectLods(napi_env env,napi_callback_info info){
     napi_value args[4];size_t argc=4;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
     std::vector<double> camera;double budget=0,fov=0,aspect=0;
-    if(argc!=4||!ReadBuffer(env,args[0],camera,7)||camera.size()!=7||napi_get_value_double(env,args[1],&budget)!=napi_ok||!std::isfinite(budget)||budget<1||budget>splat::MaxGaussians||napi_get_value_double(env,args[2],&fov)!=napi_ok||!std::isfinite(fov)||fov<=1||fov>=179||napi_get_value_double(env,args[3],&aspect)!=napi_ok||!std::isfinite(aspect)||aspect<=0||aspect>100){napi_throw_range_error(env,nullptr,"Invalid LOD camera");return Undefined(env);}
+    if(argc!=4||!ReadBuffer(env,args[0],camera,7)||camera.size()!=7||napi_get_value_double(env,args[1],&budget)!=napi_ok||!std::isfinite(budget)||budget<1||budget>splat::MaxDrawGaussians||napi_get_value_double(env,args[2],&fov)!=napi_ok||!std::isfinite(fov)||fov<=1||fov>=179||napi_get_value_double(env,args[3],&aspect)!=napi_ok||!std::isfinite(aspect)||aspect<=0||aspect>100){napi_throw_range_error(env,nullptr,"Invalid LOD camera");return Undefined(env);}
     for(auto v:camera)if(!std::isfinite(v)||std::abs(v)>1e4){napi_throw_range_error(env,nullptr,"Invalid LOD camera value");return Undefined(env);}
     std::array<double,7> pose;std::copy_n(camera.begin(),7,pose.begin());const auto selected=lodTree.Select(pose,uint32_t(budget),fov,aspect);
     napi_value result;void *data;const size_t bytes=selected.size()*sizeof(uint32_t);napi_create_arraybuffer(env,bytes,&data,&result);if(bytes)std::memcpy(data,selected.data(),bytes);return result;
 }
 napi_value ChunksImpl(napi_env env,napi_callback_info info,bool paged) {
-    napi_value args[4];size_t argc=paged?4:3;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+    napi_value args[5];size_t argc=paged?5:3;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
     bool array=false;uint32_t n=0;
-    if(((paged&&argc!=4)||(!paged&&argc!=2&&argc!=3))||napi_is_array(env,args[0],&array)!=napi_ok||!array||napi_get_array_length(env,args[0],&n)!=napi_ok||n>1024) {
+    if(((paged&&argc!=4&&argc!=5)||(!paged&&argc!=2&&argc!=3))||napi_is_array(env,args[0],&array)!=napi_ok||!array||napi_get_array_length(env,args[0],&n)!=napi_ok||n>1024) {
         napi_throw_type_error(env,nullptr,"Expected 0-1024 chunk paths");return Undefined(env);
     }
     std::vector<std::string> paths;
@@ -96,10 +96,16 @@ napi_value ChunksImpl(napi_env env,napi_callback_info info,bool paged) {
     }
     double revision=0;
     if(paged&&(napi_get_value_double(env,args[3],&revision)!=napi_ok||!std::isfinite(revision)||revision<1||revision>9007199254740991.0||revision!=std::floor(revision))){napi_throw_range_error(env,nullptr,"Invalid selection revision");return Undefined(env);}
-    splat::Renderer::Get().SetChunks(std::move(paths),bounds,std::move(ranges),paged,uint64_t(revision));return Undefined(env);
+    bool encoded=false;if(paged&&argc==5&&napi_get_value_bool(env,args[4],&encoded)!=napi_ok){napi_throw_type_error(env,nullptr,"Expected encoded mode boolean");return Undefined(env);}
+    splat::Renderer::Get().SetChunks(std::move(paths),bounds,std::move(ranges),paged,uint64_t(revision),encoded);return Undefined(env);
 }
 napi_value Chunks(napi_env env,napi_callback_info info){return ChunksImpl(env,info,false);}
 napi_value SelectPages(napi_env env,napi_callback_info info){return ChunksImpl(env,info,true);}
+napi_value TraceFrames(napi_env env,napi_callback_info info){
+    napi_value arg;size_t argc=1;bool enabled=false;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
+    if(argc!=1||napi_get_value_bool(env,arg,&enabled)!=napi_ok){napi_throw_type_error(env,nullptr,"Expected boolean");return Undefined(env);}
+    splat::Renderer::Get().TraceFrames(enabled);return Undefined(env);
+}
 napi_value DropCaches(napi_env env,napi_callback_info){splat::Renderer::Get().DropCaches();return Undefined(env);}
 napi_value Active(napi_env env,napi_callback_info info) {
     napi_value arg;size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);bool active;
@@ -131,6 +137,7 @@ napi_value Init(napi_env env,napi_value exports) {
     napi_property_descriptor methods[]={
         {"registerLods",nullptr,RegisterLods,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"selectLods",nullptr,SelectLods,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"traceFrames",nullptr,TraceFrames,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"dropCaches",nullptr,DropCaches,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"selectPages",nullptr,SelectPages,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"pick",nullptr,Pick,nullptr,nullptr,nullptr,napi_default,nullptr},

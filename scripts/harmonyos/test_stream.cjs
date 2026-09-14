@@ -72,4 +72,21 @@ console.log('PASS AABB distance, rear penalty, offscreen detail, fixed budget, i
  assert.equal(published,beforeTurn+2,'cached front/back selections must publish during pending downloads');
  console.log('PASS cached camera turn does not wait for the network batch');
 
+ const pressure=new sandbox.exports.StreamSession(()=>{}),removed=[];
+ fakeFs.unlink=async path=>removed.push(path);
+ pressure.manifest={version:2,bounds:[0,0,0,1],levels:3,
+  chunks:Array.from({length:4},(_,i)=>({file:`chunk-000${i}.sog`,count:10,bytes:16,bounds:[0,0,0,1]})),
+  leaves:[{bounds:[0,0,0,1],lods:[[2,0,10],[1,0,10],[0,0,10]]}]};
+ pressure.updateSelection=()=>{};pressure.selection=[1];pressure.publishCached=()=>[];
+ pressure.targetFiles=new Set(['chunk-0001.sog']);pressure.previousFiles=new Set(['chunk-0002.sog']);
+ for(let i=0;i<4;i++)pressure.cache.set(`chunk-000${i}.sog`,`/cache/chunk-000${i}.sog`);
+ pressure.loadedBytes=536870912+16;
+ await pressure.pump([0,0,1,0,0,0],true,75,1);
+ assert.deepEqual(removed,['/cache/chunk-0003.sog']);
+ assert.ok(pressure.cache.has('chunk-0002.sog'),'previous view stays pinned');
+ pressure.cache.delete('chunk-0002.sog');let requests=0;pressure.fetch=async()=>{requests++;return new ArrayBuffer(16);};
+ await pressure.pump([0,0,1,0,0,0],true,75,1);
+ assert.equal(requests,0,'full cache must not fetch and immediately evict prefetch');
+ console.log('PASS disk pressure: current/previous views pinned; no prefetch churn without headroom');
+
 })().catch(e=>{console.error(e);process.exitCode=1;});

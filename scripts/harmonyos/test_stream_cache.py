@@ -5,7 +5,7 @@ from pathlib import Path
 import subprocess
 root = Path(__file__).resolve().parents[2]
 core = root / 'apps/harmonyos/entry/src/main/cpp'
-for name in ('upload_rows', 'scene_cache', 'page_atlas', 'paged_scene', 'lod_selection'):
+for name in ('upload_rows', 'scene_cache', 'page_atlas', 'paged_scene', 'lod_selection', 'decode_queue'):
     output = root / 'artifacts/harmonyos' / (name + '-test')
     output.parent.mkdir(parents=True, exist_ok=True)
     subprocess.run([os.environ.get('CXX', 'clang++'), '-std=c++17', '-Wall', '-Wextra', '-Werror',

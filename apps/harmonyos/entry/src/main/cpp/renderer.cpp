@@ -16,6 +16,29 @@ const char *Vertex = R"GLSL(#version 300 es
 precision highp float;
 layout(location=0) in uint splatIndex;
 uniform highp sampler2D splatData;
+uniform highp usampler2D encodedCodes;
+uniform highp sampler2D codebooks;
+uniform bool encoded;
+vec4 bytes(uint v){return vec4(v&255u,(v>>8u)&255u,(v>>16u)&255u,v>>24u);}
+float book(uint code,uint row,int component){return texelFetch(codebooks,ivec2(int(code&255u),int(row)),0)[component];}
+void readEncoded(out vec3 position,out vec4 color,out mat3 covariance){
+    ivec2 address=ivec2(int(splatIndex%4096u),int(splatIndex/4096u));
+    position=texelFetch(splatData,address,0).xyz;
+    uvec4 data=texelFetch(encodedCodes,address,0);uint row=data.w;
+    color=vec4(vec3(book(data.z,row,1),book(data.z>>8u,row,1),book(data.z>>16u,row,1)),float(data.z>>24u)/255.0);
+    vec3 abc=(bytes(data.x).xyz/255.0-.5)*1.41421356237;
+    float d=sqrt(max(0.0,1.0-dot(abc,abc)));vec4 q;
+    uint mode=data.x>>24u;
+    if(mode==252u)q=vec4(d,abc);else if(mode==253u)q=vec4(abc.x,d,abc.yz);else if(mode==254u)q=vec4(abc.xy,d,abc.z);else q=vec4(abc,d);
+    q=normalize(q);float w=q.x,x=q.y,y=q.z,z=q.w;
+    mat3 r=mat3(1.0-2.0*(y*y+z*z),2.0*(x*y+z*w),2.0*(x*z-y*w),
+                2.0*(x*y-z*w),1.0-2.0*(x*x+z*z),2.0*(y*z+x*w),
+                2.0*(x*z+y*w),2.0*(y*z-x*w),1.0-2.0*(x*x+y*y));
+    vec3 scale=vec3(book(data.y,row,0),book(data.y>>8u,row,0),book(data.y>>16u,row,0));
+    covariance=(r*mat3(scale.x,0,0,0,scale.y,0,0,0,scale.z))*transpose(r);
+    covariance[0][2]=-covariance[0][2];covariance[2][0]=-covariance[2][0];
+    covariance[1][2]=-covariance[1][2];covariance[2][1]=-covariance[2][1];
+}
 vec4 readSplat(uint offset) { uint address=splatIndex*4u+offset;return texelFetch(splatData,ivec2(int(address%4096u),int(address/4096u)),0); }
 uniform mat4 view;
 uniform vec2 viewport;
@@ -26,18 +49,20 @@ uniform bool optimized;
 out vec2 gaussian;
 out vec4 tint;
 void main() {
-    vec4 t0=readSplat(0u),t1=readSplat(1u);
-    vec3 position=t0.xyz;vec4 color=vec4(t0.w,t1.xyz);
+    vec3 position;vec4 color;mat3 covariance;
+    if(encoded){readEncoded(position,color,covariance);}
+    else {vec4 t0=readSplat(0u),t1=readSplat(1u),t2=readSplat(2u),t3=readSplat(3u);
+        position=t0.xyz;color=vec4(t0.w,t1.xyz);
+        vec3 covA=vec3(t1.w,t2.xy),covB=vec3(t2.zw,t3.x);
+        covariance=mat3(covA.x,covA.y,covA.z,covA.y,covB.x,covB.y,covA.z,covB.y,covB.z);
+    }
     tint=color;
     vec3 center=(view*vec4(position,1.0)).xyz;
     float z=-center.z;
     if(z<=nearPlane || z>=farPlane || color.a<0.0039) {
         gl_Position=vec4(2.0,2.0,2.0,1.0); gaussian=vec2(0.0); return;
     }
-    vec4 t2=readSplat(2u),t3=readSplat(3u);
-    vec3 covA=vec3(t1.w,t2.xy),covB=vec3(t2.zw,t3.x);
     float focal=viewport.y/(2.0*tanHalfFov);
-    mat3 covariance=mat3(covA.x,covA.y,covA.z,covA.y,covB.x,covB.y,covA.z,covB.y,covB.z);
     mat3 rotation=mat3(view);
     mat3 c=rotation*covariance*transpose(rotation);
     // Perspective projection derivative, screen coordinates in pixels.
@@ -131,12 +156,13 @@ void Renderer::Load(std::string path) {
     {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();preparedPage_.reset();chunksPaged_=false;chunkPaths_.clear();chunksDirty_=false;requestedPath_=path;pendingPath_=std::move(path);cancel_=true;status_.state="loading";status_.message="Loading model";}
     loadChanged_.notify_one();
 }
-void Renderer::SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges,bool paged,uint64_t revision) {
-    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();preparedPage_.reset();chunksPaged_=paged;requestRevision_=revision;requestAt_=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count();status_.requestRevision=revision;chunkPaths_=std::move(paths);chunkBounds_=bounds;chunkRanges_=std::move(ranges);
+void Renderer::SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges,bool paged,uint64_t revision,bool encoded) {
+    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();preparedPage_.reset();chunksPaged_=paged;chunksEncoded_=encoded;requestRevision_=revision;requestAt_=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count();status_.requestRevision=revision;chunkPaths_=std::move(paths);chunkBounds_=bounds;chunkRanges_=std::move(ranges);
      pendingPath_.clear();requestedPath_.clear();chunksDirty_=!chunkPaths_.empty();cancel_=true;dirty_=true;
      status_.state=chunkPaths_.empty()?"ready":"loading";status_.message=chunkPaths_.empty()?"Stream stopped":"Streaming chunks";}
     loadChanged_.notify_one();changed_.notify_one();
 }
+void Renderer::TraceFrames(bool enabled){std::lock_guard<std::mutex> lock(mutex_);traceFrames_=enabled;lastTraceFrame_=0;}
 void Renderer::DropCaches(){std::lock_guard<std::mutex> lock(mutex_);dropCaches_=true;}
 void Renderer::SetCamera(Camera camera) {
     {std::lock_guard<std::mutex> lock(mutex_);camera_=camera;dirty_=true;}changed_.notify_one();
@@ -175,7 +201,7 @@ void Renderer::InitGL(void *window) {
     viewLocation_=glGetUniformLocation(program_,"view");viewportLocation_=glGetUniformLocation(program_,"viewport");nearLocation_=glGetUniformLocation(program_,"nearPlane");farLocation_=glGetUniformLocation(program_,"farPlane");dataLocation_=glGetUniformLocation(program_,"splatData");optimizedLocation_=glGetUniformLocation(program_,"optimized");
     glGenVertexArrays(1,&vao_);glBindVertexArray(vao_);glGenBuffers(1,&buffer_);glBindBuffer(GL_ARRAY_BUFFER,buffer_);
     glEnableVertexAttribArray(0);glVertexAttribIPointer(0,1,GL_UNSIGNED_INT,sizeof(uint32_t),nullptr);glVertexAttribDivisor(0,1);
-    GLint maxTexture=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxTexture);atlasRows_=std::min(maxTexture,8192);atlas_.Reset(atlasRows_*4);
+    GLint maxTexture=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxTexture);atlasRows_=std::min(maxTexture,8192);atlas_.Reset(atlasRows_*4);encodedRows_=std::min(maxTexture,4096);encodedAtlas_.Reset(encodedRows_*16);encodedBookSlots_.assign(encodedRows_*16,UINT32_MAX);bookAtlas_.Reset(2048);
     if(maxTexture<4096)throw std::runtime_error("4096-wide data textures unavailable");
     glGenTextures(1,&dataTexture_);glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,dataTexture_);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
@@ -183,6 +209,8 @@ void Renderer::InitGL(void *window) {
     glEnable(GL_BLEND);glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA);glDisable(GL_DEPTH_TEST);glDepthMask(GL_FALSE);glDisable(GL_CULL_FACE);
 }
 void Renderer::DestroyGL() {
+    if(encodedCenters_)glDeleteTextures(1,&encodedCenters_);if(encodedCodes_)glDeleteTextures(1,&encodedCodes_);if(codebookTexture_)glDeleteTextures(1,&codebookTexture_);
+    encodedCenters_=encodedCodes_=codebookTexture_=0;encodedDrawable_=false;encodedBookSlots_.clear();encodedAtlas_.Reset(0);bookAtlas_.Reset(0);activeEncodedPages_.clear();activeBooks_.clear();
     if(atlasTexture_)glDeleteTextures(1,&atlasTexture_);atlasTexture_=0;atlasDrawable_=false;atlas_.Reset(0);activePages_.clear();stagingPage_.reset();
     if(stagingTexture_)glDeleteTextures(1,&stagingTexture_);stagingTexture_=0;
     if(spareTexture_)glDeleteTextures(1,&spareTexture_);spareTexture_=0;spareCapacity_=dataCapacity_=0;
@@ -298,7 +326,10 @@ void Renderer::Draw(const View &view,int width,int height) {
     glUniformMatrix4fv(viewLocation_,1,GL_FALSE,view.matrix.data());
     glUniform2f(viewportLocation_,float(width),float(height));
     glUniform1f(glGetUniformLocation(program_,"tanHalfFov"),view.tanHalfFov);glUniform1f(nearLocation_,view.nearPlane);glUniform1f(farLocation_,view.farPlane);
-    glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,scene_->paged?atlasTexture_:dataTexture_);glUniform1i(dataLocation_,0);
+    glUniform1i(glGetUniformLocation(program_,"encoded"),scene_->paged&&encodedDrawable_);
+    glUniform1i(glGetUniformLocation(program_,"encodedCodes"),1);glActiveTexture(GL_TEXTURE1);glBindTexture(GL_TEXTURE_2D,encodedCodes_);
+    glUniform1i(glGetUniformLocation(program_,"codebooks"),2);glActiveTexture(GL_TEXTURE2);glBindTexture(GL_TEXTURE_2D,codebookTexture_);
+    glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,scene_->paged?(encodedDrawable_?encodedCenters_:atlasTexture_):dataTexture_);glUniform1i(dataLocation_,0);
     if(uploadDirty_ && !preuploaded_ && !scene_->paged) {
         const size_t height=std::max(size_t(1),(scene_->Count()*4+4095)/4096);
         if(uploadPixels_.empty()) {
@@ -332,6 +363,9 @@ void Renderer::Draw(const View &view,int width,int height) {
         OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","PageDisplay revision=%{public}llu count=%{public}zu prepareMs=%{public}.2f sortMs=%{public}.2f refineMs=%{public}.2f uploadedBytes=%{public}.0f pageHits=%{public}.0f frameMs=%{public}.2f",(unsigned long long)pendingDisplayRevision_,scene_->Count(),pendingPrepareMs_,pendingSortMs_,status_.refineMs,status_.uploadedBytes,status_.pageHits,Ms(drawStart));
         pendingDisplayRevision_=0;
     }
+    if(traceFrames_){const double now=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count();
+        if(lastTraceFrame_>0)OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","StreamPresent intervalMs=%{public}.3f submitMs=%{public}.3f count=%{public}zu revision=%{public}.0f",now-lastTraceFrame_,Ms(drawStart),scene_->Count(),status_.displayRevision);
+        lastTraceFrame_=now;}
     status_.frames++;status_.sortMs=sortMs;status_.frameMs=Ms(drawStart);status_.fps=1000.0/std::max(Ms(start),.001);status_.bytes=(preparedPixels_.capacity()+stagingPixels_.capacity())*sizeof(float)+cacheBytes_.load()+scene_->points.capacity()*sizeof(Gaussian)+scene_->Count()*68+sorted.capacity()*sizeof(uint32_t);
 }
 void Renderer::LoadLoop() {
@@ -339,14 +373,14 @@ void Renderer::LoadLoop() {
     OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","Thread QoS LoadLoop() result=%{public}d",qos);
     for (;;) {
         std::vector<std::vector<float>> retiredPixels;std::vector<std::shared_ptr<Scene>> retiredScenes;
-        std::string path;std::vector<std::string> chunks;std::array<float,4> bounds{};std::vector<uint32_t> ranges;uint64_t generation,revision=0;bool paged=false,dropCaches=false;double requestAt=0;
+        std::string path;std::vector<std::string> chunks;std::array<float,4> bounds{};std::vector<uint32_t> ranges;uint64_t generation,revision=0;bool paged=false,encoded=false,dropCaches=false;double requestAt=0;
         {
             std::unique_lock<std::mutex> lock(mutex_);
             loadChanged_.wait(lock,[&]{return stop_||!retiredPixels_.empty()||!retiredScenes_.empty()||(active_&&(!pendingPath_.empty()||chunksDirty_));});
             retiredPixels.swap(retiredPixels_);retiredScenes.swap(retiredScenes_);
             if(stop_)return;
             if(!active_)continue;
-            generation=loadGeneration_;paged=chunksPaged_;revision=requestRevision_;requestAt=requestAt_;path=std::move(pendingPath_);pendingPath_.clear();
+            generation=loadGeneration_;paged=chunksPaged_;encoded=chunksEncoded_;revision=requestRevision_;requestAt=requestAt_;path=std::move(pendingPath_);pendingPath_.clear();
             if(chunksDirty_){chunks=chunkPaths_;bounds=chunkBounds_;ranges=chunkRanges_;chunksDirty_=false;}
             if(!path.empty()||!chunks.empty()){dropCaches=dropCaches_;dropCaches_=false;}cancel_=false;
         }
@@ -384,7 +418,7 @@ void Renderer::LoadLoop() {
                 }
             }
             if(!chunks.empty() && paged){
-                try{PreparePages(chunks,bounds,ranges,generation,revision,requestAt);}
+                try{PreparePages(chunks,bounds,ranges,generation,revision,requestAt,encoded);}
                 catch(const std::exception &e){std::lock_guard<std::mutex> lock(mutex_);if(!cancel_ && generation==loadGeneration_){status_.state="error";status_.message=e.what();}}
             }
             if(!chunks.empty() && !paged) {

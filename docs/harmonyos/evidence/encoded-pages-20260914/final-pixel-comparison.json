@@ -1,0 +1,12 @@
+{
+  "roi": [
+    0,
+    450,
+    1320,
+    1280
+  ],
+  "meanAbs8Bit": 0.00014482171108677134,
+  "p99Abs8Bit": 0.0,
+  "maxAbs8Bit": 1,
+  "differentPixelsFraction": 0.000425337714494341
+}

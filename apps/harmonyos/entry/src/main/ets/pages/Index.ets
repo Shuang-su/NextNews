@@ -68,6 +68,7 @@ struct Index {
   @State streamMessage: string = '';
   @State quality: number = 2000000;
   @State paged: boolean = false;
+  @State encoded: boolean = false;
   @State fullLoad: boolean = false;
   @State streamPanel: boolean = false;
   private stream: StreamSession | undefined = undefined;
@@ -159,7 +160,9 @@ struct Index {
   private async measureStream(fileOnly: boolean = false): Promise<void> {
     const stream = this.stream;
     if (!stream || !stream.paged || this.streamMeasuring) { return; }
+    this.settingsVisible = false; this.diagnosticsVisible = false;
     this.streamMeasuring = true; this.autoOrbit = false; this.profilePlaying = false;
+    const prefetch = stream.prefetchEnabled; stream.prefetchEnabled = false;
     this.resetJoystick();
     const original = this.controls.current.slice();
     try {
@@ -168,13 +171,13 @@ struct Index {
         const pose = original.slice(); pose[0] += trial % 2 === 0 ? -.65 : .65;
         this.controls.current = pose; this.controls.target = pose.slice(); this.updateCamera();
         if (fileOnly && trial >= 0) { nativeRender.dropCaches(); stream.retry(); }
-        const start = Date.now();
+        const start = Date.now(), networkStart = stream.networkBytes;
         stream.tick(pose, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
         let complete = false;
         while (Date.now() - start < 45000 && this.active && this.stream === stream) {
           const status = nativeRender.status();
           if (stream.selectionSubmitted && stream.coverage === 1 && status.state === 'ready' && status.displayRevision === stream.submittedRevision && status.count === stream.requestedCount) {
-            console.info(`StreamTrial trial=${trial} cache=${fileOnly ? 'file' : 'gpu'} budget=${this.quality} revision=${stream.submittedRevision} target=${stream.targetRevision} elapsedMs=${Date.now() - start} refineMs=${status.refineMs.toFixed(2)} uploadedBytes=${status.uploadedBytes} count=${status.count} coverage=${stream.coverage}`);
+            console.info(`StreamTrial trial=${trial} cache=${fileOnly ? 'file' : 'gpu'} budget=${this.quality} revision=${stream.submittedRevision} target=${stream.targetRevision} elapsedMs=${Date.now() - start} refineMs=${status.refineMs.toFixed(2)} uploadedBytes=${status.uploadedBytes} networkBytes=${stream.networkBytes - networkStart} count=${status.count} coverage=${stream.coverage}`);
             this.benchmarkResult = `流式测量 ${Math.max(0, trial + 1)}/20 · ${Date.now() - start} ms`; complete = true; break;
           }
           if (status.state === 'error') { throw new Error(status.message); }
@@ -184,7 +187,30 @@ struct Index {
         await new Promise<void>((resolve) => { setTimeout(resolve, 300); });
       }
     } catch (error) { this.benchmarkResult = `测量未通过：${String(error)}`; console.info(`StreamTrial failure=${String(error)}`); }
-    finally { this.streamMeasuring = false; }
+    finally {
+      stream.prefetchEnabled = prefetch;
+      if (this.active && this.stream === stream) { this.controls.current = original; this.controls.target = original.slice(); this.updateCamera(); }
+      this.streamMeasuring = false;
+    }
+  }
+  private async measureContinuous(): Promise<void> {
+    const stream = this.stream;
+    if (!stream || !stream.paged || this.streamMeasuring) { return; }
+    this.streamMeasuring = true; this.autoOrbit = false; this.profilePlaying = false;
+    this.settingsVisible = false; this.diagnosticsVisible = false; this.resetJoystick();
+    const original = this.controls.current.slice(), start = Date.now(); nativeRender.traceFrames(true);
+    console.info(`StreamContinuous start budget=${this.quality}`);
+    try {
+      while (Date.now() - start < 20000 && this.active && this.stream === stream) {
+        const t = (Date.now() - start) / 1000, pose = original.slice();
+        pose[0] += .65 * Math.sin(t * 1.2); pose[1] += .08 * Math.sin(t * .7);
+        this.controls.current = pose; this.controls.target = pose.slice(); this.updateCamera();
+        stream.tick(pose, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
+        await new Promise<void>((resolve) => { setTimeout(resolve, 16); });
+      }
+      console.info(`StreamContinuous complete elapsedMs=${Date.now() - start} budget=${this.quality}`);
+      this.benchmarkResult = '连续转向完成 · 逐帧记录已写入日志';
+    } finally { nativeRender.traceFrames(false); this.streamMeasuring = false; }
   }
   private toggleMode(): void { this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.flyMode = !this.flyMode; this.controls.setFly(this.flyMode); this.updateCamera(); }
   private async focusAt(x: number, y: number): Promise<void> {
@@ -260,7 +286,7 @@ struct Index {
   private async startStream(): Promise<void> {
     this.stopStream(); this.localError = ''; this.title = '流式场景'; this.reset();
     const session = new StreamSession((message: string) => { if (this.stream === session) { this.streamMessage = message; } });
-    this.stream = session; session.budget = this.quality; session.paged = this.paged;
+    this.stream = session; session.budget = this.quality; session.paged = this.paged; session.encoded = this.encoded;
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       await session.open(this.streamUrl, context.cacheDir, this.fullLoad);
@@ -401,6 +427,7 @@ struct Index {
                     Button('配置默认镜头').fontSize(12).onClick(() => { this.profileCamera(false); })
                     Button(this.profilePlaying ? '暂停配置动画' : '播放配置动画').fontSize(12).onClick(() => { if (this.profilePlaying) { this.profilePlaying = false; } else { this.profileCamera(true); } })
                   }
+                  Button('SuperSplat Web 对照').fontSize(12).onClick(() => this.getUIContext().getRouter().pushUrl({ url: 'pages/WebComparison' }))
                   Button('华为原生渲染').fontSize(13).width('100%').onClick(() => { this.getUIContext().getRouter().pushUrl({ url: 'pages/SpatialViewer' }).catch((error: BusinessError) => { this.localError = error.message; }); })
                   Button('同源 SOG 对照').enabled(!this.busy).onClick(() => { this.loadComparison(); })
                   Button('打开本地 PLY / SOG').fontSize(13).width('100%').enabled(!this.busy).onClick(() => { this.importModel(); })
@@ -418,14 +445,17 @@ struct Index {
                 }
                 if (this.settingsVisible) {
                   Text('视图设置').fontSize(16).fontColor('#EEF4FF').width('100%')
-                  Button(this.paged ? '流式：稳定页（实验）' : '流式：兼容').fontSize(12).onClick(() => {
+                  Button(this.encoded ? '纹理：SOG 编码（实验）' : '纹理：浮点').fontSize(12).enabled(this.paged && this.quality <= 4000000).onClick(() => {
+                    this.encoded = !this.encoded; if (this.stream) { this.stream.encoded = this.encoded; this.stream.retry(); }
+                  })
+                  Button(this.paged ? '流式：稳定页（实验）' : '流式：兼容').fontSize(12).enabled(this.quality <= 4000000).onClick(() => {
                     this.paged = !this.paged;
                     if (this.stream) { this.stream.paged = this.paged; this.stream.retry(); }
                   })
                   Row({ space: 8 }) {
                     Text('高斯预算').fontSize(12).fontColor('#AFC6D8').layoutWeight(1)
-                    Button(this.quality === 1000000 ? '100 万' : this.quality === 2000000 ? '200 万' : '400 万').fontSize(12).onClick(() => {
-                      this.quality = this.quality === 1000000 ? 2000000 : this.quality === 2000000 ? 4000000 : 1000000;
+                    Button(this.quality === 1000000 ? '100 万' : this.quality === 2000000 ? '200 万' : this.quality === 4000000 ? '400 万' : '800 万（实验）').fontSize(12).onClick(() => {
+                      this.quality = this.quality === 1000000 ? 2000000 : this.quality === 2000000 ? 4000000 : this.quality === 4000000 && this.paged && this.encoded ? 8000000 : 1000000;
                       if (this.stream) { this.stream.budget = this.quality; }
                     })
                   }.width('100%')
@@ -444,6 +474,7 @@ struct Index {
                 }
                 if (this.diagnosticsVisible) {
                   Button(this.gpuOptimized ? 'GPU 裁剪：开' : 'GPU 裁剪：关').fontSize(12).onClick(() => { this.gpuOptimized = !this.gpuOptimized; nativeRender.optimize(this.gpuOptimized); })
+                  Button('连续转向 20 秒').fontSize(12).enabled(this.paged && !this.streamMeasuring).onClick(() => { this.measureContinuous(); })
                   Button('流式测量 20 次').fontSize(12).enabled(this.paged && !this.streamMeasuring).onClick(() => { this.measureStream(); })
                   Button('文件缓存测量 20 次').fontSize(12).enabled(this.paged && !this.streamMeasuring).onClick(() => { this.measureStream(true); })
                   Button('测量 10 秒').fontSize(12).enabled(this.benchmarkStart === 0).onClick(() => { this.benchmark(); })

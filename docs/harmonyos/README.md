@@ -7,7 +7,8 @@ native library and OpenGL ES 3.0. Models and streamed selections are decoded, me
 a separate worker sorts camera updates. Streaming textures upload to a staging texture in at most 4 MiB batches per frame; the previous resident scene remains drawable until the replacement is ready. Rendering uses instanced Gaussian ellipses,
 projected anisotropic covariance and back-to-front premultiplied alpha blending.
 The first version uses SH0 color, a 45° vertical field of view and orbit controls.
-This is a native renderer; there is no ArkWeb dependency.
+The main renderer uses native OpenGL ES. The separate **SuperSplat Web 对照**
+page uses ArkWeb to run a pinned upstream viewer on the same phone.
 
 `libsplat.so` exports `load(path)`, `camera(yaw,pitch,zoom,targetX,targetY,targetZ,fly)`,
 `pick(x,y)`, `chunks(paths,bounds,ranges)`, `setActive(boolean)`, and `status()`. Model parsing is asynchronous relative to
@@ -189,6 +190,12 @@ for implementation, measured gates and current limitations. `benchmark_pages.py`
 records 20 full-coverage camera turns; `--file-only` drops reusable CPU/GPU source
 identities while retaining the previous drawable scene and cached files. The
 legacy path remains the default pending complete acceptance.
+
+The **纹理：SOG 编码（实验）** switch adds 32-byte GPU Gaussians, two-file native
+decode prefetch and row-coalesced uploads. It also unlocks the experimental 8M
+budget. The **SuperSplat Web 对照** and **同源 PLY** controls provide separate
+upstream/Huawei checks; see [encoded-pages-20260914.md](encoded-pages-20260914.md)
+for reproducible commands, measurements and limits of the comparison.
 
 Multitouch controls use independent pointer ownership for the flight stick and
 viewport. Run `node scripts/harmonyos/test_pointer_input.cjs` for the regression.

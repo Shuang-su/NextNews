@@ -19,5 +19,13 @@ int main(){
     Key front={"chunk",{0,2}},back={"chunk",{2,2}};
     subsets.Put(front,a);subsets.Put(back,b);
     assert(subsets.Get(front)==a&&subsets.Get(back)==b);
+    auto book=std::make_shared<SogTables>();
+    auto encoded=[&](){auto s=std::make_shared<Scene>();s->tables=book;s->positions.resize(256);s->codes.resize(256);return s;};
+    SceneCache<int> pages(sizeof(SogTables)+2*256*24);
+    auto p=encoded(),q=encoded();pages.Put(1,p);pages.Put(2,q);
+    assert(pages.Bytes()==sizeof(SogTables)+2*256*24&&pages.Points()==512);
+    assert(pages.Get(1)==p&&pages.Get(2)==q);
+    pages.Put(3,encoded());assert(!pages.Get(1)&&pages.Get(2)==q);assert(pages.Bytes()==sizeof(SogTables)+2*256*24);
+    pages.Clear();assert(pages.Bytes()==0);assert(p->Count()==256&&p->tables==book);
     std::cout<<"PASS weighted LRU, touches, live eviction, replacement, limit, range-key history\n";
 }
