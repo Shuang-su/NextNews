@@ -158,3 +158,6 @@ python3 scripts/harmonyos/verify_toolbar.py
 
 It checks immersive/help shortcuts and double-click mode changes, and saves
 fresh screenshots/layouts under an ignored timestamped artifacts directory.
+
+First physical-device results (Mate 80 Pro Max, API 26) are recorded in
+[device-20260914.md](device-20260914.md), separately from simulator measurements.
