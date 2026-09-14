@@ -1,3 +1,6 @@
+import { common } from '@kit.AbilityKit';
+import { ViewerProfile } from './ViewerProfile';
+import { ViewerPose } from './ViewerSettings';
 import { Scene, Camera, EnvironmentBackgroundType } from '@kit.ArkGraphics3D';
 import { spatialRender } from '@kit.SpatialReconKit';
 import { BusinessError } from '@kit.BasicServicesKit';
@@ -6,6 +9,34 @@ import { SAMPLE_BOUNDS, SampleBounds } from './ModelBounds';
 @Entry
 @Component
 struct SpatialViewer {
+  private profile: ViewerProfile | undefined = undefined;
+  private profileTimer: number = -1;
+  @State profilePlaying: boolean = false;
+  private stopProfile(): void { if (this.profileTimer !== -1) { clearInterval(this.profileTimer); this.profileTimer = -1; } this.profilePlaying = false; }
+  private profilePose(p: ViewerPose): void {
+    if (!this.camera) { return; }
+    const d = p.position.map((v: number, i: number) => v - p.target[i]); const len = Math.hypot(...d);
+    const yaw = Math.atan2(d[0], d[2]), pitch = Math.asin(d[1] / len);
+    const hs = Math.sin(yaw / 2), hc = Math.cos(yaw / 2), ps = Math.sin(-pitch / 2), pc = Math.cos(-pitch / 2);
+    this.yaw = yaw; this.pitch = pitch; this.zoom = len / (this.bounds.radius * 3);
+    this.targetOffset = p.target.map((v: number, i: number) => v - this.bounds.center[i]); this.panX = 0; this.panY = 0;
+    this.camera.position = { x: p.position[0], y: p.position[1], z: p.position[2] };
+    this.camera.rotation = { x: hc * ps, y: hs * pc, z: -hs * ps, w: hc * pc };
+    this.camera.fov = p.fov * Math.PI / 180;
+  }
+  private async profileCamera(play: boolean): Promise<void> {
+    if (this.selectedIndex !== 2 || !this.camera) { this.message = '请先加载华发转换产物'; return; }
+    try {
+      this.stopProfile(); this.stopBenchmark();
+      if (!play || !this.profile) { this.profile = await ViewerProfile.load(this.getUIContext().getHostContext() as common.UIAbilityContext); }
+      this.profilePose(play ? this.profile.animation.sample(this.profile.time) : this.profile.initial()); this.profilePlaying = play;
+      let previous = Date.now();
+      if (play) { this.profileTimer = setInterval(() => {
+        const now = Date.now(); if (this.foreground && this.profile) { this.profilePose(this.profile.advance((now - previous) / 1000)); } previous = now;
+      }, 16); }
+      this.message = 'viewer-settings.json · 75° · 默认镜头 / 配置动画';
+    } catch (error) { this.message = String(error); }
+  }
   @State scene: Scene | undefined = undefined;
   @State message: string = '检查 SpatialRender 能力';
   @State busy: boolean = false;
@@ -21,6 +52,7 @@ struct SpatialViewer {
   private yaw: number = 0;
   private pitch: number = 0;
   private zoom: number = 1;
+  private targetOffset: number[] = [0, 0, 0];
   private panX: number = 0;
   private panY: number = 0;
   private lastX: number = 0;
@@ -29,7 +61,7 @@ struct SpatialViewer {
 
   aboutToAppear(): void { this.visible = true; this.load(1); }
   aboutToDisappear(): void {
-    this.visible = false; this.generation++; this.stopBenchmark();
+    this.visible = false; this.generation++; this.stopBenchmark(); this.stopProfile();
     this.camera = undefined;
     this.scene?.destroy(); this.scene = undefined;
   }
@@ -63,8 +95,9 @@ struct SpatialViewer {
     }, 16);
   }
   private reset(): void {
+    this.stopProfile(); if (this.camera) { this.camera.fov = Math.PI / 4; }
     this.stopBenchmark(); this.benchmarkResult = '';
-    this.yaw = 0; this.pitch = 0; this.zoom = 1; this.panX = 0; this.panY = 0;
+    this.targetOffset = [0, 0, 0]; this.yaw = 0; this.pitch = 0; this.zoom = 1; this.panX = 0; this.panY = 0;
     this.updateCamera();
   }
   private updateCamera(): void {
@@ -73,9 +106,9 @@ struct SpatialViewer {
     const sp = Math.sin(this.pitch); const cp = Math.cos(this.pitch);
     const r = this.bounds.radius; const d = r * 3 * this.zoom;
     this.camera.position = {
-      x: this.bounds.center[0] + sy * cp * d + (cy * this.panX - sy * sp * this.panY) * r,
-      y: this.bounds.center[1] + sp * d + cp * this.panY * r,
-      z: this.bounds.center[2] + cy * cp * d + (-sy * this.panX - cy * sp * this.panY) * r
+      x: this.bounds.center[0] + this.targetOffset[0] + sy * cp * d + (cy * this.panX - sy * sp * this.panY) * r,
+      y: this.bounds.center[1] + this.targetOffset[1] + sp * d + cp * this.panY * r,
+      z: this.bounds.center[2] + this.targetOffset[2] + cy * cp * d + (-sy * this.panX - cy * sp * this.panY) * r
     };
     const hs = Math.sin(this.yaw / 2); const hc = Math.cos(this.yaw / 2);
     const ps = Math.sin(-this.pitch / 2); const pc = Math.cos(-this.pitch / 2);
@@ -86,8 +119,8 @@ struct SpatialViewer {
     if (!canIUse('SystemCapability.Graphics.SpatialRender')) {
       this.message = '此设备未声明 SpatialRender 能力，请返回 C++ 查看器或使用受支持真机。'; return;
     }
-    this.stopBenchmark(); this.benchmarkResult = ''; this.busy = true; this.message = '正在加载华为原生 3DGS 插件与模型';
-    const view = [this.yaw, this.pitch, this.zoom, this.panX, this.panY];
+    this.stopProfile(); this.stopBenchmark(); this.benchmarkResult = ''; this.busy = true; this.message = '正在加载华为原生 3DGS 插件与模型';
+    const view = [this.yaw, this.pitch, this.zoom, this.panX, this.panY, ...this.targetOffset, this.camera?.fov ?? Math.PI / 4];
     const request = ++this.generation; const start = Date.now();
     let pending: Scene | undefined = undefined;
     let stage: string = '初始化渲染上下文';
@@ -124,7 +157,7 @@ struct SpatialViewer {
       this.camera = camera; this.reset(); this.selectedIndex = index;
       if (preserveView) {
         this.yaw = view[0]; this.pitch = view[1]; this.zoom = view[2];
-        this.panX = view[3]; this.panY = view[4]; this.updateCamera();
+        this.panX = view[3]; this.panY = view[4]; this.targetOffset = view.slice(5, 8); camera.fov = view[8]; this.updateCamera();
       }
       this.scene = pending; pending = undefined;
       this.message = `${this.bounds.file} · 加载接口 ${Date.now() - start} ms · SH0 输入\nSpatialReconKit / ArkGraphics3D · Rz 180°`;
@@ -145,12 +178,12 @@ struct SpatialViewer {
         Component3D({ scene: this.scene, modelType: ModelType.SURFACE })
           .width('100%').height('100%')
           .gesture(GestureGroup(GestureMode.Exclusive,
-            PinchGesture({ fingers: 2 }).onActionStart(() => { this.stopBenchmark(); this.pinchStart = this.zoom; })
+            PinchGesture({ fingers: 2 }).onActionStart(() => { this.stopProfile(); this.stopBenchmark(); this.pinchStart = this.zoom; })
               .onActionUpdate((event: GestureEvent) => {
                 this.zoom = Math.max(0.05, Math.min(20, this.pinchStart / Math.max(event.scale, 0.01)));
                 this.updateCamera();
               }),
-            PanGesture({ fingers: 1 }).onActionStart(() => { this.stopBenchmark(); this.lastX = 0; this.lastY = 0; })
+            PanGesture({ fingers: 1 }).onActionStart(() => { this.stopProfile(); this.stopBenchmark(); this.lastX = 0; this.lastY = 0; })
               .onActionUpdate((event: GestureEvent) => {
                 const dx = event.offsetX - this.lastX; const dy = event.offsetY - this.lastY;
                 this.lastX = event.offsetX; this.lastY = event.offsetY;
@@ -181,6 +214,10 @@ struct SpatialViewer {
         Button('复位').onClick(() => this.reset());
         Button('测量 10 秒').enabled(!this.busy).onClick(() => this.benchmark());
       }
+        Row({ space: 6 }) {
+          Button('配置默认镜头').fontSize(12).onClick(() => this.profileCamera(false));
+          Button(this.profilePlaying ? '暂停配置动画' : '播放配置动画').fontSize(12).onClick(() => { if (this.profilePlaying) { this.stopProfile(); } else { this.profileCamera(true); } });
+        }
         Text(this.benchmarkResult).fontSize(12).fontColor('#EBC478');
       }.padding(12).width('100%').backgroundColor('#BB07131F').position({ x: 0, y: '100%' }).translate({ y: '-100%' });
     }.width('100%').height('100%').backgroundColor('#07131F');

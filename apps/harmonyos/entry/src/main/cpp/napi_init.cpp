@@ -23,10 +23,11 @@ napi_value Load(napi_env env,napi_callback_info info) {
     splat::Renderer::Get().Load(std::string(path.data(),length));return Undefined(env);
 }
 napi_value Camera(napi_env env,napi_callback_info info) {
-    napi_value args[7];size_t argc=7;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);double v[7];
-    if(argc!=7){napi_throw_type_error(env,nullptr,"Expected seven camera values");return Undefined(env);}
-    for(int i=0;i<7;++i)if(napi_get_value_double(env,args[i],&v[i])!=napi_ok||!std::isfinite(v[i])||std::abs(v[i])>1e4){napi_throw_range_error(env,nullptr,"Invalid camera value");return Undefined(env);}
-    splat::Renderer::Get().SetCamera({float(v[0]),float(v[1]),float(v[2]),float(v[3]),float(v[4]),float(v[5]),float(v[6])});return Undefined(env);
+    napi_value args[8];size_t argc=8;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);double v[8]={0,0,1,0,0,0,0,45};
+    if(argc!=7&&argc!=8){napi_throw_type_error(env,nullptr,"Expected seven camera values and optional vertical FOV");return Undefined(env);}
+    for(size_t i=0;i<argc;++i)if(napi_get_value_double(env,args[i],&v[i])!=napi_ok||!std::isfinite(v[i])||std::abs(v[i])>1e4){napi_throw_range_error(env,nullptr,"Invalid camera value");return Undefined(env);}
+    if(v[7]<=1||v[7]>=179){napi_throw_range_error(env,nullptr,"Invalid FOV");return Undefined(env);}
+    splat::Renderer::Get().SetCamera({float(v[0]),float(v[1]),float(v[2]),float(v[3]),float(v[4]),float(v[5]),float(v[6]),float(v[7])});return Undefined(env);
 }
 napi_value Optimize(napi_env env,napi_callback_info info) {
     napi_value arg;size_t argc=1;bool enabled=false;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);

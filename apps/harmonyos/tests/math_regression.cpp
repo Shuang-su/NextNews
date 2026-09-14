@@ -12,6 +12,9 @@ int main(){
  splat::ApplyViewerTransform(scene);assert(scene.points[0].position[0]==2&&scene.center[1]==2);
  scene.center={0,0,0};scene.points={{{0,0,0},{1,1,1,.1f},{.01f,0,0,.01f,0,.01f}},{{0,0,-1},{1,1,1,.9f},{.01f,0,0,.01f,0,.01f}}};
  auto p=splat::Pick(scene,splat::MakeView(scene,{}),.5f,.5f,100,100);assert(p.size()==3&&p[2]==-1);assert(splat::Pick(scene,splat::MakeView(scene,{}),0,0,100,100).empty());
+ splat::Camera wide;wide.fov=75;auto wideView=splat::MakeView(scene,wide);
+ assert(std::abs(wideView.tanHalfFov-std::tan(75.f*.00872664626f))<1e-6f);
+ assert(std::abs(splat::MakeView(scene,{}).tanHalfFov-std::tan(45.f*.00872664626f))<1e-6f);
  std::mt19937 rng(42);std::uniform_real_distribution<float> random(-100,100);scene.points.resize(260000);
  for(auto &v:scene.points)for(float &x:v.position)x=random(rng);
  auto view=splat::MakeView(scene,{.8f,.3f});const auto &m=view.matrix;

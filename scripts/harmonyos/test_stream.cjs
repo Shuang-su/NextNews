@@ -33,3 +33,30 @@ if(process.argv[2]) {
  const count=chosen.reduce((n,l,i)=>n+full.leaves[i].lods[l][2],0);assert.ok(count<=2000000);
  console.log('PASS source hierarchy',full.leaves.length,count);
 }
+// Equal-size front/back/side leaves: viewport detail must not be spent behind the camera.
+const view={version:2,bounds:[0,0,0,10],levels:2,
+ chunks:[{file:'chunk-0000.sog',count:3000,bytes:30000,bounds:[0,0,0,10]}],
+ leaves:[{bounds:[0,0,-5,.2],lods:[[0,0,900],[0,900,10]]},
+ {bounds:[0,0,5,.2],lods:[[0,1000,900],[0,1900,10]]},
+ {bounds:[3,0,-5,.2],lods:[[0,2000,900],[0,2900,10]]}]};
+validate(view);
+assert.deepEqual(Array.from(box.exports.selectLods(view,[0,0,1,0,0,0],true,2000,45,1)),[0,1,1]);
+assert.deepEqual(Array.from(box.exports.selectLods(view,[0,0,1,0,0,0],true,2000,75,1)),[0,1,0]);
+assert.deepEqual(Array.from(box.exports.selectLods(view,[Math.PI,0,1,0,0,0],true,2000,45,1)),[1,0,1]);
+console.log('PASS viewport refinement: front/back, FOV, camera turn, retained coarse coverage');
+(async()=>{
+ let inflight=0,peak=0,published=0;
+ const fakeFs={OpenMode:{CREATE:1,READ_WRITE:2,TRUNC:4},open:async()=>({fd:1}),write:async(_fd,b)=>b.byteLength,close:async()=>{},unlink:async()=>{}};
+ const render={status:()=>({state:'ready'}),chunks:()=>published++};
+ const sandbox={exports:{},require:n=>n==='@kit.CoreFileKit'?{fileIo:fakeFs}:n==='libsplat.so'?{default:render}:{}};
+ vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,sandbox);
+ const session=new sandbox.exports.StreamSession(()=>{});
+ session.manifest={version:2,bounds:[0,0,0,1],levels:1,chunks:Array.from({length:6},(_,i)=>({file:`chunk-000${i}.sog`,count:10,bytes:16,bounds:[0,0,0,1]})),leaves:[{bounds:[0,0,0,1],lods:[[0,0,10]]}]};
+ session.fullLoad=true;
+ session.fetch=async()=>{inflight++;peak=Math.max(peak,inflight);await new Promise(setImmediate);inflight--;return new ArrayBuffer(16);};
+ await session.pump([0,0,1,0,0,0],false,45,1);
+ assert.equal(peak,4);assert.equal(session.cache.size,4);assert.equal(published,1,'full preload must publish before all files arrive');
+ await session.pump([0,0,1,0,0,0],false,45,1);
+ assert.equal(session.cache.size,6);assert.equal(published,1,'unchanged scene should not reupload');
+ console.log('PASS streaming scheduler: four requests, early full-preload frame, unchanged selection');
+})().catch(e=>{console.error(e);process.exitCode=1;});

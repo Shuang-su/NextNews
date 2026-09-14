@@ -7,6 +7,7 @@ export class OrbitControls {
   height: number = 1;
   fly: boolean = false;
   speed: number = 1;
+  fov: number = 45;
   keys: string[] = [];
   private previous: OrbitTouch[] = [];
   reset(): void {
@@ -58,7 +59,7 @@ export class OrbitControls {
   }
   pan(dx: number, dy: number): void {
     // Radius-normalized world target. 45-degree vertical FOV, distance = radius * 3 * zoom.
-    const scale = 6 * this.target[2] * Math.tan(Math.PI / 8) / this.height;
+    const scale = 6 * this.target[2] * Math.tan(this.fov * Math.PI / 360) / this.height;
     const x = -dx * scale; const y = dy * scale;
     const yaw = this.current[0]; const pitch = this.current[1];
     this.target[3] += Math.cos(yaw) * x - Math.sin(yaw) * Math.sin(pitch) * y;

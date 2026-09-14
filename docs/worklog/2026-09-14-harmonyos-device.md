@@ -22,3 +22,7 @@
 - 新增 `scripts/harmonyos/compare_renderers.py`，使用实际渲染表面 ID 采集并校验新帧，避免误测桌面 `code_artSurface` 或沿用页面自己的交换计数。CLI 测试脚本也修正了模型库切换后需重新打开性能面板的步骤。
 - 自动刷新签名时出现 TLS ECONNRESET；复用当日有效的本机真机签名完成部署，没有绕过 TLS 校验、升级工具链或提交签名。
 - 华为路径目前验证三份小 PLY，尚无大规模／全量 SOG 的等量基准；背景及颜色处理仍有差异。保留 OpenGL 的飞行、拾取及 SOG 流式能力。
+
+### 用户配置与完整场景修正
+
+用户澄清配置名为 `viewer-settings.json`，要求以完整 Metaflow/SuperSplat 体验对标。接入两条路线的默认镜头、75° FOV 和默认动画；此前 8 万高斯的 LOD8 样例不再充当画质基准。完整华发分块已在手机显示，改进为 4 并发下载、视野优先细化、全量预载提前显示。找到本地定制 Viewer 工程并保留其未提交修改。构建、配置/流式/原生数学测试通过；实测图片及未完成差异见 `docs/harmonyos/viewer-settings-stream.md`。当前不宣称已实现完整交互、SH 或 Huawei 流式对等。

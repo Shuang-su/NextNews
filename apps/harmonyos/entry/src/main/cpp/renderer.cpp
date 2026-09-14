@@ -18,6 +18,7 @@ vec4 readSplat(uint offset) { uint address=splatIndex*4u+offset;return texelFetc
 uniform mat4 view;
 uniform vec2 viewport;
 uniform float nearPlane;
+uniform float tanHalfFov;
 uniform float farPlane;
 uniform bool optimized;
 out vec2 gaussian;
@@ -33,13 +34,13 @@ void main() {
     }
     vec4 t2=readSplat(2u),t3=readSplat(3u);
     vec3 covA=vec3(t1.w,t2.xy),covB=vec3(t2.zw,t3.x);
-    float focal=viewport.y*1.20710678; // 45 degree vertical field of view
+    float focal=viewport.y/(2.0*tanHalfFov);
     mat3 covariance=mat3(covA.x,covA.y,covA.z,covA.y,covB.x,covB.y,covA.z,covB.y,covB.z);
     mat3 rotation=mat3(view);
     mat3 c=rotation*covariance*transpose(rotation);
     // Perspective projection derivative, screen coordinates in pixels.
-    vec3 jx=vec3(focal/z,0.0,focal*clamp(center.x/z,-0.54*viewport.x/viewport.y,0.54*viewport.x/viewport.y)/z);
-    vec3 jy=vec3(0.0,focal/z,focal*clamp(center.y/z,-0.54,0.54)/z);
+    vec3 jx=vec3(focal/z,0.0,focal*clamp(center.x/z,-(1.3*tanHalfFov)*viewport.x/viewport.y,(1.3*tanHalfFov)*viewport.x/viewport.y)/z);
+    vec3 jy=vec3(0.0,focal/z,focal*clamp(center.y/z,-(1.3*tanHalfFov),(1.3*tanHalfFov))/z);
     float a=dot(jx,c*jx)+0.3;
     float b=dot(jx,c*jy);
     float d=dot(jy,c*jy)+0.3;
@@ -221,7 +222,7 @@ void Renderer::Draw(const View &view,int width,int height) {
     glUniform1i(optimizedLocation_,optimized_.load());
     glUniformMatrix4fv(viewLocation_,1,GL_FALSE,view.matrix.data());
     glUniform2f(viewportLocation_,float(width),float(height));
-    glUniform1f(nearLocation_,view.nearPlane);glUniform1f(farLocation_,view.farPlane);
+    glUniform1f(glGetUniformLocation(program_,"tanHalfFov"),view.tanHalfFov);glUniform1f(nearLocation_,view.nearPlane);glUniform1f(farLocation_,view.farPlane);
     glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,dataTexture_);glUniform1i(dataLocation_,0);
     if(uploadDirty_) {
         const size_t height=std::max(size_t(1),(scene_->points.size()*4+4095)/4096);

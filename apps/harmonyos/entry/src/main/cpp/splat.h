@@ -23,11 +23,11 @@ Scene ReadModel(const std::string &path, const std::atomic<bool> *cancel = nullp
 void ApplyViewerTransform(Scene &scene);
 Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel = nullptr);
 struct Camera {
-    float yaw = 0, pitch = 0, zoom = 1, panX = 0, panY = 0, panZ = 0, fly = 0;
+    float yaw = 0, pitch = 0, zoom = 1, panX = 0, panY = 0, panZ = 0, fly = 0, fov = 45;
 };
 struct View {
     std::array<float, 16> matrix;
-    float nearPlane, farPlane;
+    float nearPlane, farPlane, tanHalfFov = .41421356f;
 };
 View MakeView(const Scene &scene, const Camera &camera);
 std::vector<float> Pick(const Scene &scene, const View &view, float x, float y, int width, int height);

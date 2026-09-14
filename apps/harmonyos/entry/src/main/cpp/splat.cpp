@@ -130,11 +130,11 @@ View MakeView(const Scene &scene, const Camera &camera) {
     View v{}; auto &m = v.matrix;
     for(int k=0;k<3;++k) { m[k*4]=right[k]; m[k*4+1]=up[k]; m[k*4+2]=back[k]; }
     for(int k=0;k<3;++k) { m[12]-=right[k]*eye[k]; m[13]-=up[k]*eye[k]; m[14]-=back[k]*eye[k]; }
-    m[15]=1; v.nearPlane=scene.radius*.001f; v.farPlane=scene.radius*100.f; return v;
+    m[15]=1; v.tanHalfFov=std::tan(std::clamp(camera.fov, 1.01f, 178.99f)*.00872664626f); v.nearPlane=scene.radius*.001f; v.farPlane=scene.radius*100.f; return v;
 }
 std::vector<float> Pick(const Scene &scene,const View &view,float x,float y,int width,int height) {
     struct Hit { float depth,alpha; size_t index; }; std::vector<Hit> hits;
-    const auto &m=view.matrix;const float f=height*1.20710678f;
+    const auto &m=view.matrix;const float f=height/(2.f*view.tanHalfFov);
     const float px=(x-.5f)*width,py=(.5f-y)*height;
     for(size_t i=0;i<scene.points.size();++i) {
         const auto &g=scene.points[i];float v[3]={m[12],m[13],m[14]};
@@ -143,9 +143,9 @@ std::vector<float> Pick(const Scene &scene,const View &view,float x,float y,int 
         const float c[3][3]={{g.covariance[0],g.covariance[1],g.covariance[2]},
             {g.covariance[1],g.covariance[3],g.covariance[4]}, {g.covariance[2],g.covariance[4],g.covariance[5]}};
         float j[2][3]{};
-        const float limit=.54f*width/height;
+        const float verticalLimit=1.3f*view.tanHalfFov;const float limit=verticalLimit*width/height;
         for(int k=0;k<3;++k){j[0][k]=f/z*(m[k*4]+std::clamp(v[0]/z,-limit,limit)*m[k*4+2]);
-            j[1][k]=f/z*(m[k*4+1]+std::clamp(v[1]/z,-.54f,.54f)*m[k*4+2]);}
+            j[1][k]=f/z*(m[k*4+1]+std::clamp(v[1]/z,-verticalLimit,verticalLimit)*m[k*4+2]);}
         float a=.3f,b=0,d=.3f;
         for(int r=0;r<3;++r)for(int k=0;k<3;++k){a+=j[0][r]*c[r][k]*j[0][k];b+=j[0][r]*c[r][k]*j[1][k];d+=j[1][r]*c[r][k]*j[1][k];}
         const float dx=px-f*v[0]/z,dy=py-f*v[1]/z,det=a*d-b*b;
