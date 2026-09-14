@@ -43,3 +43,15 @@ Enabled 4M OpenGL budget and captured eight drags, near-4M actual residency,
 1.44 GiB sampled PSS, and multi-second preparation/55–58 ms sampled draw
 pressure. Kept 8M unenabled pending optimization. Details and screenshots:
 `docs/harmonyos/streaming-pipeline-20260914.md`.
+
+### Cached turn publication
+
+Clarified that the user's previously successful native streaming test was
+in the phone's 第一现场 test app. Do not infer asset incompatibility or a
+filename requirement from NextNews's current failed adapter test.
+
+Removed the network busy barrier from camera selection and cached publication.
+Regression verifies cached front/back detail can publish during pending
+downloads. Build and signed deployment passed; the 2M phone loading/drag
+regression passed (53 intervals). Full-scene CPU preparation remains a bottleneck;
+this change is not a claim of complete SuperSplat parity.

@@ -59,4 +59,13 @@ console.log('PASS viewport refinement: front/back, FOV, camera turn, retained co
  await session.pump([0,0,1,0,0,0],false,45,1);
  assert.equal(session.cache.size,6);assert.equal(published,1,'unchanged scene should not reupload');
  console.log('PASS streaming scheduler: four requests, early full-preload frame, unchanged selection');
+ const turning=new sandbox.exports.StreamSession(()=>{});
+ turning.manifest=view;turning.budget=2000;turning.busy=true;
+ turning.cache.set('chunk-0000.sog','/cache/chunk-0000.sog');
+ const beforeTurn=published;
+ turning.tick([0,0,1,0,0,0],true,45,1);
+ turning.tick([Math.PI,0,1,0,0,0],true,45,1);
+ assert.equal(published,beforeTurn+2,'cached front/back selections must publish during pending downloads');
+ console.log('PASS cached camera turn does not wait for the network batch');
+
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -119,14 +119,44 @@ export class StreamSession {
   stop(): void { this.stopped = true; for (const request of this.requests) { request.destroy(); } this.requests.clear(); }
   async dispose(): Promise<void> { this.stop(); if (this.directory) { try { await fs.rmdir(this.directory); } catch (_) {} } }
   tick(camera: number[], fly: boolean, fov: number = 45, aspect: number = 1): void {
-    if (this.stopped || !this.active || this.busy || !this.manifest) { return; }
-    this.pump(camera.slice(), fly, fov, aspect);
+    if (this.stopped || !this.active || !this.manifest) { return; }
+    this.updateSelection(camera, fly, fov, aspect);
+    this.publishCached();
+    if (!this.busy) { this.pump(camera.slice(), fly, fov, aspect); }
+  }
+  private updateSelection(camera: number[], fly: boolean, fov: number, aspect: number): void {
+    const m = this.manifest; if (!m) { return; }
+    const key = camera.map((v: number) => v.toFixed(2)).join(',') + `${fly}:${this.budget}:${fov}:${aspect}`;
+    if (key !== this.selectionKey) { this.selection = selectLods(m, camera, fly, this.budget, fov, aspect); this.selectionKey = key; }
+  }
+  // Called on camera ticks even while downloads are pending. Cached detail must
+  // not wait for unrelated network requests or use an old camera selection.
+  private publishCached(): string[] {
+    const m = this.manifest; if (!m || this.stopped) { return []; }
+    const coarseFiles = m.leaves && m.levels ? m.leaves.map((l: StreamLeaf) => l.lods[(m.levels as number) - 1][0]) : m.chunks.map((_c: StreamChunk, i: number) => i);
+    const ready = coarseFiles.filter((i: number) => i >= 0).every((i: number) => this.cache.has(m.chunks[i].file));
+    const levels = this.selection;
+    const paths: string[] = []; const ranges: number[] = []; let count = 0; let refined = 0;
+    if (ready) {
+      if (m.leaves && m.levels) {
+        for (let i = 0; i < m.leaves.length; i++) {
+          const l = m.leaves[i]; let level = levels[i];
+          while (level < m.levels - 1 && l.lods[level][0] >= 0 && !this.cache.has(m.chunks[l.lods[level][0]].file)) { level++; }
+          const r = l.lods[level]; if (r[0] < 0) { continue; } const path = this.cache.get(m.chunks[r[0]].file) as string;
+          let index = paths.indexOf(path); if (index < 0) { index = paths.length; paths.push(path); }
+          ranges.push(index, r[1], r[2]); count += r[2]; if (level < m.levels - 1) { refined++; }
+        }
+      } else { for (const c of m.chunks) { paths.push(this.cache.get(c.file) as string); count += c.count; } }
+      const key = paths.join('|') + ':' + ranges.join(',');
+      if (key !== this.published && nativeRender.status().state !== 'loading') { nativeRender.chunks(paths, m.bounds, ranges); this.published = key; }
+    }
+    this.progress(`${this.fullLoad ? '全量预载' : 'LOD 流式'} · 缓存 ${this.cache.size}/${m.chunks.length} · ${ready ? '完整基础覆盖' : '等待基础覆盖'} · ${count.toLocaleString()} 个高斯 · 细化 ${refined} 区`);
+    return paths;
   }
   private async pump(camera: number[], fly: boolean, fov: number, aspect: number): Promise<void> {
     const m = this.manifest; if (!m) { return; } this.busy = true;
     try {
-      const key = camera.map((v: number) => v.toFixed(2)).join(',') + `${fly}:${this.budget}:${fov}:${aspect}`;
-      if (key !== this.selectionKey) { this.selection = selectLods(m, camera, fly, this.budget, fov, aspect); this.selectionKey = key; }
+      this.updateSelection(camera, fly, fov, aspect);
       const levels = this.selection;
       const coarseFiles: number[] = []; const desiredFiles: number[] = [];
       if (m.leaves && m.levels) {
@@ -149,21 +179,7 @@ export class StreamSession {
       }));
       if (failure) { throw new Error(failure); }
       if (this.stopped) { return; }
-      const ready = coarseFiles.filter((i: number) => i >= 0).every((i: number) => this.cache.has(m.chunks[i].file));
-      const paths: string[] = []; const ranges: number[] = []; let count = 0; let refined = 0;
-      if (ready) {
-        if (m.leaves && m.levels) {
-          for (let i = 0; i < m.leaves.length; i++) {
-            const l = m.leaves[i]; let level = levels[i];
-            while (level < m.levels - 1 && l.lods[level][0] >= 0 && !this.cache.has(m.chunks[l.lods[level][0]].file)) { level++; }
-            const r = l.lods[level]; if (r[0] < 0) { continue; } const path = this.cache.get(m.chunks[r[0]].file) as string;
-            let index = paths.indexOf(path); if (index < 0) { index = paths.length; paths.push(path); }
-            ranges.push(index, r[1], r[2]); count += r[2]; if (level < m.levels - 1) { refined++; }
-          }
-        } else { for (const c of m.chunks) { paths.push(this.cache.get(c.file) as string); count += c.count; } }
-        const key = paths.join('|') + ':' + ranges.join(',');
-        if (key !== this.published && nativeRender.status().state !== 'loading') { nativeRender.chunks(paths, m.bounds, ranges); this.published = key; }
-      }
+      const paths = this.publishCached();
       if (!this.fullLoad) {
         const pinned = new Set(order.map((i: number) => m.chunks[i].file));
         for (const file of Array.from(this.cache.keys())) {
@@ -172,7 +188,6 @@ export class StreamSession {
           if (!pinned.has(file) && !paths.includes(path)) { await fs.unlink(path); this.cache.delete(file); this.loadedBytes -= (m.chunks.find((c: StreamChunk) => c.file === file) as StreamChunk).bytes; }
         }
       }
-      this.progress(`${this.fullLoad ? '全量预载' : 'LOD 流式'} · 缓存 ${this.cache.size}/${m.chunks.length} · ${ready ? '完整基础覆盖' : '等待基础覆盖'} · ${count.toLocaleString()} 个高斯 · 细化 ${refined} 区`);
     } catch (error) { if (!this.stopped) { const failure = error as BusinessError; this.progress(`流式暂停：${failure.code ?? ''} ${failure.message ?? String(error)}；点击重试`); this.active = false; } }
     finally { this.busy = false; if (this.stopped && this.directory) { try { await fs.rmdir(this.directory); } catch (_) {} } }
   }

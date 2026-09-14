@@ -90,3 +90,39 @@ and must not be interpreted as sustained interactive FPS. Evidence is in
 Keep 4M as an optional quality tier; optimize its preparation and drawing before
 raising the default. 8M remains untested and requires coordinated resident/GPU
 capacity changes. The phone is left on the 4M tier for manual evaluation.
+
+## Cached LOD camera updates
+
+The user clarified that the previously working streaming JSON was tested in
+the phone's **第一现场 test app**, not necessarily this NextNews adapter.
+That reported success is a separate integration; our failed test cannot
+establish a required extension or incompatible asset. Renaming is not a
+confirmed fix or prerequisite.
+
+The current SuperSplat 1.18.2 local engine uses `selectDesiredLodIndex`,
+`prefetchNextLod` and `pendingDecrements` in
+`gsplat-unified/gsplat-octree-instance.js`: it selects loaded representations,
+prefetches the next refinement, and defers old-resource release until the new
+resource is available. NextNews still differs in selection, cache residency
+and full CPU merge/pack/upload of the selected scene.
+
+Fixed a separate avoidable delay: `tick()` previously returned while a batch
+of four HTTP requests was pending. Publication followed `Promise.all` and
+used the camera captured before the wait. Now camera selection and cached
+publication run independently of the network busy flag; completion publishes
+the latest selection. Downloads retain the four-request limit. The native
+loading gate remains to avoid repeatedly canceling expensive in-flight work.
+This removes a network barrier, not the multi-second CPU preparation cost.
+
+A regression holds the network scheduler busy, turns between front and back
+leaves whose files are cached, and requires both resident selections to publish.
+It fails with the previous busy guard and passes after this change. Existing
+manifest/LOD/full-preload tests and the HAP build also pass.
+
+The signed build was installed on Mate 80 Pro Max / API 26. The 2M
+loading-and-drag regression passed with 53 sampled intervals showing the old
+resident scene drawing while replacement loading continued. Final screenshot
+was visually checked. This does not measure cached-turn-to-fine latency or
+prove SuperSplat performance parity; preparation still sampled 5.7–6.7 s.
+Evidence: `artifacts/harmonyos/cached-turn-regression/` and the committed
+`evidence/streaming-pipeline-20260914/cached-turn-result.json`.
