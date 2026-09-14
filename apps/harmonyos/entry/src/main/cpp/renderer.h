@@ -1,5 +1,7 @@
 #pragma once
 #include "splat.h"
+#include "upload_rows.h"
+#include "scene_cache.h"
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <condition_variable>
@@ -14,6 +16,7 @@ struct Status {
     size_t count = 0, bytes = 0, frames = 0;
     int width = 1, height = 1;
     double gpuMs = -1, uploadMs = 0;
+    size_t uploadedRows = 0, reusedRows = 0, decodedFiles = 0, subsetHits = 0;
     double loadMs = 0, sortMs = 0, frameMs = 0, fps = 0;
 };
 class Renderer {
@@ -45,6 +48,10 @@ private:
     std::shared_ptr<Scene> preparedScene_;
     bool preparedResetCamera_ = false;
     std::vector<float> preparedPixels_, uploadPixels_;
+    UploadRows preparedRows_, stagingRows_, dataRows_, spareRows_, stagingPreviousRows_;
+    size_t stagingUploadedRows_ = 0, stagingReusedRows_ = 0;
+    std::map<std::string,uint64_t> sourceIds_;
+    uint64_t nextSourceId_ = 1;
     std::vector<uint32_t> preparedIndices_, initialIndices_;
     std::shared_ptr<Scene> stagingScene_;
     std::vector<float> stagingPixels_;
@@ -73,8 +80,8 @@ private:
     std::vector<std::string> chunkPaths_;
     std::array<float,4> chunkBounds_{};
     std::vector<uint32_t> chunkRanges_;
-    std::map<std::string,std::shared_ptr<Scene>> decoded_;
-    std::map<std::string,std::pair<std::vector<uint32_t>,std::shared_ptr<Scene>>> selected_;
+    SceneCache<std::string> decoded_{8000000};
+    SceneCache<std::pair<std::string,std::vector<uint32_t>>> selected_{8000000};
     bool chunksDirty_ = false;
     Camera camera_;
     Status status_;

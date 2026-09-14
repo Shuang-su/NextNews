@@ -176,3 +176,9 @@ This page currently supports the bundled PLY samples, orbit/pan/pinch/reset and 
 fixed trajectory; the richer flight/focus/SOG streaming viewer remains the C++ route.
 
 Streaming responsiveness regression and the native tiled adapter status are documented in [streaming-pipeline-20260914.md](streaming-pipeline-20260914.md).
+
+Streaming CPU caches now use bounded LRU retention for decoded chunks and
+selected ranges. Retained GPU textures skip exactly matching rows (up to
+4 MiB of changed rows per frame). This does not yet eliminate whole-scene
+CPU packing. See the streaming pipeline report for memory costs and phone
+evidence; `test_stream_cache.py` exercises row identities and LRU eviction.

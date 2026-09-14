@@ -119,12 +119,12 @@ struct Index {
       this.stream?.tick(this.controls.current, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
       const state = nativeRender.status();
       this.loading = state.state === 'loading';
-      if (this.stream) { console.info(`StreamFrame state=${state.state} frames=${state.frames} count=${state.count} loadMs=${state.loadMs.toFixed(0)} frameMs=${state.frameMs.toFixed(1)} uploadMs=${state.uploadMs.toFixed(1)}`); }
+      if (this.stream) { console.info(`StreamFrame state=${state.state} frames=${state.frames} count=${state.count} loadMs=${state.loadMs.toFixed(0)} frameMs=${state.frameMs.toFixed(1)} uploadMs=${state.uploadMs.toFixed(1)} uploadedRows=${state.uploadedRows} reusedRows=${state.reusedRows} decodedFiles=${state.decodedFiles} subsetHits=${state.subsetHits}`); }
       if (!this.busy && this.localError.length === 0) {
         this.message = state.state === 'ready' ? '单击聚焦 · 双击环绕 / 飞行 · 拖动旋转' : state.message;
       }
       this.graphics = state.graphics;
-      this.details = `${state.count.toLocaleString()} 个高斯 · SH0\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\n单帧 ${state.frameMs.toFixed(1)} ms · 渲染耗时折算 ${state.fps.toFixed(1)} fps\n最近上传批次 ${state.uploadMs.toFixed(1)} ms\nGPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
+      this.details = `${state.count.toLocaleString()} 个高斯 · SH0\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\n单帧 ${state.frameMs.toFixed(1)} ms · 渲染耗时折算 ${state.fps.toFixed(1)} fps\n最近上传批次 ${state.uploadMs.toFixed(1)} ms · 上传/复用 ${state.uploadedRows}/${state.reusedRows} 行\nGPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
     }, 500);
   }
   aboutToDisappear(): void {

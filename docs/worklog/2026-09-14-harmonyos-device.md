@@ -55,3 +55,15 @@ Regression verifies cached front/back detail can publish during pending
 downloads. Build and signed deployment passed; the 2M phone loading/drag
 regression passed (53 intervals). Full-scene CPU preparation remains a bottleneck;
 this change is not a claim of complete SuperSplat parity.
+
+### CPU and GPU cache reuse
+
+Implemented exact source-range identities for incremental texture rows and
+weighted LRU caches for decoded files and selected-range histories (8M each,
+render budget unchanged). Initial row-only probe showed poor reuse when tight
+packing shifted offsets. Final phone test demonstrated 1,110 reused/659
+uploaded rows in one update and selected-range cache hits; other updates
+still rebuilt most data. Recorded the limitation instead of claiming complete
+SuperSplat parity. 2M motion regression passed (59 intervals); process PSS
+sampled 1.54 GiB. Host ASan/UBSan row/cache/parser/math tests and signed
+deployment passed. “Upload” means CPU-to-GPU, not network re-download.

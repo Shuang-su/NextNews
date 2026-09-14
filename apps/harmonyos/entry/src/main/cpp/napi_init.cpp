@@ -71,7 +71,7 @@ void Number(napi_env env,napi_value object,const char *key,double value){napi_va
 napi_value Status(napi_env env,napi_callback_info) {
     const auto s=splat::Renderer::Get().GetStatus();napi_value result;napi_create_object(env,&result);
     String(env,result,"state",s.state);String(env,result,"message",s.message);String(env,result,"graphics",s.graphics);
-    Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"uploadMs",s.uploadMs);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);return result;
+    Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"uploadMs",s.uploadMs);Number(env,result,"uploadedRows",s.uploadedRows);Number(env,result,"reusedRows",s.reusedRows);Number(env,result,"decodedFiles",s.decodedFiles);Number(env,result,"subsetHits",s.subsetHits);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);return result;
 }
 struct PickWork { napi_async_work work; napi_deferred deferred; float x,y;std::vector<float> point;std::string error; };
 napi_value Pick(napi_env env,napi_callback_info info) {

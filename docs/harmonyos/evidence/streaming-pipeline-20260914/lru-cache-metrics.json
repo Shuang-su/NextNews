@@ -1,0 +1,18 @@
+{
+  "best_observed_reuse": {
+    "count": 1810528.0,
+    "loadMs": 1753.0,
+    "uploadedRows": 659.0,
+    "reusedRows": 1110.0,
+    "decodedFiles": 8.0,
+    "subsetHits": 41.0
+  },
+  "pss_kib_samples": [
+    1617892,
+    1617892,
+    1617892,
+    1617892,
+    1617892
+  ],
+  "note": "Opportunistic row reuse; sample maximum is not an average speedup or turn-to-fine latency. CPU merging/packing remains."
+}

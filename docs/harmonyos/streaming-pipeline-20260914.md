@@ -126,3 +126,43 @@ was visually checked. This does not measure cached-turn-to-fine latency or
 prove SuperSplat performance parity; preparation still sampled 5.7–6.7 s.
 Evidence: `artifacts/harmonyos/cached-turn-regression/` and the committed
 `evidence/streaming-pipeline-20260914/cached-turn-result.json`.
+
+## CPU LRU and incremental GPU rows
+
+“Upload” here means CPU-to-GPU texture transfer, not HTTP download. Both
+SuperSplat and NextNews reuse client-side assets; a disk hit in NextNews
+previously still led to repeated decoding and full texture transfer.
+
+- CPU: full decoded chunks now use weighted LRU (8M Gaussian limit); selected
+  ranges use another 8M LRU keyed by file plus exact ranges. Different views
+  of a file can coexist; turning away no longer immediately deletes all old
+  selections. These are cache limits, not an 8M render setting.
+- GPU: each row records exact immutable session-file identity, offset and count.
+  A retained spare texture skips matching rows, uploading at most 64 changed
+  rows (4 MiB) per frame. Fresh textures, changed ranges and new sessions cannot
+  match. Old scene indices remain paired with the old texture until commit.
+- Limits: CPU merge/initial sort/packing still covers the whole selected scene.
+  Tight packing shifts later rows when an earlier region changes size, reducing
+  GPU reuse. This is opportunistic row reuse, not a persistent per-chunk GPU
+  atlas or complete SuperSplat pipeline. Stream session files are immutable.
+
+Mate 80 Pro Max / API 26, 2M render budget: loading/drag regression passed
+with 59 intervals showing continued drawing. A sampled update reused 1,110
+rows and uploaded 659 (62.7% reused); other updates reused none. That sample
+reported 41 selected-range hits and 8 decoded files. This is an observed
+sample, not an average speedup. Later sampled CPU preparation remained
+1.7–4.35 seconds; this is not a controlled turn-to-fine latency benchmark.
+SmartPerf process PSS sampled 1,617,892 KiB (about 1.54 GiB); larger caches
+trade memory for fewer repeated decodes. Screenshots were visually checked.
+
+Tests: HAP build and signed phone deployment passed; parser/math fixtures and
+the new exact-row/LRU fixtures passed under ASan/UBSan using the per-command
+Xcode 27 override. Run the new host fixtures with:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode-27.0.0-beta.5.app/Contents/Developer python3 scripts/harmonyos/test_stream_cache.py
+```
+
+The device regression now records uploaded/reused rows and decode/subset-hit
+counters in addition to render activity. Evidence is in the `lru-*.json` and
+`lru-motion.png` files under `evidence/streaming-pipeline-20260914/`.

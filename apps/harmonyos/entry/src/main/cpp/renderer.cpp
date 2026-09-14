@@ -180,6 +180,7 @@ void Renderer::DestroyGL() {
     if(stagingTexture_)glDeleteTextures(1,&stagingTexture_);stagingTexture_=0;
     if(spareTexture_)glDeleteTextures(1,&spareTexture_);spareTexture_=0;spareCapacity_=dataCapacity_=0;
     stagingScene_.reset();stagingPixels_.clear();stagingIndices_.clear();preuploaded_=false;
+    dataRows_.clear();spareRows_.clear();stagingRows_.clear();stagingPreviousRows_.clear();
     if(display_==EGL_NO_DISPLAY)return;
     if(context_!=EGL_NO_CONTEXT && surface_!=EGL_NO_SURFACE){
         eglMakeCurrent(display_,surface_,surface_,context_);
@@ -213,8 +214,10 @@ void Renderer::AdvanceUpload() {
         if(spareTexture_ && spareCapacity_>=rows){
             stagingTexture_=spareTexture_;stagingCapacity_=spareCapacity_;spareTexture_=0;spareCapacity_=0;
             glBindTexture(GL_TEXTURE_2D,stagingTexture_);
+            stagingPreviousRows_=std::move(spareRows_);
         }else{
             if(spareTexture_)glDeleteTextures(1,&spareTexture_);spareTexture_=0;spareCapacity_=0;
+            spareRows_.clear();stagingPreviousRows_.clear();
             stagingCapacity_=1;while(stagingCapacity_<rows)stagingCapacity_*=2;
             glGenTextures(1,&stagingTexture_);glBindTexture(GL_TEXTURE_2D,stagingTexture_);
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
@@ -223,14 +226,25 @@ void Renderer::AdvanceUpload() {
         }
     }else glBindTexture(GL_TEXTURE_2D,stagingTexture_);
     // At most 4 MiB per frame. The old scene/texture remain drawable while this fills.
-    const size_t batch=std::min(size_t(64),rows-stagingRow_);
-    glTexSubImage2D(GL_TEXTURE_2D,0,0,stagingRow_,4096,batch,GL_RGBA,GL_FLOAT,stagingPixels_.data()+stagingRow_*4096*4);
-    stagingRow_+=batch;
+    size_t uploaded=0;
+    while(stagingRow_<rows && uploaded<64){
+        if(SameUploadRow(stagingRows_,stagingPreviousRows_,stagingRow_)){
+            ++stagingRow_;++stagingReusedRows_;continue;
+        }
+        const size_t begin=stagingRow_;
+        while(stagingRow_<rows && uploaded<64 && !SameUploadRow(stagingRows_,stagingPreviousRows_,stagingRow_)){
+            ++stagingRow_;++uploaded;
+        }
+        glTexSubImage2D(GL_TEXTURE_2D,0,0,begin,4096,stagingRow_-begin,GL_RGBA,GL_FLOAT,stagingPixels_.data()+begin*4096*4);
+    }
+    stagingUploadedRows_+=uploaded;
     if(stagingRow_==rows){
         std::lock_guard<std::mutex> lock(mutex_);
         if(stagingGeneration_==loadGeneration_){
             retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);initialIndices_=std::move(stagingIndices_);
             spareTexture_=dataTexture_;spareCapacity_=dataCapacity_;
+            spareRows_=std::move(dataRows_);dataRows_=std::move(stagingRows_);stagingPreviousRows_.clear();
+            status_.uploadedRows=stagingUploadedRows_;status_.reusedRows=stagingReusedRows_;
             dataTexture_=stagingTexture_;dataCapacity_=stagingCapacity_;stagingTexture_=0;
             uploadDirty_=true;preuploaded_=true;sortPending_=sortReady_=false;
             sortScene_.reset();sortedScene_.reset();sortedIndices_.clear();
@@ -323,7 +337,7 @@ void Renderer::LoadLoop() {
         retiredPixels.clear();retiredScenes.clear();
         if(path.empty()&&chunks.empty())continue;
         // Prepare CPU uploads and the first sorted index buffer without occupying EGL.
-        auto publish=[&](std::shared_ptr<Scene> loaded,bool reset,double loadMs) {
+        auto publish=[&](std::shared_ptr<Scene> loaded,bool reset,double loadMs,const std::vector<SourceSpan> &spans) {
             Camera camera;{std::lock_guard<std::mutex> lock(mutex_);camera=reset?Camera{}:camera_;}
             const View view=MakeView(*loaded,camera);
             auto indices=SortIndices(*loaded,view);
@@ -334,8 +348,10 @@ void Renderer::LoadLoop() {
                 const auto &g=loaded->points[i];float *p=pixels.data()+i*16;
                 std::copy_n(g.position,3,p);std::copy_n(g.color,4,p+3);std::copy_n(g.covariance,6,p+7);
             }
+            auto rowIdentities=MakeUploadRows(spans);
             std::lock_guard<std::mutex> lock(mutex_);
             if(cancel_||generation!=loadGeneration_)return;
+            preparedRows_=std::move(rowIdentities);
             preparedScene_=std::move(loaded);preparedPixels_=std::move(pixels);preparedIndices_=std::move(indices);
             preparedResetCamera_=reset;dirty_=true;status_.loadMs=loadMs;
             status_.message="CPU resident set prepared";
@@ -343,8 +359,9 @@ void Renderer::LoadLoop() {
             if(!path.empty()) {
                 const auto start=Clock::now();
                 try {
-                    decoded_.clear();selected_.clear();auto loaded=ReadModel(path,&cancel_);
-                    publish(std::make_shared<Scene>(std::move(loaded)),true,Ms(start));
+                    decoded_.Clear();selected_.Clear();auto loaded=ReadModel(path,&cancel_);
+                    const uint32_t count=loaded.points.size();
+                    publish(std::make_shared<Scene>(std::move(loaded)),true,Ms(start),{{nextSourceId_++,0,count}});
                 } catch(const std::exception &e) {
                     std::lock_guard<std::mutex> lock(mutex_);if(!cancel_){status_.state="error";status_.message=e.what();}
                 }
@@ -352,46 +369,43 @@ void Renderer::LoadLoop() {
             if(!chunks.empty()) {
                 const auto start=Clock::now();
                 try {
-                    Scene combined;size_t requested=0;for(size_t i=2;i<ranges.size();i+=3)requested+=ranges[i];if(requested>MaxGaussians)throw std::runtime_error("Resident budget exceeded");combined.points.reserve(requested);combined.center={bounds[0],bounds[1],bounds[2]};combined.radius=bounds[3];
+                    size_t decodedFiles=0,subsetHits=0;
+                    Scene combined;std::vector<SourceSpan> spans;size_t requested=0;for(size_t i=2;i<ranges.size();i+=3)requested+=ranges[i];if(requested>MaxGaussians)throw std::runtime_error("Resident budget exceeded");combined.points.reserve(requested);combined.center={bounds[0],bounds[1],bounds[2]};combined.radius=bounds[3];
                     if(ranges.empty())for(size_t i=0;i<chunks.size();++i){ranges.push_back(i);ranges.push_back(0);ranges.push_back(0);}
                     for(size_t file=0;file<chunks.size();++file) {
                         if(cancel_)throw std::runtime_error("Load cancelled");
                         std::vector<uint32_t> selection;
                         for(size_t i=0;i<ranges.size();i+=3)if(ranges[i]==file){selection.push_back(ranges[i+1]);selection.push_back(ranges[i+2]);}
-                        auto cachedSelection=selected_.find(chunks[file]);std::shared_ptr<Scene> subset;
-                        if(cachedSelection!=selected_.end()&&cachedSelection->second.first==selection)subset=cachedSelection->second.second;
+                        auto &source=sourceIds_[chunks[file]];if(!source)source=nextSourceId_++;
+                        const auto selectionKey=std::make_pair(chunks[file],selection);
+                        auto subset=selected_.Get(selectionKey);
+                        if(subset)++subsetHits;
                         else {
-                            auto found=decoded_.find(chunks[file]);std::shared_ptr<Scene> part;
-                            if(found!=decoded_.end())part=found->second;
-                            else {part=std::make_shared<Scene>(ReadModel(chunks[file],&cancel_));decoded_[chunks[file]]=part;}
+                            auto part=decoded_.Get(chunks[file]);
+                            if(!part){part=std::make_shared<Scene>(ReadModel(chunks[file],&cancel_));decoded_.Put(chunks[file],part);++decodedFiles;}
                             subset=std::make_shared<Scene>();
                             for(size_t i=0;i<selection.size();i+=2){
                                 const size_t offset=selection[i],count=selection[i+1]?selection[i+1]:part->points.size();
                                 if(offset>part->points.size()||count>part->points.size()-offset||subset->points.size()+count>MaxGaussians)throw std::runtime_error("LOD selection exceeds model or resident budget");
                                 subset->points.insert(subset->points.end(),part->points.begin()+offset,part->points.begin()+offset+count);
                             }
-                            selected_[chunks[file]]={selection,subset};
+                            selected_.Put(selectionKey,subset);
                         }
                         if(combined.points.size()+subset->points.size()>MaxGaussians)throw std::runtime_error("Resident budget exceeded");
                         combined.points.insert(combined.points.end(),subset->points.begin(),subset->points.end());
-                        size_t cached=0;for(const auto &item:decoded_)cached+=item.second->points.size();
-                        while(cached>4000000&&decoded_.size()>1) {
-                            auto evict=decoded_.begin();if(evict->first==chunks[file])++evict;
-                            cached-=evict->second->points.size();decoded_.erase(evict);
-                        }
+                        size_t explicitCount=0,wholeCopies=0;
+                        for(size_t i=1;i<selection.size();i+=2){if(selection[i])explicitCount+=selection[i];else ++wholeCopies;}
+                        const uint32_t wholeCount=wholeCopies?uint32_t((subset->points.size()-explicitCount)/wholeCopies):0;
+                        for(size_t i=0;i<selection.size();i+=2)spans.push_back({source,selection[i],selection[i+1]?selection[i+1]:wholeCount});
                     }
-                    for(auto i=selected_.begin();i!=selected_.end();) {
-                        if(std::find(chunks.begin(),chunks.end(),i->first)==chunks.end())i=selected_.erase(i);else ++i;
-                    }
-                    publish(std::make_shared<Scene>(std::move(combined)),false,Ms(start));
+                    {std::lock_guard<std::mutex> lock(mutex_);status_.decodedFiles=decodedFiles;status_.subsetHits=subsetHits;}
+                    publish(std::make_shared<Scene>(std::move(combined)),false,Ms(start),spans);
                 } catch(const std::exception &e) {
                     std::lock_guard<std::mutex> lock(mutex_);if(!cancel_){status_.state="error";status_.message=e.what();}
                 }
             }
 
-        size_t bytes=0;for(const auto &item:decoded_)bytes+=item.second->points.capacity()*sizeof(Gaussian);
-        for(const auto &item:selected_)bytes+=item.second.second->points.capacity()*sizeof(Gaussian);
-        cacheBytes_=bytes;changed_.notify_one();
+        cacheBytes_=decoded_.Bytes()+selected_.Bytes();changed_.notify_one();
     }
 }
 void Renderer::Loop(void *window) {
@@ -407,6 +421,8 @@ void Renderer::Loop(void *window) {
                     stagingScene_=std::move(preparedScene_);stagingPixels_=std::move(preparedPixels_);
                     stagingIndices_=std::move(preparedIndices_);stagingResetCamera_=preparedResetCamera_;
                     stagingGeneration_=loadGeneration_;stagingRow_=0;
+                    stagingRows_=std::move(preparedRows_);stagingPreviousRows_.clear();
+                    stagingUploadedRows_=stagingReusedRows_=0;
                 }
                 camera=camera_;width=width_;height=height_;dirty_=false;
             }
