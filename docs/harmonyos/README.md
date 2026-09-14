@@ -3,8 +3,8 @@
 ## Architecture
 
 The application uses ArkTS/ArkUI (Stage model), a surface XComponent, a C++17
-native library and OpenGL ES 3.0. Models are parsed off the ArkUI thread. A render worker owns its EGL context;
-a separate worker sorts camera updates. Rendering uses instanced Gaussian ellipses,
+native library and OpenGL ES 3.0. Models and streamed selections are decoded, merged, packed and initially sorted on an independent loader thread. A render worker owns its EGL context;
+a separate worker sorts camera updates. Streaming textures upload to a staging texture in at most 4 MiB batches per frame; the previous resident scene remains drawable until the replacement is ready. Rendering uses instanced Gaussian ellipses,
 projected anisotropic covariance and back-to-front premultiplied alpha blending.
 The first version uses SH0 color, a 45° vertical field of view and orbit controls.
 This is a native renderer; there is no ArkWeb dependency.
@@ -174,3 +174,5 @@ python3 scripts/harmonyos/compare_renderers.py
 
 This page currently supports the bundled PLY samples, orbit/pan/pinch/reset and a
 fixed trajectory; the richer flight/focus/SOG streaming viewer remains the C++ route.
+
+Streaming responsiveness regression and the native tiled adapter status are documented in [streaming-pipeline-20260914.md](streaming-pipeline-20260914.md).

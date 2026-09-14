@@ -11,5 +11,18 @@ if lsof -iTCP:"$stream_port" -sTCP:LISTEN -t >/dev/null 2>&1; then
 fi
 stream_hdc="$DEVECO_STUDIO_HOME/Contents/sdk/default/openharmony/toolchains/hdc"
 "$stream_hdc" rport "tcp:$stream_port" "tcp:$stream_port"
+if [[ "${3:-}" == "--background" ]]; then
+  mkdir -p "$NEXTNEWS_ROOT/.local"
+  python3 - "$stream_dir" "$stream_port" "$NEXTNEWS_ROOT/.local" <<'PYTHON'
+import pathlib, subprocess, sys
+root, port, local = pathlib.Path(sys.argv[1]).resolve(), sys.argv[2], pathlib.Path(sys.argv[3])
+with (local / f'stream-server-{port}.log').open('ab') as log:
+    child = subprocess.Popen([sys.executable, '-m', 'http.server', port, '--bind', '127.0.0.1', '--directory', str(root)],
+                             stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+(local / f'stream-server-{port}.pid').write_text(str(child.pid))
+print(f'Background server PID {child.pid}; loopback port {port}; log: {local / ("stream-server-" + port + ".log")}')
+PYTHON
+  exit 0
+fi
 trap '"$stream_hdc" fport rm "tcp:$stream_port" "tcp:$stream_port" >/dev/null 2>&1 || true' EXIT
 python3 -m http.server "$stream_port" --bind 127.0.0.1 --directory "$stream_dir"

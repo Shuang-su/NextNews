@@ -10,6 +10,7 @@ export interface RenderStatus {
   loadMs: number;
   sortMs: number;
   gpuMs: number;
+  uploadMs: number;
   frameMs: number;
   fps: number;
 }

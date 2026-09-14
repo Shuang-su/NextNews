@@ -13,7 +13,7 @@ struct Status {
     std::string state = "waiting", message = "Waiting for render surface", graphics;
     size_t count = 0, bytes = 0, frames = 0;
     int width = 1, height = 1;
-    double gpuMs = -1;
+    double gpuMs = -1, uploadMs = 0;
     double loadMs = 0, sortMs = 0, frameMs = 0, fps = 0;
 };
 class Renderer {
@@ -33,12 +33,31 @@ public:
 private:
     void Loop(void *window);
     void SortLoop();
+    void LoadLoop();
     void InitGL(void *window);
     void DestroyGL();
+    void AdvanceUpload();
     void Draw(const View &view, int width, int height);
     std::mutex mutex_;
     std::condition_variable changed_;
-    std::thread worker_, sorter_;
+    std::thread worker_, sorter_, loader_;
+    std::condition_variable loadChanged_;
+    std::shared_ptr<Scene> preparedScene_;
+    bool preparedResetCamera_ = false;
+    std::vector<float> preparedPixels_, uploadPixels_;
+    std::vector<uint32_t> preparedIndices_, initialIndices_;
+    std::shared_ptr<Scene> stagingScene_;
+    std::vector<float> stagingPixels_;
+    std::vector<uint32_t> stagingIndices_;
+    GLuint stagingTexture_ = 0, spareTexture_ = 0;
+    size_t stagingCapacity_ = 0, spareCapacity_ = 0, dataCapacity_ = 0;
+    size_t stagingRow_ = 0;
+    uint64_t stagingGeneration_ = 0;
+    bool stagingResetCamera_ = false, preuploaded_ = false;
+    uint64_t loadGeneration_ = 0;
+    std::atomic<size_t> cacheBytes_{0};
+    std::vector<std::vector<float>> retiredPixels_;
+    std::vector<std::shared_ptr<Scene>> retiredScenes_;
     std::condition_variable sortChanged_;
     std::shared_ptr<Scene> sortScene_, sortedScene_;
     View sortView_{};
