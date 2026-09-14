@@ -1,4 +1,4 @@
-import { Scene, Camera } from '@kit.ArkGraphics3D';
+import { Scene, Camera, EnvironmentBackgroundType } from '@kit.ArkGraphics3D';
 import { spatialRender } from '@kit.SpatialReconKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { SAMPLE_BOUNDS, SampleBounds } from './ModelBounds';
@@ -10,8 +10,12 @@ struct SpatialViewer {
   @State message: string = '检查 SpatialRender 能力';
   @State busy: boolean = false;
   @State panMode: boolean = false;
+  @StorageLink('nextnewsForeground') @Watch('foregroundChanged') foreground: boolean = true;
+  @State benchmarkResult: string = '';
+  private benchmarkTimer: number = -1;
   private camera: Camera | undefined = undefined;
   private generation: number = 0;
+  private selectedIndex: number = 1;
   private visible: boolean = true;
   private bounds: SampleBounds = SAMPLE_BOUNDS[0];
   private yaw: number = 0;
@@ -23,15 +27,43 @@ struct SpatialViewer {
   private lastY: number = 0;
   private pinchStart: number = 1;
 
-  aboutToAppear(): void { this.visible = true; this.load(0); }
+  aboutToAppear(): void { this.visible = true; this.load(1); }
   aboutToDisappear(): void {
-    this.visible = false; this.generation++;
+    this.visible = false; this.generation++; this.stopBenchmark();
     this.camera = undefined;
     this.scene?.destroy(); this.scene = undefined;
   }
-  onPageHide(): void { if (this.camera) { this.camera.enabled = false; } }
+  onPageHide(): void { this.stopBenchmark(); if (this.camera) { this.camera.enabled = false; } }
   onPageShow(): void { if (this.camera) { this.camera.enabled = true; } }
+  private foregroundChanged(): void {
+    if (!this.foreground) {
+      this.stopBenchmark();
+      if (this.camera) { this.camera.enabled = false; }
+    } else if (this.visible && this.scene) {
+      // GS resources may be lost when the system recreates the rendering surface.
+      this.load(this.selectedIndex, true);
+    }
+  }
+  private stopBenchmark(): void {
+    if (this.benchmarkTimer !== -1) { clearInterval(this.benchmarkTimer); this.benchmarkTimer = -1; this.benchmarkResult = '测量已停止'; }
+  }
+  private benchmark(): void {
+    if (!this.camera || this.busy) { return; }
+    this.reset(); const start = Date.now();
+    this.benchmarkResult = '固定环绕轨迹 · 测量 10 秒';
+    console.info(`SpatialBenchmark start file=${this.bounds.file}`);
+    this.benchmarkTimer = setInterval(() => {
+      const elapsed = Date.now() - start;
+      if (elapsed >= 10000) {
+        this.stopBenchmark(); this.benchmarkResult = '轨迹完成 · 帧率由系统采集';
+        console.info(`SpatialBenchmark complete elapsedMs=${elapsed}`); return;
+      }
+      this.yaw = elapsed * .0003; this.pitch = .2; this.zoom = 1;
+      this.updateCamera();
+    }, 16);
+  }
   private reset(): void {
+    this.stopBenchmark(); this.benchmarkResult = '';
     this.yaw = 0; this.pitch = 0; this.zoom = 1; this.panX = 0; this.panY = 0;
     this.updateCamera();
   }
@@ -49,16 +81,22 @@ struct SpatialViewer {
     const ps = Math.sin(-this.pitch / 2); const pc = Math.cos(-this.pitch / 2);
     this.camera.rotation = { x: hc * ps, y: hs * pc, z: -hs * ps, w: hc * pc };
   }
-  private async load(index: number): Promise<void> {
+  private async load(index: number, preserveView: boolean = false): Promise<void> {
     if (this.busy) { return; }
     if (!canIUse('SystemCapability.Graphics.SpatialRender')) {
       this.message = '此设备未声明 SpatialRender 能力，请返回 C++ 查看器或使用受支持真机。'; return;
     }
-    this.busy = true; this.message = '正在加载华为原生 3DGS 插件与模型';
+    this.stopBenchmark(); this.benchmarkResult = ''; this.busy = true; this.message = '正在加载华为原生 3DGS 插件与模型';
+    const view = [this.yaw, this.pitch, this.zoom, this.panX, this.panY];
     const request = ++this.generation; const start = Date.now();
     let pending: Scene | undefined = undefined;
     let stage: string = '初始化渲染上下文';
     try {
+      // Component3D's Scene option is construction-time state: detach before replacing it.
+      const oldScene = this.scene; this.scene = undefined; this.camera = undefined;
+      await new Promise<void>((resolve) => { setTimeout(resolve, 32); });
+      oldScene?.destroy();
+      if (!this.visible || request !== this.generation) { return; }
       const context = Scene.getDefaultRenderContext();
       console.info(`SpatialViewer contextAvailable=${context !== null}`);
       if (!context || !await context.loadPlugin(spatialRender.GSPlugin.PLUGIN_ID)) {
@@ -69,19 +107,27 @@ struct SpatialViewer {
       pending = await Scene.load();
       console.info(`SpatialViewer sceneCreated elapsedMs=${Date.now() - start}`);
       stage = '加载 3DGS 模型';
-      await spatialRender.GSPlugin.loadGSNode(pending,
+      const model = await spatialRender.GSPlugin.loadGSNode(pending,
         { uri: `OhosRawFile://models/${SAMPLE_BOUNDS[index].file}` }, pending.root ?? undefined);
+      model.rotation = { x: 0, y: 0, z: 1, w: 0 };
       console.info(`SpatialViewer modelLoaded file=${SAMPLE_BOUNDS[index].file} elapsedMs=${Date.now() - start}`);
       stage = '创建相机';
       const camera = await pending.getResourceFactory().createCamera({ name: 'comparisonCamera' });
       if (!this.visible || request !== this.generation) { return; }
-      this.bounds = SAMPLE_BOUNDS[index];
+      const source = SAMPLE_BOUNDS[index];
+      this.bounds = { file: source.file, center: [-source.center[0], -source.center[1], source.center[2]], radius: source.radius };
       camera.fov = Math.PI / 4; camera.nearPlane = this.bounds.radius * 0.001;
-      camera.farPlane = this.bounds.radius * 100; camera.enabled = true;
-      const previous = this.scene;
-      this.camera = camera; this.reset(); this.scene = pending; pending = undefined;
-      previous?.destroy();
-      this.message = `${this.bounds.file} · 原生加载 ${Date.now() - start} ms · SH0 输入\n图像、颜色和设备兼容性仍需实测确认`;
+      camera.farPlane = this.bounds.radius * 100; camera.enabled = this.foreground;
+      pending.environment.backgroundType = EnvironmentBackgroundType.BACKGROUND_NONE;
+      camera.postProcess = null;
+      camera.clearColor = { r: .035, g: .045, b: .065, a: 1 };
+      this.camera = camera; this.reset(); this.selectedIndex = index;
+      if (preserveView) {
+        this.yaw = view[0]; this.pitch = view[1]; this.zoom = view[2];
+        this.panX = view[3]; this.panY = view[4]; this.updateCamera();
+      }
+      this.scene = pending; pending = undefined;
+      this.message = `${this.bounds.file} · 加载接口 ${Date.now() - start} ms · SH0 输入\nSpatialReconKit / ArkGraphics3D · Rz 180°`;
     } catch (error) {
       if (this.visible && request === this.generation) {
         const detail = (error as BusinessError)?.message ?? String(error);
@@ -94,24 +140,17 @@ struct SpatialViewer {
     }
   }
   build() {
-    Column({ space: 10 }) {
-      Row({ space: 10 }) {
-        Button('返回').onClick(() => this.getUIContext().getRouter().back());
-        Text('Spatial Recon 原生对照').fontSize(20).fontColor('#EDF6FC');
-      }.width('100%');
-      Text(this.message).fontSize(13).fontColor('#AFC6D8').width('100%');
-      Text('华为官方暂不支持在模拟器运行此套件；请在受支持真机验证。')
-        .fontSize(12).fontColor('#EBC478').width('100%');
+    Stack({ alignContent: Alignment.TopStart }) {
       if (this.scene) {
         Component3D({ scene: this.scene, modelType: ModelType.SURFACE })
-          .width('100%').layoutWeight(1)
+          .width('100%').height('100%')
           .gesture(GestureGroup(GestureMode.Exclusive,
-            PinchGesture({ fingers: 2 }).onActionStart(() => { this.pinchStart = this.zoom; })
+            PinchGesture({ fingers: 2 }).onActionStart(() => { this.stopBenchmark(); this.pinchStart = this.zoom; })
               .onActionUpdate((event: GestureEvent) => {
                 this.zoom = Math.max(0.05, Math.min(20, this.pinchStart / Math.max(event.scale, 0.01)));
                 this.updateCamera();
               }),
-            PanGesture({ fingers: 1 }).onActionStart(() => { this.lastX = 0; this.lastY = 0; })
+            PanGesture({ fingers: 1 }).onActionStart(() => { this.stopBenchmark(); this.lastX = 0; this.lastY = 0; })
               .onActionUpdate((event: GestureEvent) => {
                 const dx = event.offsetX - this.lastX; const dy = event.offsetY - this.lastY;
                 this.lastX = event.offsetX; this.lastY = event.offsetY;
@@ -121,8 +160,17 @@ struct SpatialViewer {
               })
           ));
       } else {
-        Blank().layoutWeight(1);
+        Blank().width('100%').height('100%');
       }
+      Column({ space: 8 }) {
+        Row({ space: 10 }) {
+          Button('返回').onClick(() => this.getUIContext().getRouter().back());
+        Text('Spatial Recon 原生对照').fontSize(20).fontColor('#EDF6FC');
+      }.width('100%');
+      Text(this.message).fontSize(13).fontColor('#AFC6D8').width('100%');
+
+      }.padding(12).width('100%').backgroundColor('#BB07131F');
+      Column({ space: 8 }) {
       Row({ space: 8 }) {
         Button('Tripo').enabled(!this.busy).onClick(() => this.load(0));
         Button('公开样例').enabled(!this.busy).onClick(() => this.load(1));
@@ -131,7 +179,10 @@ struct SpatialViewer {
       Row({ space: 8 }) {
         Button(this.panMode ? '拖动：平移' : '拖动：旋转').onClick(() => { this.panMode = !this.panMode; });
         Button('复位').onClick(() => this.reset());
+        Button('测量 10 秒').enabled(!this.busy).onClick(() => this.benchmark());
       }
-    }.padding(16).width('100%').height('100%').backgroundColor('#07131F');
+        Text(this.benchmarkResult).fontSize(12).fontColor('#EBC478');
+      }.padding(12).width('100%').backgroundColor('#BB07131F').position({ x: 0, y: '100%' }).translate({ y: '-100%' });
+    }.width('100%').height('100%').backgroundColor('#07131F');
   }
 }

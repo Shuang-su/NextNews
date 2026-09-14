@@ -23,7 +23,7 @@ support on the selected emulator or phone.
 
 Implemented a separate `pages/SpatialViewer` ArkGraphics3D comparison page with capability
 checks, asynchronous plugin/model loading, camera controls, error reporting and
-resource disposal. It compiles with API 26; rendering remains unverified. Use the same prepared SH0 models to compare orientation,
+resource disposal. It compiles with API 26 and now renders all three bundled PLY samples on the Mate 80 Pro Max. Open the model library → 华为原生渲染. See [the physical-device comparison](spatial-device-20260914.md). Use the same prepared SH0 models to compare orientation,
 scale, color, occlusion and loading behavior. Keep the existing renderer usable
 when the device lacks SpatialRender. Native reconstruction C APIs are a separate
 generation capability, not required for the viewer milestone.

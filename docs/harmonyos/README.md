@@ -161,3 +161,16 @@ fresh screenshots/layouts under an ignored timestamped artifacts directory.
 
 First physical-device results (Mate 80 Pro Max, API 26) are recorded in
 [device-20260914.md](device-20260914.md), separately from simulator measurements.
+
+Huawei's SpatialReconKit / ArkGraphics3D comparison is now available in the model
+library under **华为原生渲染**. The [real-device comparison](spatial-device-20260914.md)
+records the three PLY inputs, orientation, scene remount fix and system FPS evidence.
+To reproduce the sequential device capture (restarts only this debug app):
+
+```bash
+source scripts/harmonyos/env.sh
+python3 scripts/harmonyos/compare_renderers.py
+```
+
+This page currently supports the bundled PLY samples, orbit/pan/pinch/reset and a
+fixed trajectory; the richer flight/focus/SOG streaming viewer remains the C++ route.

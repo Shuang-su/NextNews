@@ -1,0 +1,220 @@
+{
+  "device": "HUAWEI Mate 80 Pro Max",
+  "api": 26,
+  "gpu": "Maleoon 935",
+  "viewport": [
+    1320,
+    2623
+  ],
+  "trajectory": "yaw=elapsedSeconds*0.3; pitch=0.2; zoom=1; target=center; 10 seconds",
+  "metric": "frequency of second timestamp column in RenderService surface records over last one second captured during trajectory; not GPU duration",
+  "samples": [
+    {
+      "model": "public",
+      "input_gaussians": 80000,
+      "sha256": "e326a781b1c1dbff8fed2407e191db51295bac9abb6d2086d3cfd7313410cec3",
+      "spatial": {
+        "rs_record_hz": 60.06339505151163,
+        "smartperf_fps_samples": [
+          59,
+          60,
+          82,
+          120,
+          120,
+          104,
+          60,
+          60,
+          60,
+          60,
+          60,
+          61
+        ],
+        "process_pss_kib_samples": [
+          251633,
+          251633,
+          251633,
+          251633,
+          251633,
+          251633,
+          251633,
+          251633,
+          251633,
+          251633,
+          251633,
+          251633
+        ],
+        "memory_note": "Whole app process; includes caches and UI. Separate capture sequences, not isolated engine allocation."
+      },
+      "gl": {
+        "rs_record_hz": 60.05921466198541,
+        "smartperf_fps_samples": [
+          10,
+          0,
+          1,
+          85,
+          120,
+          119,
+          84,
+          60,
+          60,
+          60,
+          60,
+          60
+        ],
+        "process_pss_kib_samples": [
+          98854,
+          98854,
+          98854,
+          98854,
+          98854,
+          98854,
+          98854,
+          98854,
+          98854,
+          98854,
+          98854,
+          98854
+        ],
+        "memory_note": "Whole app process; includes caches and UI. Separate capture sequences, not isolated engine allocation."
+      }
+    },
+    {
+      "model": "tripo",
+      "input_gaussians": 32768,
+      "sha256": "9bdae843684e466e36a3fd402b75784aa43d2dcad500c615eb1fae4051ca5d9f",
+      "spatial": {
+        "rs_record_hz": 60.0543586230882,
+        "smartperf_fps_samples": [
+          60,
+          60,
+          96,
+          120,
+          120,
+          90,
+          60,
+          61,
+          60,
+          60,
+          60,
+          60
+        ],
+        "process_pss_kib_samples": [
+          253241,
+          253241,
+          253241,
+          253241,
+          253241,
+          253241,
+          253241,
+          253241,
+          253241,
+          253241,
+          253241,
+          253241
+        ],
+        "memory_note": "Whole app process; includes caches and UI. Separate capture sequences, not isolated engine allocation."
+      },
+      "gl": {
+        "rs_record_hz": 60.05828464338129,
+        "smartperf_fps_samples": [
+          10,
+          0,
+          19,
+          120,
+          120,
+          117,
+          60,
+          60,
+          60,
+          60,
+          60,
+          60
+        ],
+        "process_pss_kib_samples": [
+          146286,
+          146286,
+          146286,
+          146286,
+          146286,
+          146286,
+          146286,
+          146286,
+          146286,
+          146286,
+          146286,
+          146286
+        ],
+        "memory_note": "Whole app process; includes caches and UI. Separate capture sequences, not isolated engine allocation."
+      }
+    },
+    {
+      "model": "converted",
+      "input_gaussians": 80000,
+      "sha256": "e7fd99bc9c914085719701b0cb15a6a3229051077a66b557a247acf985767366",
+      "spatial": {
+        "rs_record_hz": 60.05300614619298,
+        "smartperf_fps_samples": [
+          60,
+          60,
+          60,
+          117,
+          120,
+          120,
+          70,
+          60,
+          60,
+          60,
+          60,
+          60
+        ],
+        "process_pss_kib_samples": [
+          257712,
+          257712,
+          257712,
+          257712,
+          257712,
+          257712,
+          257712,
+          257712,
+          257712,
+          257712,
+          257712,
+          257712
+        ],
+        "memory_note": "Whole app process; includes caches and UI. Separate capture sequences, not isolated engine allocation."
+      },
+      "gl": {
+        "rs_record_hz": 60.0582377524497,
+        "smartperf_fps_samples": [
+          0,
+          0,
+          57,
+          120,
+          120,
+          96,
+          59,
+          60,
+          60,
+          60,
+          60,
+          61
+        ],
+        "process_pss_kib_samples": [
+          165420,
+          165420,
+          165420,
+          165420,
+          165420,
+          165420,
+          165420,
+          165420,
+          165420,
+          165420,
+          165420,
+          165420
+        ],
+        "memory_note": "Whole app process; includes caches and UI. Separate capture sequences, not isolated engine allocation."
+      }
+    }
+  ]
+}

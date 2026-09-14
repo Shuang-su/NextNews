@@ -1,5 +1,7 @@
 # SpatialReconKit 继续排查 — 2026-09-11
 
+> 2026-09-14 更新：真机已通过基础场景及三类 PLY 的渲染检查，详见[实机对比](spatial-device-20260914.md)。以下保留当时的模拟器排查记录。
+
 ## 结论
 
 当前模拟器上仍未实现 SpatialReconKit 渲染。华为[套件简介](https://developer.huawei.com/consumer/cn/doc/HarmonyOS-Guides/spatial-recon-introduction)（页面标注更新 2026-07-28）明确说明暂不支持模拟器。系统能力检查通过、SDK 接口存在，均不能替代设备支持判断。
