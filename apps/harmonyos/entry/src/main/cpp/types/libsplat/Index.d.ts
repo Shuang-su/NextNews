@@ -56,3 +56,4 @@ export const collisionStep: (generation: number, dt: number, yaw: number, right:
 export const collisionPause: () => void;
 export const collisionReset: () => number[];
 export const collisionStatus: () => CollisionStatus;
+export const collisionDebug: (generation: number, x: number, y: number, z: number) => Promise<number[]>;

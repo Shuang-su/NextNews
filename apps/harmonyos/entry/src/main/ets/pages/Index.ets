@@ -1,4 +1,6 @@
 import { ViewerCollision } from './ViewerCollision';
+import { ViewerProjection } from './ViewerProjection';
+import { ViewerTimeline } from './ViewerTimeline';
 import { Scene } from '@kit.ArkGraphics3D';
 import { util } from '@kit.ArkTS';
 import { ViewerRuntime, ViewerMarker } from './ViewerRuntime';
@@ -39,6 +41,50 @@ struct ViewerTool {
 @Entry
 @Component
 struct Index {
+  @State collisionDebug: boolean = false;
+  @State collisionDebugMessage: string = '';
+  private debugCanvas: CanvasRenderingContext2D = new CanvasRenderingContext2D(new RenderingContextSettings(true));
+  private debugReady: boolean = false;
+  private debugPending: boolean = false;
+  private debugRevision: number = 0;
+  private debugAt: number = 0;
+  private debugDrawAt: number = 0;
+  private debugWire: number[] = [];
+  private clearDebug(): void { this.debugRevision++; this.debugDrawAt = 0; this.debugWire = []; this.collisionDebugMessage = ''; this.drawDebug(); }
+  private drawDebug(): void {
+    if (!this.debugReady || !this.collisionDebug) { return; }
+    const now = Date.now(); if (now - this.debugDrawAt < 100) { return; } this.debugDrawAt = now;
+    const ctx = this.debugCanvas, w = this.controls.width, h = this.controls.height;
+    ctx.clearRect(0, 0, w, h);
+    if (!this.collisionDebug || !this.active) { return; }
+    const projection = new ViewerProjection(this.viewer.pose(), w, h);
+    const colors = ['#66F3DB', '#DA9BFF', '#FFCF68'];
+    ctx.lineWidth = .8; ctx.globalAlpha = .7;
+    for (let kind = 0; kind < 3; kind++) {
+      ctx.beginPath(); ctx.strokeStyle = colors[kind];
+      for (let i = 1; i + 6 < this.debugWire.length; i += 7) {
+        if (this.debugWire[i] !== kind) { continue; }
+        const line = projection.segment(this.debugWire.slice(i + 1, i + 4), this.debugWire.slice(i + 4, i + 7));
+        if (line.length === 4) { ctx.moveTo(line[0], line[1]); ctx.lineTo(line[2], line[3]); }
+      }
+      ctx.stroke();
+    }
+  }
+  private async refreshDebug(): Promise<void> {
+    const session = this.collision;
+    if (!this.collisionDebug || !session || this.debugPending || !this.active) { return; }
+    this.debugPending = true; const revision = this.debugRevision, pose = this.viewer.pose();
+    const direction = pose.target.map((v: number, i: number) => v - pose.position[i]), length = Math.hypot(...direction);
+    const eye = pose.position.map((v: number, i: number) => v + direction[i] / length * 5);
+    try {
+      const wire = await nativeRender.collisionDebug(session.generation, eye[0], eye[1], eye[2]);
+      if (revision !== this.debugRevision || this.collision !== session || !this.collisionDebug || !this.active) { return; }
+      this.debugWire = wire;
+      this.collisionDebugMessage = `碰撞透视：青色体素 · 紫色 GLB · 黄色已加载区域\n镜头前方 10 米范围 · ${Math.floor((wire.length - 1) / 7)} 条边${wire[0] ? '（显示量已限流）' : ''}`;
+      this.drawDebug();
+    } catch (error) { if (revision === this.debugRevision) { this.collisionDebugMessage = ((error as BusinessError).message || String(error)); } }
+    finally { this.debugPending = false; }
+  }
   @State walkMode: boolean = false;
   @State walkPending: boolean = false;
   @State collisionMessage: string = '';
@@ -63,10 +109,10 @@ struct Index {
     catch (error) { if (this.collision === session) { this.collisionMessage = ((error as BusinessError).message || String(error)); } }
   }
   private leaveWalk(): void { this.walkMode = false; this.walkPending = false; this.walkDestination = undefined; this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; nativeRender.collisionPause(); }
-  private stopCollision(): void { this.leaveWalk(); const old = this.collision; this.collision = undefined; old?.stop(); this.collisionMessage = ''; }
+  private stopCollision(): void { this.leaveWalk(); this.clearDebug(); const old = this.collision; this.collision = undefined; old?.stop(); this.collisionMessage = ''; }
   private async enterWalk(): Promise<void> {
     if (!this.collision || this.walkPending) { this.localError = '请先在模型菜单加载碰撞数据'; return; }
-    const session = this.collision; this.walkPending = true; this.profilePlaying = false; this.viewer.interrupt(); this.controls.cancel(); this.resetJoystick();
+    const session = this.collision; this.walkPending = true; this.stopAnimation(); this.viewer.interrupt(); this.controls.cancel(); this.resetJoystick();
     try {
       const eye = await session.enter(this.viewer.pose().position);
       if (!this.walkPending || this.collision !== session || !this.active) { return; }
@@ -127,6 +173,21 @@ struct Index {
   @State profileReady: boolean = false;
   private timelineUpdated: number = 0;
   @State profilePlaying: boolean = false;
+  @State animationMode: boolean = false;
+  private scrubResume: boolean = false;
+  private stopAnimation(): void { this.animationMode = false; this.profilePlaying = false; this.scrubResume = false; }
+  private scrubAnimation(phase: string): void {
+    if (phase === 'begin') {
+      if (!this.animationMode) { return; }
+      this.scrubResume = this.profilePlaying; this.profilePlaying = false; this.viewer.interrupt(); this.resetJoystick(); this.controls.cancel();
+    } else {
+      this.profilePlaying = phase === 'end' && this.animationMode && this.active && this.scrubResume; this.scrubResume = false;
+    }
+  }
+  private seekAnimation(value: number): void {
+    if (!this.animationMode || this.walkMode || !this.viewer.profile) { return; }
+    this.timeline = value; this.applyProfilePose(this.viewer.profile.seek(value));
+  }
   @StorageLink('nextnewsForeground') @Watch('foregroundChanged') foreground: boolean = true;
   private applyProfilePose(pose: ViewerPose): void {
     this.viewer.apply(pose, this.controls.fly); this.updateCamera();
@@ -139,14 +200,15 @@ struct Index {
     this.annotationTitle = annotation?.title ?? ''; this.annotationText = annotation?.text ?? '';
   }
   private activateAnnotation(index: number): void { this.leaveWalk();
-    this.profilePlaying = false; this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++;
+    this.stopAnimation(); this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++;
     this.controls.setFly(false); this.flyMode = false; this.viewer.annotation(index); this.refreshAnnotations();
   }
   private play(): void { this.leaveWalk();
     if (!this.viewer.profile) { this.viewer.configure(createSettings(this.viewer.pose())); }
     this.duration = this.viewer.profile!.animation.duration;
     if (this.viewer.profile!.ended) { this.viewer.profile!.time = 0; }
-    this.viewer.interrupt(); this.autoOrbit = false; this.profilePlaying = !this.profilePlaying; this.profileReady = true;
+    this.viewer.interrupt(); this.controls.cancel(); this.pointers.cancel(); this.resetJoystick(); this.autoOrbit = false;
+    this.profilePlaying = !this.profilePlaying; this.animationMode = true; this.profileReady = true;
   }
   private async importSettings(): Promise<void> {
     const request = ++this.pickGeneration;
@@ -163,11 +225,11 @@ struct Index {
         text = new util.TextDecoder('utf-8', { fatal: true }).decodeWithStream(new Uint8Array(data));
       } finally { await fs.close(file); }
       if (request !== this.pickGeneration || !this.visible) { return; }
-      this.viewer.configure(parseViewerSettings(text)); this.viewer.initial();
+      this.leaveWalk(); this.stopAnimation(); this.viewer.configure(parseViewerSettings(text)); this.viewer.initial();
       const collisionUrl = this.viewer.profile!.settings.collisionUrl ?? this.viewer.profile!.settings.voxelManifestUrl ?? this.viewer.profile!.settings.voxelUrl;
       if (collisionUrl) { this.collisionUrl = collisionUrl; this.loadCollision(); } this.flyMode = this.controls.fly;
       this.duration = this.viewer.profile!.animation.duration; this.timeline = 0;
-      this.profilePlaying = this.viewer.profile!.settings.startMode === 'animTrack'; this.modelsVisible = false; this.updateCamera();
+      this.profilePlaying = this.viewer.profile!.settings.startMode === 'animTrack'; this.animationMode = this.profilePlaying; this.modelsVisible = false; this.updateCamera();
     } catch (error) { this.localError = ((error as BusinessError).message || String(error)); }
   }
   private async switchBackend(): Promise<void> {
@@ -190,10 +252,11 @@ struct Index {
   }
 
   private async profileCamera(play: boolean): Promise<void> {
+    this.leaveWalk(); this.stopAnimation(); this.controls.cancel(); this.resetJoystick();
     if (this.title !== '转换样例' && this.title !== '流式场景' && this.title !== '同源 SOG' && !this.viewer.profile) { this.viewer.configure(createSettings(this.viewer.pose())); }
     try {
       if (!this.viewer.profile) { this.viewer.profile = await ViewerProfile.load(this.getUIContext().getHostContext() as common.UIAbilityContext, this.viewer.bounds); }
-      this.autoOrbit = false; this.benchmarkStart = 0; this.profilePlaying = play;
+      this.autoOrbit = false; this.benchmarkStart = 0; this.profilePlaying = play; this.animationMode = play;
       this.duration = this.viewer.profile.animation.duration;
       if (play) { this.applyProfilePose(this.viewer.profile.animation.sample(this.viewer.profile.time)); }
       else { this.viewer.initial(); this.flyMode = this.controls.fly; this.updateCamera(); }
@@ -247,6 +310,7 @@ struct Index {
   private active: boolean = true;
 
   private foregroundChanged(): void {
+    this.scrubResume = false; this.clearDebug();
     this.active = this.foreground; this.motionTime = Date.now(); this.pickGeneration++; this.resetJoystick(); this.controls.cancel(); this.pointers.cancel();
     this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.collision?.pause(!this.foreground);
     this.backend.active(this.foreground); if (this.stream) { this.stream.active = this.foreground; }
@@ -269,6 +333,7 @@ struct Index {
         this.stream?.tick(this.controls.current, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
       }
       if (this.active && !this.busy) { this.collision?.tick(this.viewer.pose().position); }
+      if (this.active && !this.busy && now - this.debugAt >= 500) { this.debugAt = now; this.refreshDebug(); }
       if (this.active && !this.busy && this.walkMode) { this.walkFrame(dt);
       } else if (this.active && this.profilePlaying && this.viewer.profile) {
         this.applyProfilePose(this.viewer.profile.advance(dt / 1000));
@@ -319,9 +384,9 @@ struct Index {
     this.backend.dispose();
   }
   onPageShow(): void { this.collision?.pause(false); this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); this.backend.active(true); }
-  onPageHide(): void { this.collision?.pause(true); this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); this.backend.active(false); }
+  onPageHide(): void { this.scrubResume = false; this.clearDebug(); this.collision?.pause(true); this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); this.backend.active(false); }
   private updateCamera(): void {
-    this.backend.camera(this.viewer.pose(), this.viewer.bounds); this.refreshAnnotations();
+    this.backend.camera(this.viewer.pose(), this.viewer.bounds); this.refreshAnnotations(); this.drawDebug();
   }
 
   private benchmark(): void {
@@ -384,7 +449,8 @@ struct Index {
       this.benchmarkResult = '连续转向完成 · 逐帧记录已写入日志';
     } finally { nativeRender.traceFrames(false); this.streamMeasuring = false; }
   }
-  private toggleMode(): void { this.leaveWalk(); this.viewer.interrupt(); this.profilePlaying = false; this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.flyMode = !this.flyMode; this.controls.setFly(this.flyMode); this.updateCamera(); }
+  private setMode(fly: boolean): void { this.leaveWalk(); this.viewer.interrupt(); this.stopAnimation(); this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.flyMode = fly; this.controls.setFly(fly); this.updateCamera(); }
+  private toggleMode(): void { this.setMode(!this.flyMode); }
   private async focusAt(x: number, y: number, doubleTap: boolean = false): Promise<void> {
     if (this.flyMode && this.gaming) { return; }
     const request = ++this.pickGeneration;
@@ -397,20 +463,20 @@ struct Index {
         this.viewer.navigate(point, doubleTap); this.flyMode = this.controls.fly; this.updateCamera(); }
     } catch (error) { console.warn(`Focus: ${((error as BusinessError).message || String(error))}`); }
   }
-  private frame(): void { this.leaveWalk(); this.viewer.interrupt(); this.profilePlaying = false; this.controls.setFly(false); this.flyMode = false; this.viewer.transition(framePose(this.viewer.bounds, this.controls.fov)); }
+  private frame(): void { this.leaveWalk(); this.viewer.interrupt(); this.stopAnimation(); this.controls.setFly(false); this.flyMode = false; this.viewer.transition(framePose(this.viewer.bounds, this.controls.fov)); }
   private reset(): void {
     if (this.walkMode) { const eye = nativeRender.collisionReset(); for (let i = 0; i < 3; i++) { this.controls.current[i + 3] = (eye[i] - this.viewer.bounds[i]) / this.viewer.bounds[3]; this.controls.target[i + 3] = this.controls.current[i + 3]; } this.walkDestination = undefined; this.updateCamera(); return; }
-    this.profilePlaying = false; this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.viewer.interrupt();
+    this.stopAnimation(); this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.viewer.interrupt();
     this.benchmarkStart = 0; this.benchmarkResult = ''; this.controls.cancel();
     if (this.viewer.profile) { this.viewer.profile.time = 0; this.viewer.selected = -1; this.viewer.initial(); }
     else { this.controls.reset(); this.controls.fov = 85; this.viewer.apply(framePose(this.viewer.bounds), false); }
     this.flyMode = this.controls.fly; this.timeline = 0; this.updateCamera();
   }
-  private clearProfile(): void { this.stopCollision(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; }
+  private clearProfile(): void { this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; }
   private touch(event: TouchEvent): void {
-    this.viewer.interrupt();
-    this.profilePlaying = false;
     if (event.source === SourceType.Mouse) { return; }
+    this.viewer.interrupt();
+    this.stopAnimation();
     this.autoOrbit = false;
     const points = this.pointers.viewport(this.touchPhase(event.type), this.touchPoints(event.touches), this.touchPoints(event.changedTouches));
     this.controls.touch(points, this.panMode);
@@ -424,7 +490,7 @@ struct Index {
   private resetJoystick(): void { this.pointers.cancelStick(); this.joyX = 0; this.joyY = 0; }
 
   private mouse(event: MouseEvent): void {
-    if (event.action === MouseAction.Press || this.mouseButton !== MouseButton.None) { this.viewer.interrupt(); this.profilePlaying = false; }
+    if (event.action === MouseAction.Press || this.mouseButton !== MouseButton.None) { this.viewer.interrupt(); this.stopAnimation(); }
     if (event.action === MouseAction.Press) {
       this.autoOrbit = false; if (this.pointers.stickId < 0) { this.pointers.blockTap = false; }
       this.getUIContext().getFocusController().requestFocus('viewer-surface');
@@ -466,17 +532,16 @@ struct Index {
       return true;
     }
     if (event.type === KeyType.Down && key === '3') { this.enterWalk(); return true; }
-    if (event.type === KeyType.Down && key !== ' ') { this.profilePlaying = false; }
     console.info(`ViewerKey ${event.keyCode} type=${event.type} key=${key}`);
     if (event.type === KeyType.Down && key === 'escape') { this.viewer.interrupt(); this.profilePlaying = false; this.gaming = false; this.viewer.gaming = false; this.toolsVisible = true; this.helpVisible = this.settingsVisible = this.modelsVisible = false; this.resetJoystick(); return true; }
     if (event.type === KeyType.Down && key === 'h') { this.helpVisible = !this.helpVisible; return true; }
     if (event.type === KeyType.Down && key === 'f') { this.frame(); return true; }
     if (event.type === KeyType.Down && key === ' ') { this.play(); return true; }
     if (event.type === KeyType.Down && key === 'g') { this.gaming = !this.gaming; this.viewer.gaming = this.gaming; this.resetJoystick(); return true; }
-    if (event.type === KeyType.Down && (key === '1' || key === '2')) { if (this.walkMode) { this.leaveWalk(); this.controls.setFly(key === '2'); this.flyMode = key === '2'; } else if (this.flyMode !== (key === '2')) { this.toggleMode(); } return true; }
+    if (event.type === KeyType.Down && (key === '1' || key === '2')) { this.setMode(key === '2'); return true; }
     if (key === 'r' && event.type === KeyType.Down) { this.reset(); return true; }
     if ('wasdqe'.includes(key) && key.length === 1) {
-      this.viewer.interrupt(); if (event.type === KeyType.Down && !this.flyMode) { this.toggleMode(); } this.gaming = true; this.viewer.gaming = true;
+      this.viewer.interrupt(); if (event.type === KeyType.Down) { this.stopAnimation(); if (!this.flyMode) { this.toggleMode(); } } this.gaming = true; this.viewer.gaming = true;
       this.controls.key(key, event.type === KeyType.Down); return true;
     }
     return false;
@@ -575,7 +640,7 @@ struct Index {
   }
   private joystick(event: TouchEvent): void {
     event.stopPropagation();
-    this.profilePlaying = false; this.viewer.interrupt();
+    this.stopAnimation(); this.viewer.interrupt();
     this.pointers.joystick(this.touchPhase(event.type), this.touchPoints(event.touches), this.touchPoints(event.changedTouches));
     this.joyX = this.pointers.x; this.joyY = this.pointers.y;
     if (event.type !== TouchType.Move) { console.info(`ViewerStick phase=${this.touchPhase(event.type)} owner=${this.pointers.stickId} x=${this.joyX.toFixed(3)} y=${this.joyY.toFixed(3)}`); }
@@ -605,9 +670,14 @@ struct Index {
           })
         ))
         .onKeyEvent((event: KeyEvent) => this.handleKey(event))
-        .onAxisEvent((event: AxisEvent) => { this.controls.zoom(Math.exp(Math.max(-1, Math.min(1, event.getVerticalAxisValue() * 0.002)))); });
+        .onAxisEvent((event: AxisEvent) => { this.stopAnimation(); this.controls.zoom(Math.exp(Math.max(-1, Math.min(1, event.getVerticalAxisValue() * 0.002)))); });
 
-      if (this.toolsVisible && this.showAnnotations && !(this.flyMode && this.gaming)) {
+      if (this.collisionDebug) {
+        Canvas(this.debugCanvas).width('100%').height('100%').hitTestBehavior(HitTestMode.None)
+          .onReady(() => { this.debugReady = true; this.drawDebug(); })
+          .onDisAppear(() => { this.debugReady = false; })
+      }
+      if (this.toolsVisible && this.showAnnotations && !(this.flyMode && this.gaming && !this.animationMode)) {
         ForEach(this.markers, (marker: ViewerMarker) => {
           Button(`${marker.index + 1}`, { type: ButtonType.Circle }).width(44).height(44).fontSize(14)
             .fontColor('#FFFFFF').backgroundColor(this.annotationIndex === marker.index ? '#e98443' : '#80000000')
@@ -632,6 +702,9 @@ struct Index {
         }
         if (this.streamMessage && this.toolsVisible) {
           Text(this.streamMessage).fontSize(10).fontColor('#B7C9DE').maxLines(2).width('100%')
+        }
+        if (this.collisionDebug && this.collisionDebugMessage) {
+          Text(this.collisionDebugMessage).fontSize(10).fontColor('#66F3DB').width('100%').backgroundColor('#99000000')
         }
       }.padding(16).width('100%').backgroundColor('#00000000')
       if (this.toolsVisible) {
@@ -660,6 +733,7 @@ struct Index {
                     TextInput({ text: this.collisionUrl, placeholder: 'collisionUrl / voxelUrl / voxelManifestUrl' }).id('collision-address').fontSize(12).onChange((value: string) => { this.collisionUrl = value; })
                     Row({ space: 8 }) { Button('加载碰撞').fontSize(12).onClick(() => { this.loadCollision(); }); Button('重试碰撞').fontSize(12).onClick(() => { this.collision?.retry(); }); Button('停止碰撞').fontSize(12).onClick(() => { this.stopCollision(); }) }
                     Text(this.collisionMessage).fontSize(12).fontColor('#BBD0E4')
+                    Button(this.collisionDebug ? '关闭碰撞显示' : '显示碰撞边线').fontSize(12).onClick(() => { this.collisionDebug = !this.collisionDebug; this.clearDebug(); this.refreshDebug(); })
                   }
                   Button('导入 viewer-settings.json').fontSize(12).onClick(() => { this.importSettings(); })
                   Button('同源 SOG 对照').enabled(!this.busy).onClick(() => { this.loadComparison(); })
@@ -725,7 +799,7 @@ struct Index {
             }.constraintSize({ maxHeight: 330 }).width('100%').backgroundColor('#EB222222').borderRadius(12)
           }
           if (this.profileReady && !this.modelsVisible && !this.settingsVisible && !this.helpVisible && !this.diagnosticsVisible) {
-            if (this.showAnnotations && this.annotationCount > 0 && !(this.flyMode && this.gaming)) {
+            if (this.showAnnotations && this.annotationCount > 0 && !(this.flyMode && this.gaming && !this.animationMode)) {
               if (this.annotationIndex >= 0 && this.markers.some((m: ViewerMarker) => m.index === this.annotationIndex)) {
                 Column({ space: 6 }) {
                   Row() { Text(this.annotationTitle).fontSize(16).fontWeight(FontWeight.Medium).fontColor('#FFFFFF').layoutWeight(1)
@@ -740,16 +814,15 @@ struct Index {
                 ViewerTool({ icon: $r('app.media.viewer_next'), label: '下一个标注', action: () => { this.activateAnnotation(this.annotationIndex + 1); } })
               }.padding({ left: 6, right: 6 }).width('100%').backgroundColor('#B0222222').borderRadius(12)
             }
-            Row({ space: 8 }) {
+            if (this.animationMode) { Row({ space: 8 }) {
               Text(`${Math.floor(this.timeline / 60)}:${Math.floor(this.timeline % 60).toString().padStart(2, '0')}`).fontSize(10).fontColor('#FFFFFF').width(32)
-              Slider({ value: this.timeline, min: 0, max: this.duration, step: .01 }).layoutWeight(1).trackColor('#666666').selectedColor('#FFFFFF')
-                .id('动画时间轴').onChange((value: number) => { this.profilePlaying = false; this.viewer.interrupt(); this.timeline = value; if (this.viewer.profile) { this.applyProfilePose(this.viewer.profile.seek(value)); } })
-            }.width('100%')
+              ViewerTimeline({ active: this.foreground, value: this.timeline, duration: this.duration, seek: (value: number) => { this.seekAnimation(value); }, drag: (phase: string) => { this.scrubAnimation(phase); } }).layoutWeight(1)
+            }.width('100%') }
           }
           Row() {
             ViewerTool({ icon: this.profilePlaying ? $r('app.media.viewer_pause') : $r('app.media.viewer_play'), label: this.profilePlaying ? '暂停动画' : '播放动画', selected: this.profilePlaying, action: () => { this.play(); } })
-            ViewerTool({ icon: $r('app.media.viewer_orbit'), label: '环绕', selected: !this.flyMode, action: () => { if (this.flyMode) { this.toggleMode(); } } })
-            ViewerTool({ icon: $r('app.media.viewer_fly'), label: '飞行', selected: this.flyMode && !this.walkMode, action: () => { if (this.walkMode) { this.leaveWalk(); } else if (!this.flyMode) { this.toggleMode(); } } })
+            ViewerTool({ icon: $r('app.media.viewer_orbit'), label: '环绕', selected: !this.flyMode && !this.animationMode, action: () => { this.setMode(false); } })
+            ViewerTool({ icon: $r('app.media.viewer_fly'), label: '飞行', selected: this.flyMode && !this.walkMode && !this.animationMode, action: () => { this.setMode(true); } })
             ViewerTool({ icon: $r('app.media.viewer_walk'), label: '步行', selected: this.walkMode, action: () => { this.enterWalk(); } })
             ViewerTool({ icon: $r('app.media.viewer_help'), label: '帮助', selected: this.helpVisible, action: () => { this.helpVisible = !this.helpVisible; this.settingsVisible = false; this.modelsVisible = false; this.diagnosticsVisible = false; } })
             ViewerTool({ icon: $r('app.media.viewer_settings'), label: '设置', selected: this.settingsVisible, action: () => { this.settingsVisible = !this.settingsVisible; this.modelsVisible = false; this.helpVisible = false; this.diagnosticsVisible = false; } })
@@ -759,10 +832,10 @@ struct Index {
         }.padding(16).width('100%').position({ x: 0, y: '100%' }).translate({ y: '-100%' })
         if (!this.settingsVisible && !this.modelsVisible && !this.helpVisible && !this.diagnosticsVisible) {
           Column({ space: 8 }) {
-            ViewerTool({ icon: $r('app.media.viewer_plus'), label: '放大', selected: false, action: () => { this.controls.zoom(1 / 1.2); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
-            ViewerTool({ icon: $r('app.media.viewer_minus'), label: '缩小', selected: false, action: () => { this.controls.zoom(1.2); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+            ViewerTool({ icon: $r('app.media.viewer_plus'), label: '放大', selected: false, action: () => { this.stopAnimation(); this.controls.zoom(1 / 1.2); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+            ViewerTool({ icon: $r('app.media.viewer_minus'), label: '缩小', selected: false, action: () => { this.stopAnimation(); this.controls.zoom(1.2); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
           }.padding(16).position({ x: '100%', y: '50%' }).translate({ x: '-100%', y: '-50%' })
-          if (this.flyMode && this.gaming) {
+          if (this.flyMode && this.gaming && !this.animationMode) {
             Stack() {
               Circle().width(96).height(96).fill('#9928354A').stroke('#7794BD').strokeWidth(1)
               Circle().width(34).height(34).id('飞行摇杆手柄').fill('#B0CFFF').translate({ x: this.joyX * 30, y: this.joyY * 30 })

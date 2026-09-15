@@ -17,6 +17,7 @@ public:
     Box Bounds()const override{return nodes_.front().bounds;}
     bool Available()const override{return !triangles_.empty();}
     bool CompleteWorld()const override{return Available();}
+    void Debug(Box area,DebugWire &wire)const override;
 private:
     struct Node {Box bounds;uint32_t start=0,count=0,left=0,right=0;};
     uint32_t Build(uint32_t start,uint32_t count,int depth);

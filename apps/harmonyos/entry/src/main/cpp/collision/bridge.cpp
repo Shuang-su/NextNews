@@ -1,6 +1,7 @@
 #include "bridge.h"
 #include "atlas.h"
 #include "mesh.h"
+#include "debug.h"
 #include <mutex>
 #include <functional>
 #include <atomic>
@@ -56,6 +57,18 @@ napi_value Step(napi_env e,napi_callback_info info){try{
     auto result=walker.Update(cache.Snapshot(),dt,yaw,right,forward,jump);return Array(e,{result.eye.x,result.eye.y,result.eye.z,result.grounded?1.0:0.0,result.blocked?1.0:0.0});
 }catch(const std::exception &x){napi_throw_error(e,nullptr,x.what());return Undefined(e);}}
 napi_value Pause(napi_env e,napi_callback_info){std::lock_guard<std::mutex> lock(stateMutex);spawnRevision++;walker.Pause();return Undefined(e);}
+napi_value Debug(napi_env e,napi_callback_info info){try{
+    auto a=Args(e,info,4);const auto g=Double(e,a[0]);V3 eye{Double(e,a[1]),Double(e,a[2]),Double(e,a[3])};Atlas snapshot;
+    {std::lock_guard<std::mutex> lock(stateMutex);if(g!=generation)throw std::runtime_error("Stale collision debug scene");snapshot=cache.Snapshot();}
+    return Async(e,"ViewerCollisionDebug",[g,eye,snapshot]()mutable{
+        DebugWire wire;Box area{eye-V3{5,5,5},eye+V3{5,5,5}};
+        std::sort(snapshot.tiles.begin(),snapshot.tiles.end(),[&](const auto&a,const auto&b){return DebugDistance(a->Bounds(),eye)<DebugDistance(b->Bounds(),eye);});
+        for(const auto &tile:snapshot.tiles)wire.Cube(2,tile->Bounds());
+        for(const auto &tile:snapshot.tiles){if(!wire.Visit())break;tile->Debug(area,wire);}
+        {std::lock_guard<std::mutex> lock(stateMutex);if(g!=generation)throw std::runtime_error("Stale collision debug scene");}
+        wire.values.insert(wire.values.begin(),wire.truncated?1.0:0.0);return wire.values;
+    });
+}catch(const std::exception &x){napi_throw_error(e,nullptr,x.what());return Undefined(e);}}
 napi_value Reset(napi_env e,napi_callback_info){std::lock_guard<std::mutex> lock(stateMutex);walker.Reset();auto p=walker.Eye();return Array(e,{p.x,p.y,p.z});}
 napi_value Status(napi_env e,napi_callback_info){std::lock_guard<std::mutex> lock(stateMutex);auto ids=cache.Ids();napi_value result,arr;napi_create_object(e,&result);napi_create_array_with_length(e,ids.size(),&arr);for(uint32_t i=0;i<ids.size();i++){napi_value v;napi_create_string_utf8(e,ids[i].c_str(),NAPI_AUTO_LENGTH,&v);napi_set_element(e,arr,i,v);}napi_set_named_property(e,result,"ids",arr);napi_set_named_property(e,result,"bytes",Number(e,cache.Bytes()));return result;}
 }
@@ -68,5 +81,6 @@ void RegisterCollision(napi_env e,napi_value exports){napi_property_descriptor m
     {"collisionStep",nullptr,Step,nullptr,nullptr,nullptr,napi_default,nullptr},
     {"collisionPause",nullptr,Pause,nullptr,nullptr,nullptr,napi_default,nullptr},
     {"collisionReset",nullptr,Reset,nullptr,nullptr,nullptr,napi_default,nullptr},
+    {"collisionDebug",nullptr,Debug,nullptr,nullptr,nullptr,napi_default,nullptr},
     {"collisionStatus",nullptr,Status,nullptr,nullptr,nullptr,napi_default,nullptr}
 };napi_define_properties(e,exports,sizeof(methods)/sizeof(methods[0]),methods);}

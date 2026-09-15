@@ -1,5 +1,6 @@
 // Adapted from PlayCanvas SuperSplat Viewer v1.31.2, MIT. See THIRD_PARTY_NOTICES.
 #include "mesh.h"
+#include "debug.h"
 #include "../third_party/nlohmann/json.hpp"
 #include <fstream>
 #include <limits>
@@ -117,6 +118,22 @@ bool Mesh::Deepest(V3 center,double half,double radius,V3 &push)const{
     }return best>1e-4;
 }
 bool Mesh::Free(V3 p)const{V3 ignored;return !Deepest(p,0,Resolution()*.5,ignored);}
+void Mesh::Debug(Box area,DebugWire &wire)const {
+    std::vector<uint32_t> stack{0};const V3 center=(area.min+area.max)*.5;
+    while(!stack.empty()){
+        auto index=stack.back();stack.pop_back();if(!wire.Visit())return;
+        const auto &n=nodes_[index];if(!DebugIntersects(area,n.bounds))continue;
+        if(n.count){for(uint32_t i=0;i<n.count;i++){
+            if(!wire.Visit())return;const auto &t=triangles_[order_[n.start+i]];
+            V3 a{t.a[0],t.a[1],t.a[2]},b{t.b[0],t.b[1],t.b[2]},c{t.c[0],t.c[1],t.c[2]};
+            wire.Edge(1,a,b);wire.Edge(1,b,c);wire.Edge(1,c,a);
+        }}else{
+            auto first=n.left,second=n.right;
+            if(DebugDistance(nodes_[first].bounds,center)<DebugDistance(nodes_[second].bounds,center))std::swap(first,second);
+            stack.push_back(first);stack.push_back(second);
+        }
+    }
+}
 std::shared_ptr<Mesh> Mesh::Load(const std::string &path){
     std::ifstream f(path,std::ios::binary|std::ios::ate);Check(bool(f),"Cannot open GLB collision resource");auto size=f.tellg();Check(size>=20&&uint64_t(size)<=MaxBytes,"GLB collision resource exceeds 64 MiB or is truncated");
     std::vector<uint8_t> bytes(size);f.seekg(0);Check(bool(f.read(reinterpret_cast<char*>(bytes.data()),size)),"Truncated GLB collision");

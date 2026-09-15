@@ -10,6 +10,7 @@
 #include <optional>
 #include <cstdint>
 namespace viewer {
+struct DebugWire;
 struct V3 {
     double x=0,y=0,z=0;
     double &operator[](size_t i){return i==0?x:i==1?y:z;}
@@ -42,6 +43,7 @@ public:
     virtual Box Bounds()const=0;
     virtual bool Available()const=0;
     virtual bool CompleteWorld()const{return false;}
+    virtual void Debug(Box area,DebugWire &wire)const=0;
 };
 class Voxel final:public CollisionResource {
 public:
@@ -56,6 +58,7 @@ public:
     size_t Bytes()const override{return (nodes_.size()+leaves_.size())*4;}
     Box Bounds()const override;
     bool Available()const override{return !nodes_.empty();}
+    void Debug(Box area,DebugWire &wire)const override;
 private:
     V3 Transform(V3 p)const{return flip_?V3{-p.x,-p.y,p.z}:p;}
     bool Inside(int x,int y,int z)const{return x>=0&&y>=0&&z>=0&&x<dimensions_[0]&&y<dimensions_[1]&&z<dimensions_[2];}

@@ -1,0 +1,41 @@
+{
+  "backend": "OpenGL",
+  "collisionSource": "actual 32-tile voxel manifest",
+  "scope": "whole-scene 2M",
+  "samples": 99,
+  "performanceAcceptance": false,
+  "visualReviewRequired": false,
+  "first": {
+    "x": 331.5092468261719,
+    "y": -81.62,
+    "z": 305.30859375,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "last": {
+    "x": 329.27059222386356,
+    "y": -81.61999999999998,
+    "z": 302.7048433543039,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "ranges": {
+    "x": [
+      329.27059222386356,
+      331.5092468261719
+    ],
+    "y": [
+      -81.62,
+      -81.03301333333332
+    ],
+    "z": [
+      302.7048433543039,
+      305.30859375
+    ]
+  },
+  "hapSha256": "ac92cd40b5bdba11394de80e1cf552fa344e6ec4ae08d9d487786c45083322b7",
+  "visualReview": "Actual voxel cells visible below the world camera; normal 2M scene visible and debug wires absent after disabling",
+  "timelineSmoke": "playing resume, paused preservation, hidden in walk/fly passed",
+  "debugWireLimit": 1024,
+  "debugProjectionMaxHz": 10
+}

@@ -1,4 +1,5 @@
 #include "collision.h"
+#include "debug.h"
 #include "../third_party/nlohmann/json.hpp"
 #include <fstream>
 #include <limits>
@@ -83,6 +84,37 @@ bool Voxel::Solid(int x,int y,int z)const {
     const uint32_t bit=(z&3)*16+(y&3)*4+(x&3);return (leaves_[(n&0xffffff)*2+bit/32]>>(bit%32))&1;
 }
 Box Voxel::Bounds()const {return flip_?Box{{-grid_.max.x,-grid_.max.y,grid_.min.z},{-grid_.min.x,-grid_.min.y,grid_.max.z}}:grid_;}
+void Voxel::Debug(Box area,DebugWire &wire)const {
+    if(!Available()||!DebugIntersects(area,Bounds()))return;
+    if(flip_)area={{-area.max.x,-area.max.y,area.min.z},{-area.min.x,-area.min.y,area.max.z}};
+    const V3 center=(area.min+area.max)*.5;
+    struct Task{uint32_t index;int size;V3 origin;};
+    std::vector<Task> stack{{0,4<<depth_,grid_.min}};
+    auto world=[this](Box b){return flip_?Box{{-b.max.x,-b.max.y,b.min.z},{-b.min.x,-b.min.y,b.max.z}}:b;};
+    while(!stack.empty()){
+        auto t=stack.back();stack.pop_back();if(!wire.Visit())return;
+        const double span=t.size*resolution_;Box box{t.origin,t.origin+V3{span,span,span}};
+        for(int k=0;k<3;k++)box.max[k]=std::min(box.max[k],grid_.max[k]);
+        if(box.max.x<=box.min.x||box.max.y<=box.min.y||box.max.z<=box.min.z)continue;
+        if(!DebugIntersects(area,box))continue;
+        auto node=nodes_[t.index],mask=node>>24;
+        if(node==0xff000000){wire.Cube(0,world(box));continue;}
+        if(mask){
+            std::vector<Task> children;
+            for(int i=0;i<8;i++)if(mask&(1u<<i)){V3 p=t.origin+V3{double(i&1),double((i>>1)&1),double((i>>2)&1)}*(span*.5);children.push_back({(node&0xffffff)+uint32_t(Pop(mask&((1u<<i)-1))),t.size/2,p});}
+            std::sort(children.begin(),children.end(),[&](const Task&a,const Task&b){double s=span*.5;return DebugDistance({a.origin,a.origin+V3{s,s,s}},center)>DebugDistance({b.origin,b.origin+V3{s,s,s}},center);});
+            stack.insert(stack.end(),children.begin(),children.end());continue;
+        }
+        // Early leaf patterns repeat at 4-cell intervals, as in Solid().
+        std::array<int,3> lo,hi;
+        for(int k=0;k<3;k++){lo[k]=std::max(0,int(std::floor((std::max(area.min[k],box.min[k])-grid_.min[k])/resolution_)));hi[k]=std::min(dimensions_[k]-1,int(std::ceil((std::min(area.max[k],box.max[k])-grid_.min[k])/resolution_))-1);}
+        for(int z=lo[2];z<=hi[2];z++)for(int y=lo[1];y<=hi[1];y++)for(int x=lo[0];x<=hi[0];x++){
+            if(!wire.Visit())return;const auto bit=(z&3)*16+(y&3)*4+(x&3);
+            if(!((leaves_[(node&0xffffff)*2+bit/32]>>(bit%32))&1))continue;
+            V3 a=grid_.min+V3{double(x),double(y),double(z)}*resolution_;wire.Cube(0,world({a,a+V3{resolution_,resolution_,resolution_}}));
+        }
+    }
+}
 bool Voxel::Known(Box area)const {
     auto b=Bounds();if(nodes_.empty())return false;
     for(int i=0;i<3;i++)if(area.min[i]<b.min[i]||area.max[i]>=b.max[i])return false;

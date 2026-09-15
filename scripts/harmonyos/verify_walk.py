@@ -5,7 +5,7 @@ Saves raw evidence; it does not declare full walk/collision acceptance.
 """
 import argparse,json,subprocess,time,re
 from pathlib import Path
-p=argparse.ArgumentParser(description=__doc__);p.add_argument('--out',type=Path,required=True);p.add_argument('--collision-url');p.add_argument('--backend',choices=['OpenGL','Huawei'],default='OpenGL');a=p.parse_args();a.out.mkdir(parents=True,exist_ok=False)
+p=argparse.ArgumentParser(description=__doc__);p.add_argument('--out',type=Path,required=True);p.add_argument('--collision-url');p.add_argument('--debug',action='store_true');p.add_argument('--backend',choices=['OpenGL','Huawei'],default='OpenGL');a=p.parse_args();a.out.mkdir(parents=True,exist_ok=False)
 hdc='/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc'
 def run(args):return subprocess.run(args,check=True,capture_output=True,timeout=60).stdout.decode('utf8','replace')
 devices=run([hdc,'list','targets']).splitlines();assert len(devices)==1 and devices[0]!='[Empty]';device=devices[0]
@@ -44,12 +44,28 @@ try:
   ui('click','--id','collision-address');shell('uitest uiInput keyEvent 2072 2017');ui('text',a.collision_url);shell('uitest uiInput keyEvent Back');time.sleep(.5)
  click('加载碰撞');time.sleep(8);collision=snap('collision-loaded');
  assert any('碰撞已缓存' in n.get('text','') for n in nodes(collision)), 'Collision did not load; do not proceed to walk'
+ if a.debug:click('显示碰撞边线');time.sleep(1)
  icon('模型');icon('步行');time.sleep(3);snap('walk-spawn')
  icon('设置');click('游戏控制：关');icon('设置');state=snap('walk-gaming')
+ assert not any(n.get('id')=='动画时间轴' for n in nodes(state)), 'Animation timeline must not control the walking body'
  stick=next(n for n in nodes(state) if n.get('id')=='飞行摇杆');x,y,X,Y=stick['bounds'];sx=(x+X)//2;sy=(y+Y)//2
  for _ in range(4):ui('swipe',str(sx),str(sy),str(sx+15),str(sy-100),'--speed','200');time.sleep(.2)
- snap('walk-moved');click('跳跃');time.sleep(.15);snap('walk-jump');time.sleep(1)
+ snap('walk-moved')
+ if a.debug:
+  ui('swipe','900','1300','900','1700','--speed','1000');time.sleep(1);snap('collision-look-down')
+  ui('swipe','900','1700','900','1300','--speed','1000');time.sleep(.5)
+ click('跳跃');time.sleep(.15);snap('walk-jump');time.sleep(1)
  shell('uitest uiInput keyEvent Home');time.sleep(1);shell('aa start -b com.nextnews.splatviewer -a EntryAbility');time.sleep(5);snap('walk-resumed');icon('飞行');snap('walk-exit')
+ if a.debug:
+  icon('播放动画');time.sleep(.5);animated=snap('animation-playing')
+  slider=next(n for n in nodes(animated) if n.get('id')=='动画时间轴');x,y,X,Y=slider['bounds'];sy=(y+Y)//2
+  ui('swipe',str(x+20),str(sy),str(X-30),str(sy),'--speed','300');time.sleep(.3)
+  resumed=snap('timeline-resumes-playing');assert any(n.get('id')=='暂停动画' for n in nodes(resumed)), 'Scrubbing must resume an originally playing animation'
+  icon('暂停动画');ui('swipe',str(X-30),str(sy),str(x+30),str(sy),'--speed','300');time.sleep(.3)
+  paused=snap('timeline-stays-paused');assert any(n.get('id')=='播放动画' for n in nodes(paused)), 'Paused animation must remain paused after scrubbing'
+  icon('飞行');final=snap('timeline-hidden-fly');assert not any(n.get('id')=='动画时间轴' for n in nodes(final))
+  icon('模型');click('关闭碰撞显示');icon('模型');off=snap('debug-off')
+  assert not any(n.get('text','').startswith('碰撞透视') for n in nodes(off)), 'Debug HUD should disappear; inspect screenshot for cleared wire lines'
  (a.out/'hilog.txt').write_text(shell('hilog -x -P '+pid));(a.out/'memory.txt').write_text(shell('hidumper --mem '+pid))
  print('Walk preview captures finished. Review geometry, actual movement and logs; full acceptance remains separate.')
 finally:
@@ -60,6 +76,7 @@ finally:
 log=(a.out/'continuous-hilog.txt').read_text(errors='replace')
 poses=[{k:float(v) for k,v in re.findall(r'(x|y|z|grounded|blocked)=([-\d.]+)',l)} for l in log.splitlines() if 'ViewerWalk ' in l]
 result={'backend':a.backend,'collisionSource':a.collision_url or 'actual 32-tile voxel manifest','scope':'whole-scene 2M' if a.backend=='OpenGL' else '80k single converted sample; not whole-scene comparison','samples':len(poses),'performanceAcceptance':False,'visualReviewRequired':True}
+if a.debug:result['timelineSmoke']='resume-playing, remain-paused, hidden-in-walk/fly';result['debugOffVisualReviewRequired']=True
 if poses:
  result['first']=poses[0];result['last']=poses[-1];result['ranges']={k:[min(p[k] for p in poses),max(p[k] for p in poses)] for k in ['x','y','z']}
 (a.out/'result.json').write_text(json.dumps(result,indent=2))

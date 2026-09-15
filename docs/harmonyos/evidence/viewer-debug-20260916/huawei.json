@@ -1,0 +1,39 @@
+{
+  "backend": "Huawei",
+  "collisionSource": "http://127.0.0.1:8781/room.glb",
+  "scope": "80k single converted sample; not whole-scene comparison",
+  "samples": 86,
+  "performanceAcceptance": false,
+  "visualReviewRequired": false,
+  "first": {
+    "x": 331.5092468261719,
+    "y": -81.62000274658203,
+    "z": 305.30859375,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "last": {
+    "x": 330.19991601135473,
+    "y": -81.620002746582,
+    "z": 302.5459858239875,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "ranges": {
+    "x": [
+      330.19991601135473,
+      331.5092468261719
+    ],
+    "y": [
+      -81.62000274658203,
+      -80.93234274658205
+    ],
+    "z": [
+      302.5459858239875,
+      305.30859375
+    ]
+  },
+  "hapSha256": "91e8e676239a5319e1048ce566389a2a6dcaedd9a73649c212a89693cf366986",
+  "visualReview": "GLB purple lines, model still visible after walking; animation resumes and joystick hidden",
+  "timelineSmoke": "playing resume, paused preservation, fly timeline hidden passed"
+}
