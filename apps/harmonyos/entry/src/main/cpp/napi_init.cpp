@@ -1,3 +1,4 @@
+#include "collision/bridge.h"
 #include "lod_selection.h"
 #include <cstring>
 #include "renderer.h"
@@ -130,7 +131,7 @@ napi_value InspectModel(napi_env env,napi_callback_info info) {
     auto *job=new InspectWork{};job->path.assign(path.data(),length);napi_value promise,name;
     napi_create_promise(env,&job->deferred,&promise);napi_create_string_utf8(env,"InspectGaussianBounds",NAPI_AUTO_LENGTH,&name);
     napi_create_async_work(env,nullptr,name,[](napi_env,void *p){auto *j=static_cast<InspectWork*>(p);
-        try {auto scene=splat::ReadModel(j->path,nullptr,true);splat::ApplyViewerTransform(scene);j->bounds={scene.center[0],scene.center[1],scene.center[2],scene.radius};}
+        try {j->bounds=splat::InspectModel(j->path);}
         catch(const std::exception &e){j->error=e.what();}},
         [](napi_env e,napi_status status,void *p){auto *j=static_cast<InspectWork*>(p);napi_value result;
             if(status!=napi_ok||!j->error.empty()){napi_value text;napi_create_string_utf8(e,j->error.empty()?"Model inspection cancelled":j->error.c_str(),NAPI_AUTO_LENGTH,&text);napi_create_error(e,nullptr,text,&result);napi_reject_deferred(e,j->deferred,result);}
@@ -152,6 +153,7 @@ napi_value Pick(napi_env env,napi_callback_info info) {
     napi_queue_async_work(env,job->work);return promise;
 }
 napi_value Init(napi_env env,napi_value exports) {
+    RegisterCollision(env,exports);
     napi_property_descriptor methods[]={
         {"inspectModel",nullptr,InspectModel,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"registerLods",nullptr,RegisterLods,nullptr,nullptr,nullptr,napi_default,nullptr},

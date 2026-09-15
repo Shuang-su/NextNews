@@ -45,3 +45,13 @@ export const registerLods: (bounds: ArrayBuffer, boxes: ArrayBuffer, lods: Array
 export const selectLods: (camera: ArrayBuffer, budget: number, fov: number, aspect: number) => ArrayBuffer;
 
 export const traceFrames: (enabled: boolean) => void;
+
+export interface CollisionStatus { ids: string[]; bytes: number; }
+export const collisionClear: () => number;
+export const collisionLoadVoxel: (generation: number, id: string, metadata: string, binary: string) => Promise<number[]>;
+export const collisionSelect: (generation: number, ids: string[]) => void;
+export const collisionEnter: (generation: number, x: number, y: number, z: number) => Promise<number[]>;
+export const collisionStep: (generation: number, dt: number, yaw: number, right: number, forward: number, jump: boolean) => number[];
+export const collisionPause: () => void;
+export const collisionReset: () => number[];
+export const collisionStatus: () => CollisionStatus;

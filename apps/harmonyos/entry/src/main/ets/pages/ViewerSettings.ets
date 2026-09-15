@@ -19,7 +19,7 @@ export interface ViewerEffects { sharpness: Sharpness; bloom: Bloom; grading: Gr
 export interface ViewerSettings {
   version: number; cameras: ViewerCamera[]; animTracks: ViewerTrack[]; startMode: string;
   annotations: ViewerAnnotation[]; background: ViewerBackground; tonemapping: string;
-  highPrecisionRendering: boolean; postEffectSettings: ViewerEffects; soundUrl?: string;
+  highPrecisionRendering: boolean; postEffectSettings: ViewerEffects; soundUrl?: string; collisionUrl?: string; voxelUrl?: string; voxelManifestUrl?: string;
 }
 interface LegacyCamera { position?: number[]; target?: number[]; fov?: number; startAnim?: string; }
 interface LegacySettings { camera: LegacyCamera; background?: ViewerBackground; animTracks?: ViewerTrack[]; }
@@ -81,6 +81,7 @@ export function parseViewerSettings(text: string): ViewerSettings {
     fx.grading.saturation, fx.vignette.intensity, fx.vignette.inner, fx.vignette.outer, fx.vignette.curvature, fx.fringing.intensity]);
   if ((settings.soundUrl !== undefined && typeof settings.soundUrl !== 'string') ||
     (settings.background.skyboxUrl !== undefined && typeof settings.background.skyboxUrl !== 'string')) { throw new Error('Viewer 资源地址无效'); }
+  for (const address of [settings.collisionUrl, settings.voxelUrl, settings.voxelManifestUrl]) { if (address !== undefined && (typeof address !== 'string' || address.length > 4096)) { throw new Error('Viewer 碰撞地址无效'); } }
   settings.cameras.forEach((c: ViewerCamera) => { if (!c) { throw new Error('Viewer 镜头缺失'); } validatePose(c.initial); });
   settings.annotations.forEach((a: ViewerAnnotation) => {
     if (!a || !vector(a.position, 3) || typeof a.title !== 'string' || typeof a.text !== 'string' ||

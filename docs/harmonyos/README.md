@@ -209,3 +209,12 @@ OpenGL/Huawei page includes viewer-settings migration, annotations and a timelin
 See [scope, device evidence and incomplete parity matrix](viewer-common-20260915.md).
 `verify_viewer_common.py` is the current smoke test; historical `verify_toolbar.py`
 expects superseded custom double-click/keyboard behavior.
+
+## Shared walk / voxel preview (2026-09-15)
+
+Key 3 enters experimental walk after collision resources are loaded; Space jumps in
+walk. The native module uses the official fixed step and shared world coordinates
+for OpenGL and Huawei. It supports single and tiled v1.0/v1.1 voxels, byte caches
+and unknown-region blocking. See [scope, commands and phone evidence](collision-preview-20260915.md).
+`verify_walk.py --backend OpenGL|Huawei` captures the actual 32-tile scene or the
+Huawei single sample respectively; these are separate functional tests.

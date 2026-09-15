@@ -6,6 +6,10 @@
 int main(int argc,char**argv){if(argc<2)return 2;
  try {auto start=std::chrono::steady_clock::now();auto a=splat::ReadSog(argv[1]);
  std::cout<<"SOG count="<<a.points.size()<<" decodeMs="<<std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count()<<"\n";
+ auto bounds=splat::InspectModel(argv[1]);
+ for(int k=0;k<3;k++)if(std::abs(bounds[k]-(k<2?-a.center[k]:a.center[k]))>1e-6)throw std::runtime_error("Inspection frame mismatch");
+ if(bounds[3]!=a.radius)throw std::runtime_error("Inspection radius mismatch");
+ std::cout<<"PASS imported model bounds in Viewer world coordinates\n";
  auto encoded=splat::ReadSog(argv[1],nullptr,true);
  if(encoded.Count()!=a.Count()||!encoded.points.empty()||encoded.codes.size()!=a.Count())throw std::runtime_error("encoded shape mismatch");
  for(int transform=0;transform<2;++transform){

@@ -62,3 +62,12 @@ migration/defaults in `ViewerSettings.ets` adapt the same pinned SuperSplat View
 v1.31.2 source, `src/index.html` and `src/settings.ts` / `src/settings`.
 Copyright (c) 2011-2026 PlayCanvas Ltd.; the MIT notice above applies.
 NextNews does not claim affiliation with PlayCanvas.
+
+## Shared collision and walking port
+
+`entry/src/main/cpp/collision/collision.{h,cpp}` adapts the fixed Viewer v1.31.2
+`src/collision/{collision,voxel-collision,find-spawn}.ts` and
+`src/cameras/walk-controller.ts` algorithms. Copyright (c) 2011-2026 PlayCanvas Ltd.;
+the MIT notice above applies. The native port adds bounded parser/work limits,
+unknown-region movement stops, swept substeps and a reference-protected tile cache.
+The differential test executes the unmodified local upstream checkout.

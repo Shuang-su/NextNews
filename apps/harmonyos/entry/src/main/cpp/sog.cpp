@@ -101,4 +101,10 @@ Scene ReadModel(const std::string &path,const std::atomic<bool> *cancel,bool enc
     auto scene=path.size()>=4&&path.substr(path.size()-4)==".sog"?ReadSog(path,cancel,encoded):ReadPly(path,cancel);
     ApplyViewerTransform(scene);return scene;
 }
+std::array<float,4> InspectModel(const std::string &path) {
+    // ReadModel already performs the Viewer import transform exactly once.
+    auto scene=ReadModel(path,nullptr,true);
+    return {scene.center[0],scene.center[1],scene.center[2],scene.radius};
+}
+
 }

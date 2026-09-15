@@ -1,0 +1,41 @@
+{
+  "samples": 82,
+  "performanceAcceptance": false,
+  "visualReviewRequired": true,
+  "first": {
+    "x": 331.5092468261719,
+    "y": -81.62,
+    "z": 305.30859375,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "last": {
+    "x": 329.211230111913,
+    "y": -81.61999999999998,
+    "z": 302.63505290551944,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "ranges": {
+    "x": [
+      329.211230111913,
+      331.5092468261719
+    ],
+    "y": [
+      -81.62,
+      -80.91091555555553
+    ],
+    "z": [
+      302.63505290551944,
+      305.30859375
+    ]
+  },
+  "scope": "OpenGL experimental encoded stable pages; 2,000,000 splats; 32-tile actual manifest",
+  "device": "Mate 80 Pro Max / SGT-AL10",
+  "api": 26,
+  "os": "7.0.0.105(SP10C00E105R3P3)",
+  "visualReviewed": true,
+  "resumeCaptureDelaySeconds": 5,
+  "jumpSampledRiseMetres": 0.7090844444444713,
+  "fullAcceptance": false
+}

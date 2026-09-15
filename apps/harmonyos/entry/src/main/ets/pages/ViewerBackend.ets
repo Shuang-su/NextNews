@@ -30,6 +30,7 @@ export class HuaweiBackend implements ViewerBackend {
     note: '单体 PLY / SOG · 原生瓦片与效果等价性尚未通过；Remy 编辑/导出仍受阻' };
   private scene: Scene | undefined = undefined;
   private view: Camera | undefined = undefined;
+  private model: spatialRender.GSNode | undefined = undefined;
   private generation: number = 0;
   private enabled: boolean = true;
   private changed: (scene: Scene | undefined) => void;
@@ -37,7 +38,7 @@ export class HuaweiBackend implements ViewerBackend {
   async load(asset: ViewerAsset): Promise<void> {
     const request = ++this.generation;
     this.changed(undefined); const old = this.scene; this.scene = undefined; this.view = undefined;
-    await new Promise<void>((resolve) => { setTimeout(resolve, 32); }); old?.destroy();
+    await new Promise<void>((resolve) => { setTimeout(resolve, 32); }); old?.destroy(); this.model = undefined;
     if (request !== this.generation) { return; }
     const context = Scene.getDefaultRenderContext();
     if (!context || !await context.loadPlugin(spatialRender.GSPlugin.PLUGIN_ID)) { throw new Error('此设备的 SpatialRender 插件不可用'); }
@@ -50,7 +51,7 @@ export class HuaweiBackend implements ViewerBackend {
       camera.clearColor = { r: .035, g: .045, b: .065, a: 1 }; camera.postProcess = null;
       pending.environment.backgroundType = EnvironmentBackgroundType.BACKGROUND_NONE;
       if (request !== this.generation) { return; }
-      this.scene = pending; this.view = camera; camera.enabled = this.enabled;
+      this.scene = pending; this.model = model; this.view = camera; camera.enabled = this.enabled;
       this.changed(pending); pending = undefined;
     } finally { pending?.destroy(); }
   }
@@ -70,5 +71,5 @@ export class HuaweiBackend implements ViewerBackend {
     return [(p.x - bounds[0]) / bounds[3], (p.y - bounds[1]) / bounds[3], (p.z - bounds[2]) / bounds[3]];
   }
   active(value: boolean): void { this.enabled = value; if (this.view) { this.view.enabled = value; } }
-  dispose(): void { this.generation++; this.changed(undefined); this.view = undefined; this.scene?.destroy(); this.scene = undefined; }
+  dispose(): void { this.generation++; this.changed(undefined); this.view = undefined; this.scene?.destroy(); this.scene = undefined; this.model = undefined; }
 }

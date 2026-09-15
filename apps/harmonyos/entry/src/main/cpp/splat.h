@@ -61,6 +61,7 @@ struct Scene {
 };
 Scene ReadSog(const std::string &path, const std::atomic<bool> *cancel = nullptr,bool encoded=false);
 Scene ReadModel(const std::string &path, const std::atomic<bool> *cancel = nullptr,bool encoded=false);
+std::array<float,4> InspectModel(const std::string &path);
 void ApplyViewerTransform(Scene &scene);
 Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel = nullptr);
 struct Camera {

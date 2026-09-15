@@ -1,3 +1,4 @@
+import { viewerRequests } from './ViewerRequests';
 import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { http } from '@kit.NetworkKit';
@@ -114,6 +115,8 @@ export class StreamSession {
   private progress: (message: string) => void;
   constructor(progress: (message: string) => void) { this.progress = progress; }
   private async fetch(url: string, limit: number): Promise<ArrayBuffer> {
+    await viewerRequests.acquire();
+    if (this.stopped) { viewerRequests.release(); throw new Error('流式加载已取消'); }
     const request = http.createHttp(); this.requests.add(request);
     try {
       const result = await request.request(url, { expectDataType: http.HttpDataType.ARRAY_BUFFER,
@@ -121,7 +124,7 @@ export class StreamSession {
       if (result.responseCode !== 200 || !(result.result instanceof ArrayBuffer) || result.result.byteLength > limit) { throw new Error(`HTTP ${result.responseCode} 或数据超过预算`); }
       this.networkBytes += result.result.byteLength;
       return result.result as ArrayBuffer;
-    } finally { request.destroy(); this.requests.delete(request); }
+    } finally { request.destroy(); this.requests.delete(request); viewerRequests.release(); }
   }
   async open(url: string, cacheDir: string, fullLoad: boolean = false): Promise<void> {
     if (!/^https?:\/\/[A-Za-z0-9.\-:\[\]]+(?:\/[A-Za-z0-9._-]+)*\/scene\.json$/.test(url)) { throw new Error('请输入 HTTP(S) scene.json 地址，不含账号、查询参数或片段'); }
