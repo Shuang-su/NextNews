@@ -199,3 +199,13 @@ for reproducible commands, measurements and limits of the comparison.
 
 Multitouch controls use independent pointer ownership for the flight stick and
 viewport. Run `node scripts/harmonyos/test_pointer_input.cjs` for the regression.
+
+## Common Viewer preview (2026-09-15)
+
+The common Viewer preview supersedes the historical toolbar/key descriptions above:
+F frames the scene, Space plays/pauses the configured animation, 1/2 select orbit/fly,
+G changes gaming controls, and double-click focuses into orbit. The shared single-model
+OpenGL/Huawei page includes viewer-settings migration, annotations and a timeline.
+See [scope, device evidence and incomplete parity matrix](viewer-common-20260915.md).
+`verify_viewer_common.py` is the current smoke test; historical `verify_toolbar.py`
+expects superseded custom double-click/keyboard behavior.

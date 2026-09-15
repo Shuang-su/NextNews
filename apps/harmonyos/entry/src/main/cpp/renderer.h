@@ -16,6 +16,7 @@ struct Status {
     std::string state = "waiting", message = "Waiting for render surface", graphics;
     size_t count = 0, bytes = 0, frames = 0;
     int width = 1, height = 1;
+    std::array<float,4> bounds{0,0,0,1};
     double gpuMs = -1, uploadMs = 0;
     size_t uploadedRows = 0, reusedRows = 0, decodedFiles = 0, subsetHits = 0;
     double requestRevision=0,displayRevision=0,prepareMs=0,refineMs=0,uploadedBytes=0,pageHits=0;

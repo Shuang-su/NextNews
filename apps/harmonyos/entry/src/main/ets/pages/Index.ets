@@ -1,3 +1,7 @@
+import { Scene } from '@kit.ArkGraphics3D';
+import { util } from '@kit.ArkTS';
+import { ViewerRuntime, ViewerMarker } from './ViewerRuntime';
+import { ViewerBackend, OpenGLBackend, HuaweiBackend } from './ViewerBackend';
 import { PointerInput } from './PointerInput';
 import { comparisonSog } from './ComparisonSog';
 import { KeyCode } from '@kit.InputKit';
@@ -6,7 +10,7 @@ import { fileIo as fs, picker } from '@kit.CoreFileKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import nativeRender from 'libsplat.so';
 import { ViewerProfile } from './ViewerProfile';
-import { ViewerPose, normalizedPose } from './ViewerSettings';
+import { ViewerPose, parseViewerSettings, createSettings, framePose } from './ViewerSettings';
 import { SAMPLE_BOUNDS } from './ModelBounds';
 import { StreamSession } from './StreamSession';
 import { OrbitControls, OrbitTouch } from './OrbitControls';
@@ -22,7 +26,7 @@ struct ViewerTool {
   build() {
     Button({ type: ButtonType.Normal }) {
       Image(this.icon).width(22).height(22).objectFit(ImageFit.Contain)
-    }.width(42).height(42).borderRadius(12).backgroundColor(this.selected ? '#3969C6' : '#DD1C283B')
+    }.width(44).height(44).borderRadius(22).backgroundColor(this.selected ? '#35FFFFFF' : '#00000000')
       .accessibilityText(this.label).id(this.label).onClick(() => {
         this.action(); setTimeout(() => { this.getUIContext().getFocusController().requestFocus('viewer-surface'); }, 0);
       })
@@ -35,20 +39,94 @@ struct ViewerTool {
 @Component
 struct Index {
   private comparisonBounds: number[] | undefined = undefined;
-  private profile: ViewerProfile | undefined = undefined;
+  private viewer: ViewerRuntime = new ViewerRuntime();
+  private gl: OpenGLBackend = new OpenGLBackend();
+  private huawei: HuaweiBackend = new HuaweiBackend((scene: Scene | undefined) => { this.spatialScene = scene; });
+  private backend: ViewerBackend = this.gl;
+  private sourcePath: string = '';
+  private awaitingModelCamera: boolean = false;
+  @State spatialScene: Scene | undefined = undefined;
+  @State backendName: string = 'OpenGL';
+  @State markers: ViewerMarker[] = [];
+  @State annotationIndex: number = -1;
+  @State annotationTitle: string = '';
+  @State annotationText: string = '';
+  @State annotationCount: number = 0;
+  @State showAnnotations: boolean = true;
+  @State gaming: boolean = false;
+  @State timeline: number = 0;
+  @State duration: number = 20;
+  @State profileReady: boolean = false;
+  private timelineUpdated: number = 0;
   @State profilePlaying: boolean = false;
+  @StorageLink('nextnewsForeground') @Watch('foregroundChanged') foreground: boolean = true;
   private applyProfilePose(pose: ViewerPose): void {
-    const sample = SAMPLE_BOUNDS[2];
-    const bounds = this.stream?.manifest?.bounds ?? (this.title === '同源 SOG' ? this.comparisonBounds : undefined) ?? [-sample.center[0], -sample.center[1], sample.center[2], sample.radius];
-    this.controls.current = normalizedPose(pose, bounds); this.controls.target = this.controls.current.slice();
-    this.controls.fly = true; this.flyMode = true; this.controls.fov = pose.fov; this.updateCamera();
+    this.viewer.apply(pose, this.controls.fly); this.updateCamera();
   }
-  private async profileCamera(play: boolean): Promise<void> {
-    if (this.title !== '转换样例' && this.title !== '流式场景' && this.title !== '同源 SOG') { this.localError = '请先加载华发转换样例或流式场景'; return; }
+  private refreshAnnotations(): void {
+    this.profileReady = this.viewer.profile !== undefined;
+    this.markers = this.viewer.markers(); this.annotationIndex = this.viewer.selected;
+    this.annotationCount = this.viewer.profile?.settings.annotations.length ?? 0;
+    const annotation = this.viewer.profile?.settings.annotations[this.annotationIndex];
+    this.annotationTitle = annotation?.title ?? ''; this.annotationText = annotation?.text ?? '';
+  }
+  private activateAnnotation(index: number): void {
+    this.profilePlaying = false; this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++;
+    this.controls.setFly(false); this.flyMode = false; this.viewer.annotation(index); this.refreshAnnotations();
+  }
+  private play(): void {
+    if (!this.viewer.profile) { this.viewer.configure(createSettings(this.viewer.pose())); }
+    this.duration = this.viewer.profile!.animation.duration;
+    if (this.viewer.profile!.ended) { this.viewer.profile!.time = 0; }
+    this.viewer.interrupt(); this.autoOrbit = false; this.profilePlaying = !this.profilePlaying; this.profileReady = true;
+  }
+  private async importSettings(): Promise<void> {
+    const request = ++this.pickGeneration;
     try {
-      if (!play || !this.profile) { this.profile = await ViewerProfile.load(this.getUIContext().getHostContext() as common.UIAbilityContext); }
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const selected = await new picker.DocumentViewPicker(context).select({ maxSelectNumber: 1, fileSuffixFilters: ['Viewer 设置|.json'] });
+      if (!selected.length) { return; }
+      const file = await fs.open(selected[0], fs.OpenMode.READ_ONLY);
+      let text = '';
+      try {
+        const size = (await fs.stat(file.fd)).size; if (size > 4 * 1024 * 1024) { throw new Error('Viewer 配置超过 4 MiB'); }
+        const data = new ArrayBuffer(size); let offset = 0;
+        while (offset < size) { const part = new ArrayBuffer(size - offset); const n = await fs.read(file.fd, part); if (n <= 0) { throw new Error('配置读取不完整'); } new Uint8Array(data).set(new Uint8Array(part, 0, n), offset); offset += n; }
+        text = new util.TextDecoder('utf-8', { fatal: true }).decodeWithStream(new Uint8Array(data));
+      } finally { await fs.close(file); }
+      if (request !== this.pickGeneration || !this.visible) { return; }
+      this.viewer.configure(parseViewerSettings(text)); this.viewer.initial(); this.flyMode = this.controls.fly;
+      this.duration = this.viewer.profile!.animation.duration; this.timeline = 0;
+      this.profilePlaying = this.viewer.profile!.settings.startMode === 'animTrack'; this.modelsVisible = false; this.updateCamera();
+    } catch (error) { this.localError = String(error); }
+  }
+  private async switchBackend(): Promise<void> {
+    if (this.busy) { return; }
+    if (this.stream) { this.localError = '华为原生整场流式尚未通过；请用同源单体模型切换对照，原生瓦片实验入口保留在模型菜单。'; return; }
+    if (!this.sourcePath) { return; }
+    const next = this.backendName === 'OpenGL' ? this.huawei : this.gl, previous = this.backend;
+    const snapshot = this.viewer.snapshot(this.profilePlaying); this.busy = true; this.localError = '';
+    this.profilePlaying = false; this.viewer.interrupt(); this.resetJoystick(); this.pickGeneration++;
+    try {
+      previous.active(false);
+      this.backend = next; this.backendName = next === this.gl ? 'OpenGL' : 'Huawei';
+      this.awaitingModelCamera = next === this.gl; await next.load({ path: this.sourcePath, bounds: this.viewer.bounds });
+      this.viewer.apply(snapshot.pose, snapshot.fly); this.flyMode = snapshot.fly; next.active(this.active); this.updateCamera();
+      previous.dispose(); this.profilePlaying = snapshot.playing;
+    } catch (error) {
+      next.dispose(); this.backend = previous; this.backendName = previous === this.gl ? 'OpenGL' : 'Huawei'; previous.active(this.active);
+      this.localError = String(error); this.viewer.apply(snapshot.pose, snapshot.fly); this.updateCamera();
+    } finally { this.busy = false; }
+  }
+
+  private async profileCamera(play: boolean): Promise<void> {
+    if (this.title !== '转换样例' && this.title !== '流式场景' && this.title !== '同源 SOG' && !this.viewer.profile) { this.viewer.configure(createSettings(this.viewer.pose())); }
+    try {
+      if (!this.viewer.profile) { this.viewer.profile = await ViewerProfile.load(this.getUIContext().getHostContext() as common.UIAbilityContext, this.viewer.bounds); }
       this.autoOrbit = false; this.benchmarkStart = 0; this.profilePlaying = play;
-      this.applyProfilePose(play ? this.profile.animation.sample(this.profile.time) : this.profile.initial());
+      this.duration = this.viewer.profile.animation.duration;
+      if (play) { this.applyProfilePose(this.viewer.profile.animation.sample(this.viewer.profile.time)); }
+      else { this.viewer.initial(); this.flyMode = this.controls.fly; this.updateCamera(); }
     } catch (error) { this.localError = String(error); }
   }
   @State message: string = '准备原生渲染窗口';
@@ -87,7 +165,7 @@ struct Index {
   @State helpVisible: boolean = false;
   @State diagnosticsVisible: boolean = false;
   private pointers: PointerInput = new PointerInput();
-  private controls: OrbitControls = new OrbitControls();
+  private controls: OrbitControls = this.viewer.controls;
   private motionTimer: number = -1;
   private motionTime: number = 0;
   private streamTime: number = 0;
@@ -98,6 +176,18 @@ struct Index {
   private benchmarkCount: number = 0;
   private active: boolean = true;
 
+  private foregroundChanged(): void {
+    this.active = this.foreground; this.motionTime = Date.now(); this.pickGeneration++; this.resetJoystick(); this.controls.cancel(); this.pointers.cancel();
+    this.backend.active(this.foreground); if (this.stream) { this.stream.active = this.foreground; }
+    if (this.foreground && this.backendName === 'Huawei' && this.sourcePath && !this.busy) { this.restoreHuawei(); }
+  }
+  private async restoreHuawei(): Promise<void> {
+    const snapshot = this.viewer.snapshot(this.profilePlaying); this.busy = true;
+    try {
+      await this.huawei.load({ path: this.sourcePath, bounds: this.viewer.bounds });
+      if (this.visible && this.backendName === 'Huawei') { this.viewer.apply(snapshot.pose, snapshot.fly); this.updateCamera(); }
+    } catch (error) { this.localError = String(error); } finally { this.busy = false; }
+  }
   aboutToAppear(): void {
     this.visible = true;
     this.motionTime = Date.now();
@@ -107,8 +197,10 @@ struct Index {
         this.streamTime = now;
         this.stream?.tick(this.controls.current, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
       }
-      if (this.active && this.profilePlaying && this.profile) {
-        this.applyProfilePose(this.profile.advance(dt / 1000));
+      if (this.active && this.profilePlaying && this.viewer.profile) {
+        this.applyProfilePose(this.viewer.profile.advance(dt / 1000));
+        if (now - this.timelineUpdated >= 100) { this.timelineUpdated = now; this.timeline = this.viewer.profile.animation.cursor(this.viewer.profile.time); }
+        if (this.viewer.profile.ended) { this.profilePlaying = false; }
       } else if (this.active && this.benchmarkStart > 0) {
         const elapsed = now - this.benchmarkStart;
         if (elapsed >= 10000) {
@@ -124,15 +216,17 @@ struct Index {
           const speed = Math.min(dt, 64) * .0006 * this.flySpeed;
           this.controls.move(this.joyX * speed, 0, -this.joyY * speed);
         }
-        if (this.controls.tick(dt)) { this.updateCamera(); }
+        if (this.viewer.tick(dt)) { this.updateCamera(); }
       }
     }, 16);
     this.timer = setInterval(() => {
+      if (this.backendName !== 'OpenGL') { this.loading = false; this.message = this.backend.capabilities.note; return; }
       const state = nativeRender.status();
+      if (state.state === 'ready' && !this.stream && state.count > 0) { this.viewer.bounds = state.bounds; if (this.awaitingModelCamera) { this.awaitingModelCamera = false; this.updateCamera(); } }
       this.loading = state.state === 'loading';
       if (this.stream) { console.info(`StreamFrame state=${state.state} frames=${state.frames} count=${state.count} loadMs=${state.loadMs.toFixed(0)} frameMs=${state.frameMs.toFixed(1)} uploadMs=${state.uploadMs.toFixed(1)} uploadedRows=${state.uploadedRows} reusedRows=${state.reusedRows} decodedFiles=${state.decodedFiles} subsetHits=${state.subsetHits} request=${state.requestRevision} display=${state.displayRevision} prepareMs=${state.prepareMs.toFixed(1)} refineMs=${state.refineMs.toFixed(1)} uploadedBytes=${state.uploadedBytes} pageHits=${state.pageHits}`); }
       if (!this.busy && this.localError.length === 0) {
-        this.message = state.state === 'ready' ? '单击聚焦 · 双击环绕 / 飞行 · 拖动旋转' : state.message;
+        this.message = state.state === 'ready' ? '官方导航 · 环绕聚焦 / 飞行前往 · 双击聚焦' : state.message;
       }
       this.graphics = state.graphics;
       this.details = `${state.count.toLocaleString()} 个高斯 · SH0\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\n单帧 ${state.frameMs.toFixed(1)} ms · 渲染耗时折算 ${state.fps.toFixed(1)} fps\n最近上传批次 ${state.uploadMs.toFixed(1)} ms · 上传/复用 ${state.uploadedRows}/${state.reusedRows} 行\nGPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
@@ -144,14 +238,14 @@ struct Index {
     if (this.timer !== -1) { clearInterval(this.timer); this.timer = -1; }
     if (this.motionTimer !== -1) { clearInterval(this.motionTimer); this.motionTimer = -1; }
     this.controls.cancel(); this.pointers.cancel(); this.resetJoystick();
-    nativeRender.setActive(false);
+    this.backend.dispose();
   }
-  onPageShow(): void { this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); nativeRender.setActive(true); }
-  onPageHide(): void { this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); nativeRender.setActive(false); }
+  onPageShow(): void { this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); this.backend.active(true); }
+  onPageHide(): void { this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); this.backend.active(false); }
   private updateCamera(): void {
-    const c = this.controls.current;
-    nativeRender.camera(c[0], c[1], c[2], c[3], c[4], c[5], this.controls.fly ? 1 : 0, this.controls.fov);
+    this.backend.camera(this.viewer.pose(), this.viewer.bounds); this.refreshAnnotations();
   }
+
   private benchmark(): void {
     this.stopStream(); this.reset(); const s = nativeRender.status();
     if (s.state !== 'ready' || !s.count) { return; }
@@ -212,15 +306,24 @@ struct Index {
       this.benchmarkResult = '连续转向完成 · 逐帧记录已写入日志';
     } finally { nativeRender.traceFrames(false); this.streamMeasuring = false; }
   }
-  private toggleMode(): void { this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.flyMode = !this.flyMode; this.controls.setFly(this.flyMode); this.updateCamera(); }
-  private async focusAt(x: number, y: number): Promise<void> {
+  private toggleMode(): void { this.viewer.interrupt(); this.profilePlaying = false; this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.flyMode = !this.flyMode; this.controls.setFly(this.flyMode); this.updateCamera(); }
+  private async focusAt(x: number, y: number, doubleTap: boolean = false): Promise<void> {
     const request = ++this.pickGeneration;
-    try { const point = await nativeRender.pick(x / this.controls.width, y / this.controls.height);
-      if (request === this.pickGeneration && this.active) { this.controls.focus(point); this.updateCamera(); }
+    try { const point = await this.backend.pick(x / this.controls.width, y / this.controls.height, this.viewer.bounds);
+      if (request === this.pickGeneration && this.active) { if (point.length !== 3) { return; } this.viewer.navigate(point, doubleTap); this.flyMode = this.controls.fly; this.updateCamera(); }
     } catch (error) { console.warn(`Focus: ${String(error)}`); }
   }
-  private reset(): void { this.profilePlaying = false; this.profile = undefined; this.controls.fov = 45; this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.benchmarkStart = 0; this.benchmarkResult = '';  this.flyMode = false; this.controls.reset(); if (this.title === '流式场景') { this.controls.current[1] = .35; this.controls.target[1] = .35; } this.updateCamera(); }
+  private frame(): void { this.viewer.interrupt(); this.profilePlaying = false; this.controls.setFly(false); this.flyMode = false; this.viewer.transition(framePose(this.viewer.bounds, this.controls.fov)); }
+  private reset(): void {
+    this.profilePlaying = false; this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.viewer.interrupt();
+    this.benchmarkStart = 0; this.benchmarkResult = ''; this.controls.cancel();
+    if (this.viewer.profile) { this.viewer.profile.time = 0; this.viewer.selected = -1; this.viewer.initial(); }
+    else { this.controls.reset(); this.controls.fov = 85; this.viewer.apply(framePose(this.viewer.bounds), false); }
+    this.flyMode = this.controls.fly; this.timeline = 0; this.updateCamera();
+  }
+  private clearProfile(): void { this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; }
   private touch(event: TouchEvent): void {
+    this.viewer.interrupt();
     this.profilePlaying = false;
     if (event.source === SourceType.Mouse) { return; }
     this.autoOrbit = false;
@@ -236,7 +339,7 @@ struct Index {
   private resetJoystick(): void { this.pointers.cancelStick(); this.joyX = 0; this.joyY = 0; }
 
   private mouse(event: MouseEvent): void {
-    this.profilePlaying = false;
+    if (event.action === MouseAction.Press || this.mouseButton !== MouseButton.None) { this.viewer.interrupt(); this.profilePlaying = false; }
     if (event.action === MouseAction.Press) {
       this.autoOrbit = false; if (this.pointers.stickId < 0) { this.pointers.blockTap = false; }
       this.getUIContext().getFocusController().requestFocus('viewer-surface');
@@ -253,7 +356,6 @@ struct Index {
     }
   }
   private handleKey(event: KeyEvent): boolean {
-    if (event.type === KeyType.Down) { this.profilePlaying = false; }
     let key = event.keyText.toLowerCase();
     switch (event.keyCode) {
       case KeyCode.KEYCODE_W: key = 'w'; break;
@@ -266,13 +368,22 @@ struct Index {
       case KeyCode.KEYCODE_F: key = 'f'; break;
       case KeyCode.KEYCODE_H: key = 'h'; break;
       case KeyCode.KEYCODE_SPACE: key = ' '; break;
+      case KeyCode.KEYCODE_G: key = 'g'; break;
+      case KeyCode.KEYCODE_1: key = '1'; break;
+      case KeyCode.KEYCODE_2: key = '2'; break;
+      case KeyCode.KEYCODE_ESCAPE: key = 'escape'; break;
     }
+    if (event.type === KeyType.Down && key !== ' ') { this.profilePlaying = false; }
     console.info(`ViewerKey ${event.keyCode} type=${event.type} key=${key}`);
+    if (event.type === KeyType.Down && key === 'escape') { this.viewer.interrupt(); this.profilePlaying = false; this.gaming = false; this.viewer.gaming = false; this.toolsVisible = true; this.helpVisible = this.settingsVisible = this.modelsVisible = false; this.resetJoystick(); return true; }
     if (event.type === KeyType.Down && key === 'h') { this.helpVisible = !this.helpVisible; return true; }
-    if (event.type === KeyType.Down && key === 'f') { this.toolsVisible = !this.toolsVisible; return true; }
-    if (event.type === KeyType.Down && key === ' ') { this.autoOrbit = !this.autoOrbit && !this.flyMode; return true; }
+    if (event.type === KeyType.Down && key === 'f') { this.frame(); return true; }
+    if (event.type === KeyType.Down && key === ' ') { this.play(); return true; }
+    if (event.type === KeyType.Down && key === 'g') { this.gaming = !this.gaming; this.viewer.gaming = this.gaming; this.resetJoystick(); return true; }
+    if (event.type === KeyType.Down && (key === '1' || key === '2')) { if (this.flyMode !== (key === '2')) { this.toggleMode(); } return true; }
     if (key === 'r' && event.type === KeyType.Down) { this.reset(); return true; }
     if ('wasdqe'.includes(key) && key.length === 1) {
+      this.viewer.interrupt(); if (event.type === KeyType.Down && !this.flyMode) { this.toggleMode(); } this.gaming = true; this.viewer.gaming = true;
       this.controls.key(key, event.type === KeyType.Down); return true;
     }
     return false;
@@ -284,13 +395,15 @@ struct Index {
     this.streamMessage = '';
   }
   private async startStream(): Promise<void> {
-    this.stopStream(); this.localError = ''; this.title = '流式场景'; this.reset();
+    if (this.backendName !== 'OpenGL') { this.localError = '华为原生瓦片请使用独立实验入口'; return; }
+    this.stopStream(); this.clearProfile(); this.localError = ''; this.title = '流式场景'; this.reset();
     const session = new StreamSession((message: string) => { if (this.stream === session) { this.streamMessage = message; } });
     this.stream = session; session.budget = this.quality; session.paged = this.paged; session.encoded = this.encoded;
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       await session.open(this.streamUrl, context.cacheDir, this.fullLoad);
       if (this.stream === session) {
+        this.viewer.bounds = session.manifest!.bounds.slice();
         if (this.streamUrl === 'http://127.0.0.1:8768/scene.json') { await this.profileCamera(false); }
         session.tick(this.controls.current, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
       }
@@ -318,7 +431,10 @@ struct Index {
         }
       } finally { await fs.close(file); }
       if (this.visible && request === this.generation) {
-        this.title = label; this.reset(); this.loading = true; nativeRender.load(path);
+        this.title = label; this.sourcePath = path; this.clearProfile();
+        const source = SAMPLE_BOUNDS.find((s) => s.file === name)!;
+        this.viewer.bounds = [-source.center[0], -source.center[1], source.center[2], source.radius];
+        this.reset(); this.loading = true; this.awaitingModelCamera = this.backendName === 'OpenGL'; await this.backend.load({ path, bounds: this.viewer.bounds }); this.updateCamera();
       }
     } catch (error) {
       this.localError = (error as BusinessError).message;
@@ -331,8 +447,8 @@ struct Index {
     try {
       const asset = await comparisonSog(this.getUIContext().getHostContext() as common.UIAbilityContext);
       if (!this.visible || request !== this.generation) { return; }
-      this.title = '同源 SOG'; this.comparisonBounds = asset.bounds;
-      nativeRender.chunks([asset.path], asset.bounds, [0, 0, asset.count]);
+      this.title = '同源 SOG'; this.sourcePath = asset.path; this.clearProfile(); this.comparisonBounds = asset.bounds; this.viewer.bounds = asset.bounds;
+      if (this.backendName === 'OpenGL') { nativeRender.chunks([asset.path], asset.bounds, [0, 0, asset.count]); } else { await this.backend.load({ path: asset.path, bounds: asset.bounds }); }
       await this.profileCamera(false);
     } catch (error) { this.localError = String(error); } finally { this.busy = false; }
   }
@@ -355,7 +471,9 @@ struct Index {
         await fs.copyFile(source.fd, destination);
       } finally { await fs.close(source); }
       if (this.visible && request === this.generation) {
-        this.title = '本地模型'; this.reset(); this.loading = true; nativeRender.load(destination);
+        const bounds = await nativeRender.inspectModel(destination);
+        if (!this.visible || request !== this.generation) { return; }
+        this.title = '本地模型'; this.sourcePath = destination; this.viewer.bounds = bounds; this.clearProfile(); this.reset(); this.loading = true; this.awaitingModelCamera = this.backendName === 'OpenGL'; await this.backend.load({ path: destination, bounds }); this.updateCamera();
       }
     } catch (error) {
       this.localError = (error as BusinessError).message;
@@ -364,7 +482,7 @@ struct Index {
   }
   private joystick(event: TouchEvent): void {
     event.stopPropagation();
-    this.profilePlaying = false;
+    this.profilePlaying = false; this.viewer.interrupt();
     this.pointers.joystick(this.touchPhase(event.type), this.touchPoints(event.touches), this.touchPoints(event.changedTouches));
     this.joyX = this.pointers.x; this.joyY = this.pointers.y;
     if (event.type !== TouchType.Move) { console.info(`ViewerStick phase=${this.touchPhase(event.type)} owner=${this.pointers.stickId} x=${this.joyX.toFixed(3)} y=${this.joyY.toFixed(3)}`); }
@@ -372,9 +490,13 @@ struct Index {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
+      if (this.backendName === 'Huawei') {
+        if (this.spatialScene) { Component3D({ scene: this.spatialScene, modelType: ModelType.SURFACE }).width('100%').height('100%') }
+      } else {
       XComponent({ id: 'nextnews-splat', type: XComponentType.SURFACE, libraryname: 'splat' })
         .width('100%').height('100%')
-        .onLoad(() => { nativeRender.setActive(true); if (nativeRender.status().count === 0) { this.sample('tripo.ply', 'Tripo Splat'); } });
+        .onLoad(() => { nativeRender.setActive(true); if (nativeRender.status().count === 0) { this.sample('tripo.ply', 'Tripo Splat'); } else { this.updateCamera(); } });
+      }
       Button('', { type: ButtonType.Normal }).width('100%').height('100%').backgroundColor('#00000000')
         .stateEffect(false).focusOnTouch(true).accessibilityText('3D 模型视窗')
         .onAreaChange((_old: Area, area: Area) => { this.controls.resize(Number(area.width), Number(area.height)); this.updateCamera(); })
@@ -384,7 +506,7 @@ struct Index {
         .onHover((hover: boolean) => { if (!hover) { this.mouseButton = MouseButton.None; } })
         .onBlur(() => { this.controls.cancel(); this.pointers.cancel(); this.resetJoystick(); this.mouseButton = MouseButton.None; })
         .parallelGesture(GestureGroup(GestureMode.Exclusive,
-          TapGesture({ count: 2 }).onAction(() => { if (!this.pointers.blockTap && this.pointers.stickId < 0) { this.toggleMode(); } }),
+          TapGesture({ count: 2 }).onAction((event: GestureEvent) => { if (!this.pointers.blockTap && this.pointers.stickId < 0 && event.fingerList.length) { this.focusAt(event.fingerList[0].localX, event.fingerList[0].localY, true); } }),
           TapGesture({ count: 1 }).onAction((event: GestureEvent) => {
             if (!this.pointers.blockTap && this.pointers.stickId < 0 && event.fingerList.length > 0) { this.focusAt(event.fingerList[0].localX, event.fingerList[0].localY); }
           })
@@ -392,13 +514,22 @@ struct Index {
         .onKeyEvent((event: KeyEvent) => this.handleKey(event))
         .onAxisEvent((event: AxisEvent) => { this.controls.zoom(Math.exp(Math.max(-1, Math.min(1, event.getVerticalAxisValue() * 0.002)))); });
 
+      if (this.toolsVisible && this.showAnnotations && !(this.flyMode && this.gaming)) {
+        ForEach(this.markers, (marker: ViewerMarker) => {
+          Button(`${marker.index + 1}`, { type: ButtonType.Circle }).width(44).height(44).fontSize(14)
+            .fontColor('#FFFFFF').backgroundColor(this.annotationIndex === marker.index ? '#e98443' : '#80000000')
+            .border({ width: 2, color: '#FFFFFF' }).position({ x: marker.x - 22, y: marker.y - 22 })
+            .accessibilityText(`标注 ${marker.index + 1} ${marker.title}`).id(`annotation-${marker.index}`)
+            .onClick(() => { this.activateAnnotation(marker.index); })
+        }, (marker: ViewerMarker) => marker.index.toString())
+      }
       Column({ space: 6 }) {
         Row() {
           Column({ space: 3 }) {
-            Text('NEXTNEWS / 3DGS').fontSize(10).fontColor('#8CA7CB').letterSpacing(2).width('100%')
-            Text(this.title).fontSize(18).fontWeight(FontWeight.Medium).fontColor('#EEF4FF').width('100%')
+            Text('NEXTNEWS').fontSize(10).fontColor('#8CA7CB').letterSpacing(2).width('100%')
+            Text(this.toolsVisible ? this.title : '').fontSize(14).fontWeight(FontWeight.Medium).fontColor('#EEF4FF').width('100%')
           }.layoutWeight(1)
-          ViewerTool({ icon: this.toolsVisible ? $r('app.media.viewer_expand') : $r('app.media.viewer_collapse'), label: this.toolsVisible ? '沉浸显示' : '显示工具', selected: !this.toolsVisible, action: () => { this.toolsVisible = !this.toolsVisible; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+          ViewerTool({ icon: this.toolsVisible ? $r('app.media.viewer_expand') : $r('app.media.viewer_collapse'), label: this.toolsVisible ? '隐藏工具' : '显示工具', selected: !this.toolsVisible, action: () => { this.toolsVisible = !this.toolsVisible; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
         }.width('100%')
         if (this.loading || this.busy || this.localError) {
           Row({ space: 8 }) {
@@ -409,7 +540,7 @@ struct Index {
         if (this.streamMessage && this.toolsVisible) {
           Text(this.streamMessage).fontSize(10).fontColor('#B7C9DE').maxLines(2).width('100%')
         }
-      }.padding(16).width('100%').backgroundColor('#B3091322')
+      }.padding(16).width('100%').backgroundColor('#00000000')
       if (this.toolsVisible) {
         Column({ space: 8 }) {
           if (this.hint) { Text(this.hint).fontSize(12).fontColor('#EEF4FF').padding(6).backgroundColor('#DD1C283B').borderRadius(6) }
@@ -428,7 +559,10 @@ struct Index {
                     Button(this.profilePlaying ? '暂停配置动画' : '播放配置动画').fontSize(12).onClick(() => { if (this.profilePlaying) { this.profilePlaying = false; } else { this.profileCamera(true); } })
                   }
                   Button('SuperSplat Web 对照').fontSize(12).onClick(() => this.getUIContext().getRouter().pushUrl({ url: 'pages/WebComparison' }))
-                  Button('华为原生渲染').fontSize(13).width('100%').onClick(() => { this.getUIContext().getRouter().pushUrl({ url: 'pages/SpatialViewer' }).catch((error: BusinessError) => { this.localError = error.message; }); })
+                  Button(this.backendName === 'OpenGL' ? '切换华为原生' : '切换 OpenGL').fontSize(13).width('100%').enabled(!this.busy).onClick(() => { this.switchBackend(); })
+                  Text(this.backend.capabilities.note).fontSize(11).fontColor('#BBBBBB')
+                  Button('华为瓦片实验').fontSize(12).onClick(() => { this.getUIContext().getRouter().pushUrl({ url: 'pages/SpatialViewer' }); })
+                  Button('导入 viewer-settings.json').fontSize(12).onClick(() => { this.importSettings(); })
                   Button('同源 SOG 对照').enabled(!this.busy).onClick(() => { this.loadComparison(); })
                   Button('打开本地 PLY / SOG').fontSize(13).width('100%').enabled(!this.busy).onClick(() => { this.importModel(); })
                   Button('流式').fontSize(12).onClick(() => { this.streamPanel = !this.streamPanel; })
@@ -444,7 +578,13 @@ struct Index {
                   }
                 }
                 if (this.settingsVisible) {
-                  Text('视图设置').fontSize(16).fontColor('#EEF4FF').width('100%')
+                  Text('设置').fontSize(16).fontColor('#FFFFFF').width('100%')
+                  Button(this.gaming ? '游戏控制：开' : '游戏控制：关').fontSize(12).onClick(() => { this.gaming = !this.gaming; this.viewer.gaming = this.gaming; this.resetJoystick(); })
+                  Button(this.showAnnotations ? '标注：显示' : '标注：隐藏').fontSize(12).onClick(() => { this.showAnnotations = !this.showAnnotations; })
+                  Row({ space: 12 }) {
+                    Button('完整取景').fontSize(12).onClick(() => { this.frame(); this.settingsVisible = false; })
+                    Button('复位').fontSize(12).onClick(() => { this.reset(); this.settingsVisible = false; })
+                  }
                   Button(this.encoded ? '纹理：SOG 编码（实验）' : '纹理：浮点').fontSize(12).enabled(this.paged && this.quality <= 4000000).onClick(() => {
                     this.encoded = !this.encoded; if (this.stream) { this.stream.encoded = this.encoded; this.stream.retry(); }
                   })
@@ -469,7 +609,7 @@ struct Index {
                 }
                 if (this.helpVisible) {
                   Text('浏览操作').fontSize(16).fontColor('#EEF4FF').width('100%')
-                  Text('单击聚焦 · 双击切换环绕 / 飞行\n左键或单指旋转 · 右键 / 中键平移\n双指同时平移与缩放 · 滚轮缩放\n飞行：WASD 移动，Q/E 升降；触屏使用摇杆\nR 复位 · F 沉浸显示 · H 帮助 · 空格自动环绕\n播放图标开启自动环绕；拖动会停止自动环绕。')
+                  Text('环绕：单击聚焦；飞行：单击前往目标\n双击聚焦并进入环绕；游戏控制不触发点击导航\n左键或单指旋转 · 右键 / 中键平移\n双指平移和缩放 · 滚轮缩放\n1 环绕 · 2 飞行 · G 游戏控制 · WASD 移动 · Q/E 升降\nR 复位 · F 完整取景 · H 帮助 · 空格播放 / 暂停\n游戏控制支持左摇杆移动、右侧转头。步行与碰撞正在后续批次接入。')
                     .fontSize(12).fontColor('#B7C9DE').width('100%').lineHeight(22)
                 }
                 if (this.diagnosticsVisible) {
@@ -483,27 +623,46 @@ struct Index {
                   Text(this.graphics).fontSize(10).fontColor('#6F899F').width('100%')
                 }
               }.padding(16).width('100%')
-            }.constraintSize({ maxHeight: 330 }).width('100%').backgroundColor('#F0162233').borderRadius(18)
+            }.constraintSize({ maxHeight: 330 }).width('100%').backgroundColor('#EB222222').borderRadius(12)
           }
-          Row({ space: 5 }) {
-            ViewerTool({ icon: $r('app.media.viewer_orbit'), label: '环绕', selected: !this.flyMode, action: () => { if (this.flyMode) { this.toggleMode(); } }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
-            ViewerTool({ icon: $r('app.media.viewer_fly'), label: '飞行', selected: this.flyMode, action: () => { if (!this.flyMode) { this.toggleMode(); } }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
-            ViewerTool({ icon: $r('app.media.viewer_reset'), label: '复位', selected: false, action: () => { this.reset(); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
-            ViewerTool({ icon: this.autoOrbit ? $r('app.media.viewer_pause') : $r('app.media.viewer_play'), label: '自动环绕', selected: this.autoOrbit, action: () => {
-              if (this.flyMode) { this.toggleMode(); } this.autoOrbit = !this.autoOrbit;
-            }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
-            ViewerTool({ icon: $r('app.media.viewer_folder'), label: '模型', selected: this.modelsVisible, action: () => { this.modelsVisible = !this.modelsVisible; this.settingsVisible = false; this.helpVisible = false; this.diagnosticsVisible = false; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
-            ViewerTool({ icon: $r('app.media.viewer_settings'), label: '设置', selected: this.settingsVisible, action: () => { this.settingsVisible = !this.settingsVisible; this.modelsVisible = false; this.helpVisible = false; this.diagnosticsVisible = false; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
-            ViewerTool({ icon: $r('app.media.viewer_help'), label: '帮助', selected: this.helpVisible, action: () => { this.helpVisible = !this.helpVisible; this.settingsVisible = false; this.modelsVisible = false; this.diagnosticsVisible = false; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
-          }.padding(8).backgroundColor('#CC101A29').borderRadius(18)
-          Text(this.flyMode ? '飞行 · 拖动转头' : '环绕 · 单击聚焦').fontSize(10).fontColor('#AFC6D8')
+          if (this.profileReady && !this.modelsVisible && !this.settingsVisible && !this.helpVisible && !this.diagnosticsVisible) {
+            if (this.showAnnotations && this.annotationCount > 0 && !(this.flyMode && this.gaming)) {
+              if (this.annotationIndex >= 0 && this.markers.some((m: ViewerMarker) => m.index === this.annotationIndex)) {
+                Column({ space: 6 }) {
+                  Row() { Text(this.annotationTitle).fontSize(16).fontWeight(FontWeight.Medium).fontColor('#FFFFFF').layoutWeight(1)
+                    Button('×').width(40).height(40).backgroundColor('#00000000').accessibilityText('关闭标注').onClick(() => { this.viewer.selected = -1; this.refreshAnnotations(); }) }
+                  Scroll() { Text(this.annotationText).fontSize(13).lineHeight(21).fontColor('#DDDDDD').width('100%') }.constraintSize({ maxHeight: 150 })
+                }.width('100%').padding(12).backgroundColor('#E6222222').borderRadius(12)
+              }
+              Row({ space: 8 }) {
+                ViewerTool({ icon: $r('app.media.viewer_prev'), label: '上一个标注', action: () => { this.activateAnnotation(this.annotationIndex < 0 ? this.annotationCount - 1 : this.annotationIndex - 1); } })
+                Text(this.annotationIndex < 0 ? `标注 · ${this.annotationCount}` : `${this.annotationIndex + 1} / ${this.annotationCount} · ${this.annotationTitle}`)
+                  .fontColor('#FFFFFF').fontSize(12).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
+                ViewerTool({ icon: $r('app.media.viewer_next'), label: '下一个标注', action: () => { this.activateAnnotation(this.annotationIndex + 1); } })
+              }.padding({ left: 6, right: 6 }).width('100%').backgroundColor('#B0222222').borderRadius(12)
+            }
+            Row({ space: 8 }) {
+              Text(`${Math.floor(this.timeline / 60)}:${Math.floor(this.timeline % 60).toString().padStart(2, '0')}`).fontSize(10).fontColor('#FFFFFF').width(32)
+              Slider({ value: this.timeline, min: 0, max: this.duration, step: .01 }).layoutWeight(1).trackColor('#666666').selectedColor('#FFFFFF')
+                .id('动画时间轴').onChange((value: number) => { this.profilePlaying = false; this.viewer.interrupt(); this.timeline = value; if (this.viewer.profile) { this.applyProfilePose(this.viewer.profile.seek(value)); } })
+            }.width('100%')
+          }
+          Row() {
+            ViewerTool({ icon: this.profilePlaying ? $r('app.media.viewer_pause') : $r('app.media.viewer_play'), label: this.profilePlaying ? '暂停动画' : '播放动画', selected: this.profilePlaying, action: () => { this.play(); } })
+            ViewerTool({ icon: $r('app.media.viewer_orbit'), label: '环绕', selected: !this.flyMode, action: () => { if (this.flyMode) { this.toggleMode(); } } })
+            ViewerTool({ icon: $r('app.media.viewer_fly'), label: '飞行', selected: this.flyMode, action: () => { if (!this.flyMode) { this.toggleMode(); } } })
+            ViewerTool({ icon: $r('app.media.viewer_help'), label: '帮助', selected: this.helpVisible, action: () => { this.helpVisible = !this.helpVisible; this.settingsVisible = false; this.modelsVisible = false; this.diagnosticsVisible = false; } })
+            ViewerTool({ icon: $r('app.media.viewer_settings'), label: '设置', selected: this.settingsVisible, action: () => { this.settingsVisible = !this.settingsVisible; this.modelsVisible = false; this.helpVisible = false; this.diagnosticsVisible = false; } })
+            ViewerTool({ icon: $r('app.media.viewer_folder'), label: '模型', selected: this.modelsVisible, action: () => { this.modelsVisible = !this.modelsVisible; this.settingsVisible = false; this.helpVisible = false; this.diagnosticsVisible = false; } })
+            ViewerTool({ icon: $r('app.media.viewer_expand'), label: '沉浸显示', action: () => { this.toolsVisible = false; this.resetJoystick(); } })
+          }.justifyContent(FlexAlign.SpaceBetween).padding(6).width('100%').backgroundColor('#B0222222').borderRadius(28)
         }.padding(16).width('100%').position({ x: 0, y: '100%' }).translate({ y: '-100%' })
         if (!this.settingsVisible && !this.modelsVisible && !this.helpVisible && !this.diagnosticsVisible) {
           Column({ space: 8 }) {
             ViewerTool({ icon: $r('app.media.viewer_plus'), label: '放大', selected: false, action: () => { this.controls.zoom(1 / 1.2); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
             ViewerTool({ icon: $r('app.media.viewer_minus'), label: '缩小', selected: false, action: () => { this.controls.zoom(1.2); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
           }.padding(16).position({ x: '100%', y: '50%' }).translate({ x: '-100%', y: '-50%' })
-          if (this.flyMode) {
+          if (this.flyMode && this.gaming) {
             Stack() {
               Circle().width(96).height(96).fill('#9928354A').stroke('#7794BD').strokeWidth(1)
               Circle().width(34).height(34).id('飞行摇杆手柄').fill('#B0CFFF').translate({ x: this.joyX * 30, y: this.joyY * 30 })

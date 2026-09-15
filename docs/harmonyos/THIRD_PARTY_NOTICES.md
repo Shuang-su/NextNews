@@ -53,3 +53,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ViewerSpline source: https://github.com/playcanvas/supersplat-viewer/blob/96f62515b99a28a20579041a656f7b1911c2964c/src/core/spline.ts . Adapted to ArkTS with explicit numeric types; MIT notice above applies.
+
+## Viewer configuration and icons
+
+The `viewer_*.svg` toolbar/annotation symbols (orbit, fly, walk, voxel, play,
+pause, help, settings, previous/next and expand/collapse) and the configuration
+migration/defaults in `ViewerSettings.ets` adapt the same pinned SuperSplat Viewer
+v1.31.2 source, `src/index.html` and `src/settings.ts` / `src/settings`.
+Copyright (c) 2011-2026 PlayCanvas Ltd.; the MIT notice above applies.
+NextNews does not claim affiliation with PlayCanvas.

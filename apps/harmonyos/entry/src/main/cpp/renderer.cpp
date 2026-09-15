@@ -171,9 +171,10 @@ void Renderer::SetActive(bool active) { {std::lock_guard<std::mutex> lock(mutex_
 std::vector<float> Renderer::Pick(float x,float y) {
     std::shared_ptr<Scene> scene;Camera camera;int width,height;
     {std::lock_guard<std::mutex> lock(mutex_);scene=scene_;camera=camera_;width=width_;height=height_;}
+    if(!scene) return {};
     return splat::Pick(*scene,MakeView(*scene,camera),x,y,width,height);
 }
-Status Renderer::GetStatus() {std::lock_guard<std::mutex> lock(mutex_);status_.width=width_;status_.height=height_;return status_;}
+Status Renderer::GetStatus() {std::lock_guard<std::mutex> lock(mutex_);status_.width=width_;status_.height=height_;if(scene_){status_.bounds={scene_->center[0],scene_->center[1],scene_->center[2],scene_->radius};}return status_;}
 void Renderer::InitGL(void *window) {
     dataCapacity_=0;uploadDirty_=true; window_ = window; bufferWidth_ = bufferHeight_ = 0;
     display_=eglGetDisplay(EGL_DEFAULT_DISPLAY);

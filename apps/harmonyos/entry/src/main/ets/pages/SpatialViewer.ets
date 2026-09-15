@@ -32,7 +32,7 @@ struct SpatialViewer {
     if (this.selectedIndex !== 2 && this.selectedIndex !== 3 && this.selectedIndex !== 4 && this.selectedIndex !== 5 || !this.camera) { this.message = '请先加载华发转换产物'; return; }
     try {
       this.stopProfile(); this.stopBenchmark();
-      if (!play || !this.profile) { this.profile = await ViewerProfile.load(this.getUIContext().getHostContext() as common.UIAbilityContext); }
+      if (!play || !this.profile) { this.profile = await ViewerProfile.load(this.getUIContext().getHostContext() as common.UIAbilityContext, [...this.bounds.center, this.bounds.radius]); }
       this.profilePose(play ? this.profile.animation.sample(this.profile.time) : this.profile.initial()); this.profilePlaying = play;
       let previous = Date.now();
       if (play) { this.profileTimer = setInterval(() => {

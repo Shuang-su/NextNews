@@ -116,10 +116,28 @@ void String(napi_env env,napi_value object,const char *key,const std::string &va
 void Number(napi_env env,napi_value object,const char *key,double value){napi_value v;napi_create_double(env,value,&v);napi_set_named_property(env,object,key,v);}
 napi_value Status(napi_env env,napi_callback_info) {
     const auto s=splat::Renderer::Get().GetStatus();napi_value result;napi_create_object(env,&result);
+    napi_value bounds; napi_create_array_with_length(env,4,&bounds); for(uint32_t i=0;i<4;i++){napi_value v;napi_create_double(env,s.bounds[i],&v);napi_set_element(env,bounds,i,v);} napi_set_named_property(env,result,"bounds",bounds);
     String(env,result,"state",s.state);String(env,result,"message",s.message);String(env,result,"graphics",s.graphics);
     Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"uploadMs",s.uploadMs);Number(env,result,"uploadedRows",s.uploadedRows);Number(env,result,"reusedRows",s.reusedRows);Number(env,result,"decodedFiles",s.decodedFiles);Number(env,result,"subsetHits",s.subsetHits);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);Number(env,result,"requestRevision",s.requestRevision);Number(env,result,"displayRevision",s.displayRevision);Number(env,result,"prepareMs",s.prepareMs);Number(env,result,"refineMs",s.refineMs);Number(env,result,"uploadedBytes",s.uploadedBytes);Number(env,result,"pageHits",s.pageHits);return result;
 }
 struct PickWork { napi_async_work work; napi_deferred deferred; float x,y;std::vector<float> point;std::string error; };
+struct InspectWork { napi_async_work work; napi_deferred deferred; std::string path,error;std::array<float,4> bounds{}; };
+napi_value InspectModel(napi_env env,napi_callback_info info) {
+    napi_value arg;size_t argc=1,length=0;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
+    if(argc!=1||napi_get_value_string_utf8(env,arg,nullptr,0,&length)!=napi_ok||!length||length>4096){napi_throw_type_error(env,nullptr,"Invalid model path");return Undefined(env);}
+    std::vector<char> path(length+1);napi_get_value_string_utf8(env,arg,path.data(),path.size(),&length);
+    if(std::strlen(path.data())!=length){napi_throw_type_error(env,nullptr,"Invalid model path");return Undefined(env);}
+    auto *job=new InspectWork{};job->path.assign(path.data(),length);napi_value promise,name;
+    napi_create_promise(env,&job->deferred,&promise);napi_create_string_utf8(env,"InspectGaussianBounds",NAPI_AUTO_LENGTH,&name);
+    napi_create_async_work(env,nullptr,name,[](napi_env,void *p){auto *j=static_cast<InspectWork*>(p);
+        try {auto scene=splat::ReadModel(j->path,nullptr,true);splat::ApplyViewerTransform(scene);j->bounds={scene.center[0],scene.center[1],scene.center[2],scene.radius};}
+        catch(const std::exception &e){j->error=e.what();}},
+        [](napi_env e,napi_status status,void *p){auto *j=static_cast<InspectWork*>(p);napi_value result;
+            if(status!=napi_ok||!j->error.empty()){napi_value text;napi_create_string_utf8(e,j->error.empty()?"Model inspection cancelled":j->error.c_str(),NAPI_AUTO_LENGTH,&text);napi_create_error(e,nullptr,text,&result);napi_reject_deferred(e,j->deferred,result);}
+            else{napi_create_array_with_length(e,4,&result);for(uint32_t i=0;i<4;i++){napi_value v;napi_create_double(e,j->bounds[i],&v);napi_set_element(e,result,i,v);}napi_resolve_deferred(e,j->deferred,result);}
+            napi_delete_async_work(e,j->work);delete j;},job,&job->work);
+    napi_queue_async_work(env,job->work);return promise;
+}
 napi_value Pick(napi_env env,napi_callback_info info) {
     napi_value args[2];size_t argc=2;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);double x,y;
     if(argc!=2||napi_get_value_double(env,args[0],&x)!=napi_ok||napi_get_value_double(env,args[1],&y)!=napi_ok||
@@ -135,6 +153,7 @@ napi_value Pick(napi_env env,napi_callback_info info) {
 }
 napi_value Init(napi_env env,napi_value exports) {
     napi_property_descriptor methods[]={
+        {"inspectModel",nullptr,InspectModel,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"registerLods",nullptr,RegisterLods,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"selectLods",nullptr,SelectLods,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"traceFrames",nullptr,TraceFrames,nullptr,nullptr,nullptr,napi_default,nullptr},
