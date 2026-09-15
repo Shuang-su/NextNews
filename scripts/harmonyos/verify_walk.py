@@ -5,7 +5,7 @@ Saves raw evidence; it does not declare full walk/collision acceptance.
 """
 import argparse,json,subprocess,time,re
 from pathlib import Path
-p=argparse.ArgumentParser(description=__doc__);p.add_argument('--out',type=Path,required=True);p.add_argument('--backend',choices=['OpenGL','Huawei'],default='OpenGL');a=p.parse_args();a.out.mkdir(parents=True,exist_ok=False)
+p=argparse.ArgumentParser(description=__doc__);p.add_argument('--out',type=Path,required=True);p.add_argument('--collision-url');p.add_argument('--backend',choices=['OpenGL','Huawei'],default='OpenGL');a=p.parse_args();a.out.mkdir(parents=True,exist_ok=False)
 hdc='/Applications/DevEco-Studio.app/Contents/sdk/default/openharmony/toolchains/hdc'
 def run(args):return subprocess.run(args,check=True,capture_output=True,timeout=60).stdout.decode('utf8','replace')
 devices=run([hdc,'list','targets']).splitlines();assert len(devices)==1 and devices[0]!='[Empty]';device=devices[0]
@@ -26,7 +26,7 @@ def click(label):
  raise RuntimeError('Missing control '+label)
 def snap(name):
  data=layout();(a.out/(name+'.json')).write_text(json.dumps(data,ensure_ascii=False,indent=2));ui('screenshot','--path',str(a.out/(name+'.png')));return data
-run([hdc,'-t',device,'rport','tcp:8768','tcp:8768']);run([hdc,'-t',device,'rport','tcp:8780','tcp:8780'])
+run([hdc,'-t',device,'rport','tcp:8781','tcp:8781']);run([hdc,'-t',device,'rport','tcp:8768','tcp:8768']);run([hdc,'-t',device,'rport','tcp:8780','tcp:8780'])
 shell('aa force-stop com.nextnews.splatviewer');shell('aa start -b com.nextnews.splatviewer -a EntryAbility');time.sleep(2)
 pid=shell('pidof com.nextnews.splatviewer').strip().split()[0]
 record=(a.out/'continuous-hilog.txt').open('wb');logger=subprocess.Popen([hdc,'-t',device,'shell','hilog -P '+pid],stdout=record,stderr=subprocess.STDOUT)
@@ -39,7 +39,12 @@ try:
  before=snap('scene-before-walk')
  assert not any('流式失败' in n.get('text','') for n in nodes(before)), 'Scene load failed; do not test collision against a previous model'
  assert any(n.get('id')=='下一个标注' for n in nodes(before)), 'Scene profile was not loaded'
- icon('模型');click('碰撞 / 体素（实验）');click('加载碰撞');time.sleep(8);snap('collision-loaded');icon('模型');icon('步行');time.sleep(3);snap('walk-spawn')
+ icon('模型');click('碰撞 / 体素（实验）');
+ if a.collision_url:
+  ui('click','--id','collision-address');shell('uitest uiInput keyEvent 2072 2017');ui('text',a.collision_url);shell('uitest uiInput keyEvent Back');time.sleep(.5)
+ click('加载碰撞');time.sleep(8);collision=snap('collision-loaded');
+ assert any('碰撞已缓存' in n.get('text','') for n in nodes(collision)), 'Collision did not load; do not proceed to walk'
+ icon('模型');icon('步行');time.sleep(3);snap('walk-spawn')
  icon('设置');click('游戏控制：关');icon('设置');state=snap('walk-gaming')
  stick=next(n for n in nodes(state) if n.get('id')=='飞行摇杆');x,y,X,Y=stick['bounds'];sx=(x+X)//2;sy=(y+Y)//2
  for _ in range(4):ui('swipe',str(sx),str(sy),str(sx+15),str(sy-100),'--speed','200');time.sleep(.2)
@@ -54,7 +59,7 @@ finally:
  record.close()
 log=(a.out/'continuous-hilog.txt').read_text(errors='replace')
 poses=[{k:float(v) for k,v in re.findall(r'(x|y|z|grounded|blocked)=([-\d.]+)',l)} for l in log.splitlines() if 'ViewerWalk ' in l]
-result={'backend':a.backend,'scope':'whole-scene 2M' if a.backend=='OpenGL' else '80k single converted sample; not whole-scene comparison','samples':len(poses),'performanceAcceptance':False,'visualReviewRequired':True}
+result={'backend':a.backend,'collisionSource':a.collision_url or 'actual 32-tile voxel manifest','scope':'whole-scene 2M' if a.backend=='OpenGL' else '80k single converted sample; not whole-scene comparison','samples':len(poses),'performanceAcceptance':False,'visualReviewRequired':True}
 if poses:
  result['first']=poses[0];result['last']=poses[-1];result['ranges']={k:[min(p[k] for p in poses),max(p[k] for p in poses)] for k in ['x','y','z']}
 (a.out/'result.json').write_text(json.dumps(result,indent=2))

@@ -218,3 +218,8 @@ for OpenGL and Huawei. It supports single and tiled v1.0/v1.1 voxels, byte cache
 and unknown-region blocking. See [scope, commands and phone evidence](collision-preview-20260915.md).
 `verify_walk.py --backend OpenGL|Huawei` captures the actual 32-tile scene or the
 Huawei single sample respectively; these are separate functional tests.
+
+The follow-up adds static GLB collision and cancellation/cache-retry handling.
+See [GLB scope and phone evidence](glb-collision-20260916.md) and the
+[complete remaining parity matrix](viewer-parity-v1312.md). No current preview
+claims full Viewer parity or passing the 2M/4M/8M performance gates.

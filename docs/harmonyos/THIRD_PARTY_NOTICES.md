@@ -71,3 +71,9 @@ NextNews does not claim affiliation with PlayCanvas.
 the MIT notice above applies. The native port adds bounded parser/work limits,
 unknown-region movement stops, swept substeps and a reference-protected tile cache.
 The differential test executes the unmodified local upstream checkout.
+
+`entry/src/main/cpp/collision/mesh.{h,cpp}` also adapts that commit's
+`src/collision/mesh-collision.ts`: triangle BVH, closest-point queries and the
+six-sample capsule refinement. Copyright (c) 2011-2026 PlayCanvas Ltd.; the MIT
+notice above applies. The bounded native GLB reader replaces PlayCanvas's asset
+loader and explicitly rejects currently unsupported geometry extensions.

@@ -1,0 +1,8 @@
+{
+  "source": "synthetic analytical floor/wall authored by NextNews",
+  "purpose": "GLB loader and collision regression only; not real-world collision alignment",
+  "floorY": -83.12,
+  "wallX": 330,
+  "sha256": "cc76175bfad63f43c00b6f6b2975b115f0d1b46ceb0cc1642e031c39411de067",
+  "license": "MIT"
+}

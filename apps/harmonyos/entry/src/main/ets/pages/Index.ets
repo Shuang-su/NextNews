@@ -293,7 +293,12 @@ struct Index {
       }
     }, 16);
     this.timer = setInterval(() => {
-      if (this.backendName !== 'OpenGL') { this.loading = false; this.message = this.backend.capabilities.note; return; }
+      if (this.backendName !== 'OpenGL') {
+        this.loading = false; this.message = this.backend.capabilities.note;
+        this.graphics = 'SpatialReconKit / ArkGraphics3D';
+        this.details = '华为渲染帧率和显存需使用系统工具采集。当前接口未提供等价的 GPU/排序统计。';
+        return;
+      }
       const state = nativeRender.status();
       if (state.state === 'ready' && !this.stream && state.count > 0) { this.viewer.bounds = state.bounds; if (this.awaitingModelCamera) { this.awaitingModelCamera = false; this.updateCamera(); } }
       this.loading = state.state === 'loading';
@@ -652,7 +657,7 @@ struct Index {
                   Button('华为瓦片实验').fontSize(12).onClick(() => { this.getUIContext().getRouter().pushUrl({ url: 'pages/SpatialViewer' }); })
                   Button('碰撞 / 体素（实验）').fontSize(12).onClick(() => { this.collisionPanel = !this.collisionPanel; })
                   if (this.collisionPanel) {
-                    TextInput({ text: this.collisionUrl, placeholder: 'collisionUrl / voxelUrl / voxelManifestUrl' }).fontSize(12).onChange((value: string) => { this.collisionUrl = value; })
+                    TextInput({ text: this.collisionUrl, placeholder: 'collisionUrl / voxelUrl / voxelManifestUrl' }).id('collision-address').fontSize(12).onChange((value: string) => { this.collisionUrl = value; })
                     Row({ space: 8 }) { Button('加载碰撞').fontSize(12).onClick(() => { this.loadCollision(); }); Button('重试碰撞').fontSize(12).onClick(() => { this.collision?.retry(); }); Button('停止碰撞').fontSize(12).onClick(() => { this.stopCollision(); }) }
                     Text(this.collisionMessage).fontSize(12).fontColor('#BBD0E4')
                   }

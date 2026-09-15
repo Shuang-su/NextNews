@@ -49,6 +49,7 @@ export const traceFrames: (enabled: boolean) => void;
 export interface CollisionStatus { ids: string[]; bytes: number; }
 export const collisionClear: () => number;
 export const collisionLoadVoxel: (generation: number, id: string, metadata: string, binary: string) => Promise<number[]>;
+export const collisionLoadMesh: (generation: number, id: string, path: string) => Promise<number[]>;
 export const collisionSelect: (generation: number, ids: string[]) => void;
 export const collisionEnter: (generation: number, x: number, y: number, z: number) => Promise<number[]>;
 export const collisionStep: (generation: number, dt: number, yaw: number, right: number, forward: number, jump: boolean) => number[];

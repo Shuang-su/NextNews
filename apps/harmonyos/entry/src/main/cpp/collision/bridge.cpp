@@ -1,5 +1,6 @@
 #include "bridge.h"
 #include "atlas.h"
+#include "mesh.h"
 #include <mutex>
 #include <functional>
 #include <atomic>
@@ -24,18 +25,21 @@ napi_value Async(napi_env env,const char *label,std::function<std::vector<double
     napi_queue_async_work(env,job->work);return promise;
 }
 napi_value Clear(napi_env e,napi_callback_info){std::lock_guard<std::mutex> lock(stateMutex);cache=CollisionCache();walker=Walker();spawnRevision++;return Number(e,++generation);}
-napi_value Load(napi_env e,napi_callback_info info){try{
-    auto a=Args(e,info,4);const auto g=Double(e,a[0]);auto id=String(e,a[1]),meta=String(e,a[2]),bin=String(e,a[3]);
-    return Async(e,"LoadViewerVoxel",[g,id,meta,bin](){
+napi_value LoadResource(napi_env e,napi_callback_info info,bool mesh){try{
+    auto a=Args(e,info,mesh?3:4);const auto g=Double(e,a[0]);auto id=String(e,a[1]),meta=String(e,a[2]),bin=mesh?std::string():String(e,a[3]);
+    return Async(e,"LoadViewerCollision",[g,id,meta,bin,mesh](){
         if(pendingLoads.fetch_add(1)>=2){pendingLoads--;throw std::runtime_error("Two collision loaders already active");}
         struct Done{~Done(){pendingLoads--;}}done;
         {std::lock_guard<std::mutex> lock(stateMutex);if(g!=generation)throw std::runtime_error("Stale collision scene");}
-        auto tile=Voxel::Load(meta,bin);auto b=tile->Bounds();
+        std::shared_ptr<const CollisionResource> tile;
+        if(mesh)tile=Mesh::Load(meta);else tile=Voxel::Load(meta,bin);auto b=tile->Bounds();
         std::lock_guard<std::mutex> lock(stateMutex);if(g!=generation)throw std::runtime_error("Stale collision scene");
         if(!cache.Insert(id,tile))throw std::runtime_error("Collision cache is pinned or exceeds 128 MiB");
         return std::vector<double>{double(tile->Bytes()),b.min.x,b.min.y,b.min.z,b.max.x,b.max.y,b.max.z};
     });
 }catch(const std::exception &x){napi_throw_error(e,nullptr,x.what());return Undefined(e);}}
+napi_value Load(napi_env e,napi_callback_info info){return LoadResource(e,info,false);}
+napi_value LoadMesh(napi_env e,napi_callback_info info){return LoadResource(e,info,true);}
 napi_value Select(napi_env e,napi_callback_info info){try{
     auto a=Args(e,info,2);double g=Double(e,a[0]);bool isArray=false;uint32_t n=0;napi_is_array(e,a[1],&isArray);napi_get_array_length(e,a[1],&n);if(!isArray||n>64)throw std::runtime_error("Invalid selected collision tiles");
     std::set<std::string> ids;for(uint32_t i=0;i<n;i++){napi_value v;napi_get_element(e,a[1],i,&v);ids.insert(String(e,v));}
@@ -58,6 +62,7 @@ napi_value Status(napi_env e,napi_callback_info){std::lock_guard<std::mutex> loc
 void RegisterCollision(napi_env e,napi_value exports){napi_property_descriptor methods[]={
     {"collisionClear",nullptr,Clear,nullptr,nullptr,nullptr,napi_default,nullptr},
     {"collisionLoadVoxel",nullptr,Load,nullptr,nullptr,nullptr,napi_default,nullptr},
+    {"collisionLoadMesh",nullptr,LoadMesh,nullptr,nullptr,nullptr,napi_default,nullptr},
     {"collisionSelect",nullptr,Select,nullptr,nullptr,nullptr,napi_default,nullptr},
     {"collisionEnter",nullptr,Enter,nullptr,nullptr,nullptr,napi_default,nullptr},
     {"collisionStep",nullptr,Step,nullptr,nullptr,nullptr,napi_default,nullptr},

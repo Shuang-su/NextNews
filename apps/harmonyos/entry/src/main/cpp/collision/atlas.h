@@ -6,7 +6,7 @@ namespace viewer {
 // Immutable query snapshots hold shared references while the loader/LRU changes.
 class Atlas final:public Collision {
 public:
-    std::vector<std::shared_ptr<const Voxel>> tiles;
+    std::vector<std::shared_ptr<const CollisionResource>> tiles;
     std::optional<V3> Ray(V3 o,V3 d,double distance)const override {
         std::optional<V3> best;double length=distance;
         for(const auto &tile:tiles){auto hit=tile->Ray(o,d,length);if(hit){length=(*hit-o).Length();best=hit;}}
@@ -18,13 +18,14 @@ public:
     }
     bool Free(V3 p)const override {
         bool known=false;
-        for(const auto &tile:tiles)if(tile->Bounds().Contains(p)){known=true;if(!tile->Free(p))return false;}
+        for(const auto &tile:tiles)if(tile->Available()&&(tile->CompleteWorld()||tile->Bounds().Contains(p))){known=true;if(!tile->Free(p))return false;}
         return known;
     }
     bool Known(Box area)const override {
         std::vector<Box> gaps{area};
         for(const auto &tile:tiles){
             if(!tile->Available())continue;
+            if(tile->CompleteWorld())return true;
             std::vector<Box> next;const auto cover=tile->Bounds();
             for(auto gap:gaps){
                 Box overlap;bool intersects=true;
@@ -41,7 +42,7 @@ public:
     double Resolution()const override{double result=10;for(const auto &tile:tiles)result=std::min(result,tile->Resolution());return result;}
 };
 class CollisionCache {
-    struct Entry {std::shared_ptr<const Voxel> tile;uint64_t used;};
+    struct Entry {std::shared_ptr<const CollisionResource> tile;uint64_t used;};
     std::map<std::string,Entry> entries_;
     std::set<std::string> selected_;
     size_t budget_,bytes_=0;uint64_t tick_=0;
@@ -51,7 +52,7 @@ public:
     size_t Count()const{return entries_.size();}
     bool Has(const std::string &id)const{return entries_.count(id)!=0;}
     void Select(std::set<std::string> ids){selected_=std::move(ids);for(const auto &id:selected_){auto it=entries_.find(id);if(it!=entries_.end())it->second.used=++tick_;}}
-    bool Insert(const std::string &id,std::shared_ptr<const Voxel> tile){
+    bool Insert(const std::string &id,std::shared_ptr<const CollisionResource> tile){
         if(Has(id))return true;
         const size_t required=tile->Bytes();if(required>budget_)return false;
         while(bytes_+required>budget_){

@@ -36,7 +36,14 @@ public:
     bool Capsule(V3 center,double halfHeight,double radius,V3 &push)const;
     bool Sphere(V3 center,double radius,V3 &push)const{return Capsule(center,0,radius,push);}
 };
-class Voxel final:public Collision {
+class CollisionResource:public Collision {
+public:
+    virtual size_t Bytes()const=0;
+    virtual Box Bounds()const=0;
+    virtual bool Available()const=0;
+    virtual bool CompleteWorld()const{return false;}
+};
+class Voxel final:public CollisionResource {
 public:
     static std::shared_ptr<Voxel> Load(const std::string &metadata,const std::string &binary);
     Voxel(Box grid,double resolution,int depth,bool flip,std::vector<uint32_t> nodes,std::vector<uint32_t> leaves);
@@ -46,9 +53,9 @@ public:
     double Resolution()const override{return resolution_;}
     std::optional<V3> Ray(V3 origin,V3 direction,double maxDistance)const override;
     bool Deepest(V3 center,double halfHeight,double radius,V3 &push)const override;
-    size_t Bytes()const{return (nodes_.size()+leaves_.size())*4;}
-    Box Bounds()const;
-    bool Available()const{return !nodes_.empty();}
+    size_t Bytes()const override{return (nodes_.size()+leaves_.size())*4;}
+    Box Bounds()const override;
+    bool Available()const override{return !nodes_.empty();}
 private:
     V3 Transform(V3 p)const{return flip_?V3{-p.x,-p.y,p.z}:p;}
     bool Inside(int x,int y,int z)const{return x>=0&&y>=0&&z>=0&&x<dimensions_[0]&&y<dimensions_[1]&&z<dimensions_[2];}

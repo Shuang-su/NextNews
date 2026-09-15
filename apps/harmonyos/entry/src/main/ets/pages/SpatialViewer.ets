@@ -11,6 +11,7 @@ import { SAMPLE_BOUNDS, SampleBounds } from './ModelBounds';
 @Entry
 @Component
 struct SpatialViewer {
+  private gsNode: spatialRender.GSNode | undefined = undefined;
   private tiled: SpatialStream | undefined = undefined;
   @State tiledUrl: string = 'http://127.0.0.1:8768/huafa.scene.json';
   private profile: ViewerProfile | undefined = undefined;
@@ -67,7 +68,7 @@ struct SpatialViewer {
   aboutToDisappear(): void {
     this.visible = false; this.generation++; this.tiled?.stop(); this.stopBenchmark(); this.stopProfile();
     this.camera = undefined;
-    this.scene?.destroy(); this.scene = undefined;
+    this.scene?.destroy(); this.scene = undefined; this.gsNode = undefined;
     if (!this.busy) { this.tiled?.dispose(); }
   }
   onPageHide(): void { this.stopBenchmark(); if (this.camera) { this.camera.enabled = false; } }
@@ -133,7 +134,7 @@ struct SpatialViewer {
       // Component3D's Scene option is construction-time state: detach before replacing it.
       const oldScene = this.scene; this.scene = undefined; this.camera = undefined;
       await new Promise<void>((resolve) => { setTimeout(resolve, 32); });
-      oldScene?.destroy(); await oldStream?.dispose();
+      oldScene?.destroy(); this.gsNode = undefined; await oldStream?.dispose();
       if (!this.visible || request !== this.generation) { return; }
       const context = Scene.getDefaultRenderContext();
       console.info(`SpatialViewer contextAvailable=${context !== null}`);
@@ -150,7 +151,7 @@ struct SpatialViewer {
       if (index !== 3) {
         const model = await spatialRender.GSPlugin.loadGSNode(pending,
           { uri: asset ? `file://${asset.path}` : `OhosRawFile://models/${SAMPLE_BOUNDS[index].file}` }, pending.root ?? undefined);
-        model.rotation = { x: 0, y: 0, z: 1, w: 0 };
+        model.rotation = { x: 0, y: 0, z: 1, w: 0 }; this.gsNode = model;
       }
       stage = '创建相机';
       const camera = await pending.getResourceFactory().createCamera({ name: 'comparisonCamera' });
@@ -185,7 +186,7 @@ struct SpatialViewer {
         console.error(`SpatialViewer ${stage}: code=${(error as BusinessError)?.code ?? -1} ${detail}`);
       }
     } finally {
-      pending?.destroy();
+      if (pending) { pending.destroy(); this.gsNode = undefined; }
       if (!this.visible) { this.tiled?.dispose(); }
       if (request === this.generation) { this.busy = false; }
     }

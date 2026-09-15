@@ -1,0 +1,39 @@
+{
+  "backend": "OpenGL",
+  "collisionSource": "actual 32-tile voxel manifest",
+  "scope": "whole-scene 2M",
+  "samples": 82,
+  "performanceAcceptance": false,
+  "visualReviewRequired": true,
+  "first": {
+    "x": 331.5092468261719,
+    "y": -81.62,
+    "z": 305.30859375,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "last": {
+    "x": 329.20398895214754,
+    "y": -81.61999999999998,
+    "z": 302.6246884960059,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "ranges": {
+    "x": [
+      329.20398895214754,
+      331.5092468261719
+    ],
+    "y": [
+      -81.62,
+      -80.86762222222221
+    ],
+    "z": [
+      302.6246884960059,
+      305.30859375
+    ]
+  },
+  "visualReviewed": true,
+  "fullAcceptance": false,
+  "hapSha256": "84e20ee3653ce5432547e136e880ce6c371c2dc705eca4912f46a2662fd0928f"
+}
