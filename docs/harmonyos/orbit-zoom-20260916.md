@@ -11,3 +11,5 @@ Mate80ProMax SGT-AL10 / API26 / 7.0.0.105(SP10C00E105R3P3) 真机完成连续 20
 已安装包 artifacts/harmonyos/NextNews-zoom-preview.hap，SHA256 7e2dd9369ce002e4f331d24867fc2bc1dafe41ca3deed6b3087350c1f2d22373。
 
 本批修复共享 Viewer 和 C++/OpenGL；历史独立 SpatialViewer 页面仍有旧 pinch 限制和静态裁剪面，华为独立页需要后续同步及实测。完整功能及性能门槛仍按 viewer-parity-v1312.md 验收。
+
+最终 CDN 近看画面见 evidence/zoom-20260916/cdn-close.png：2M 高斯、10 标注持续显示，仍在渐进加载。截图只证明这一视角可渲染，不代表 20 次性能门槛或全部极近距离画质通过。
