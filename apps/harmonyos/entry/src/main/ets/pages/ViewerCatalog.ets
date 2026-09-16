@@ -7,6 +7,7 @@ import { util, url } from '@kit.ArkTS';
 import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 import { viewerRequests } from './ViewerRequests';
 import { ViewerSettings, parseViewerSettings, createSettings } from './ViewerSettings';
+let resourceWriteSequence: number = 0;
 interface SogReceipt { names: string[]; sizes: number[]; }
 export interface CatalogProject {
   modelId: string; modelTitle: string; modelType: string; modelFileUrl?: string; modelSetting?: string | Object;
@@ -160,11 +161,16 @@ export class ViewerCatalog {
   }
   private async writeResource(path: string, data: ArrayBuffer): Promise<void> {
     if (this.stopped) { throw new Error('项目加载已取消'); }
-    const file = await fs.open(`${path}.part`, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
-    try { let offset = 0; while (offset < data.byteLength) { const n = await fs.write(file.fd, data.slice(offset)); if (n <= 0) { throw new Error('资源缓存写入失败'); } offset += n; } }
-    finally { await fs.close(file); }
-    if (this.stopped) { throw new Error('项目加载已取消'); }
-    await fs.rename(`${path}.part`, path);
+    // Multiple scene generations can finish the same URL concurrently. Never
+    // share a temporary file with a cancelled predecessor.
+    const partial = `${path}.part-${Date.now()}-${++resourceWriteSequence}`;
+    try {
+      const file = await fs.open(partial, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
+      try { let offset = 0; while (offset < data.byteLength) { const n = await fs.write(file.fd, data.slice(offset)); if (n <= 0) { throw new Error('资源缓存写入失败'); } offset += n; } }
+      finally { await fs.close(file); }
+      if (this.stopped) { throw new Error('项目加载已取消'); }
+      await fs.rename(partial, path);
+    } finally { try { await fs.unlink(partial); } catch (_) {} }
   }
   private async looseSog(address: string, directory: string, progress?: (percent: number) => void): Promise<string> {
     progress?.(-1);

@@ -78,3 +78,6 @@ export const onPresented: (callback: ((request: number) => void) | null) => void
 export const effects: (settings: number[]) => void;
 
 export const skybox: (path: string) => Promise<void>;
+
+export const gamepadActive: (enabled: boolean) => boolean;
+export const gamepad: () => number[];

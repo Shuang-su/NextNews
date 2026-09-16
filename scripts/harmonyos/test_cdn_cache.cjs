@@ -27,6 +27,10 @@ try {
  const canceled=single(),oldFetch=canceled.fetch;canceled.fetch=async address=>{const bytes=await oldFetch(address);if(address.endsWith('q.webp'))canceled.cancel();return bytes;};
  await assert.rejects(canceled.resource('https://cdn.example/canceled/meta.json',tmp));
  assert.equal(JSON.parse(await fsp.readFile(loose,'utf8')).means.files[0],'l.webp');
+ const concurrentPath=path.join(tmp,'concurrent.image');
+ await Promise.all([single().writeResource(concurrentPath,new Uint8Array(8192).fill(17).buffer),single().writeResource(concurrentPath,new Uint8Array(4096).fill(33).buffer)]);
+ const concurrent=await fsp.readFile(concurrentPath);assert.ok((concurrent.length===8192&&concurrent.every(v=>v===17))||(concurrent.length===4096&&concurrent.every(v=>v===33)));assert.equal((await fsp.readdir(tmp)).filter(n=>n.includes('.part-')).length,0);
+ console.log('PASS concurrent cache writers publish one complete file and clean temporary copies');
  console.log('PASS single JSON SOG source classification-compatible cache, warm reuse, partial repair, cancellation and original metadata preservation');
 } finally {await fsp.rm(tmp,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1});

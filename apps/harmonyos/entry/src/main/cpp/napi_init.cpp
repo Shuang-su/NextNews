@@ -2,6 +2,7 @@
 #include "lod_selection.h"
 #include <cstring>
 #include "renderer.h"
+#include "gamepad.h"
 #include <ace/xcomponent/native_interface_xcomponent.h>
 #include <napi/native_api.h>
 #include <cmath>
@@ -117,6 +118,15 @@ napi_value Skybox(napi_env env,napi_callback_info info){
     napi_create_async_work(env,nullptr,label,[](napi_env,void* data){auto* j=static_cast<SkyWork*>(data);try{std::lock_guard<std::mutex> serial(skyDecodeMutex);if(!splat::Renderer::Get().SkyboxCurrent(j->request)){j->error="Skybox load superseded";return;}auto image=splat::ReadSkyImage(j->path);if(!splat::Renderer::Get().SetSkybox(j->request,image))j->error="Skybox load superseded";}catch(const std::exception& error){j->error=error.what();}},
       [](napi_env e,napi_status status,void* data){auto* j=static_cast<SkyWork*>(data);if(status==napi_ok&&j->error.empty())napi_resolve_deferred(e,j->deferred,Undefined(e));else{napi_value text,error;napi_create_string_utf8(e,j->error.empty()?"Skybox cancelled":j->error.c_str(),NAPI_AUTO_LENGTH,&text);napi_create_error(e,nullptr,text,&error);napi_reject_deferred(e,j->deferred,error);}napi_delete_async_work(e,j->work);delete j;},job,&job->work);
     napi_queue_async_work(env,job->work);return promise;
+}
+napi_value GamepadActive(napi_env env,napi_callback_info info){
+ napi_value arg,result;size_t argc=1;bool enabled=false;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
+ if(argc!=1||napi_get_value_bool(env,arg,&enabled)!=napi_ok){napi_throw_type_error(env,nullptr,"Expected gamepad enabled boolean");return Undefined(env);}
+ napi_get_boolean(env,splat::EnableGamepad(enabled),&result);return result;
+}
+napi_value Gamepad(napi_env env,napi_callback_info){
+ auto axes=splat::ReadGamepad();napi_value result;napi_create_array_with_length(env,4,&result);
+ for(uint32_t i=0;i<4;i++){napi_value value;napi_create_double(env,axes[i],&value);napi_set_element(env,result,i,value);}return result;
 }
 napi_value Effects(napi_env env,napi_callback_info info) {
     napi_value arg{};size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);bool array=false;uint32_t length=0;
@@ -298,6 +308,8 @@ napi_value Init(napi_env env,napi_value exports) {
         {"optimize",nullptr,Optimize,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"beginIntro",nullptr,BeginIntro,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"intro",nullptr,Intro,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"gamepadActive",nullptr,GamepadActive,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"gamepad",nullptr,Gamepad,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"skybox",nullptr,Skybox,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"effects",nullptr,Effects,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"background",nullptr,Background,nullptr,nullptr,nullptr,napi_default,nullptr},

@@ -114,3 +114,10 @@ complete. Signed HAP and device images remain local ignored artifacts.
 发现并修正普通图片 RGBP 解码及后处理重复色调映射差异。
 手机外网下载失败，使用调试缓存完成真实全景显示和转向检查；不计作网络验收。
 [实现、来源与证据](../harmonyos/metaflow-skybox-20260916.md)。
+
+## 手柄和缓存并发
+
+接入 SDK GameControllerKit 双杆监听与 MetaFlow 原始轴数学，前后台及设备变化清零。
+没有物理手柄，本批仅记构建与逻辑回归通过，硬件映射未验收。
+缓存原子写入改为每请求独立临时副本，避免快速切换/重试相同资源相互截断。
+详见 [手柄接续](../harmonyos/gamepad-20260916.md)。

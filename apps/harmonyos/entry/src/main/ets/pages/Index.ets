@@ -1,3 +1,4 @@
+import { gamepadFrame } from './ViewerGamepad';
 import { ViewerSound } from './ViewerSound';
 import { ViewerLoading } from './ViewerLoading';
 import { HotspotPosition, ViewerHotspot } from './ViewerHotspot';
@@ -249,12 +250,31 @@ struct Index {
       this.walkMode = true; this.flyMode = true; this.localError = ''; this.modelsVisible = false; this.settingsVisible = false; this.updateCamera();
     } catch (error) { this.localError = `步行出生点：${((error as BusinessError).message || String(error))}`; } finally { this.walkPending = false; }
   }
+  private padAxes: number[] = [0, 0, 0, 0];
+  private gamepadEnabled: boolean = false;
+  private gamepadInput(ms: number): void {
+    this.padAxes = this.gamepadEnabled ? nativeRender.gamepad() : [0, 0, 0, 0];
+    if (this.opening || this.busy || this.modelsVisible || this.settingsVisible || this.helpVisible) { this.padAxes = [0, 0, 0, 0]; return; }
+    const frame = gamepadFrame(this.padAxes, ms / 1000, this.controls.fly || this.walkMode, this.controls.fov);
+    if (!frame.active) { return; }
+    this.sound.gesture(); this.viewer.interrupt(); this.stopAnimation(); this.autoOrbit = false; this.clearNav();
+    this.controls.target[0] += frame.yaw;
+    this.controls.target[1] = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.controls.target[1] + frame.pitch));
+    if (this.walkMode) { return; }
+    if (this.controls.fly) { this.controls.moveWorld(frame.right, 0, frame.forward); }
+    else {
+      const distance = 3 * this.controls.target[2], yaw = this.controls.target[0];
+      this.controls.target[3] += Math.cos(yaw) * frame.right * distance;
+      this.controls.target[5] -= Math.sin(yaw) * frame.right * distance;
+      this.controls.zoom(1 + frame.forward);
+    }
+  }
   private walkFrame(ms: number): void {
     const session = this.collision; if (!session) { this.leaveWalk(); return; }
     const before = this.controls.current.slice();
     const dt = Math.max(0, Math.min(ms / 1000, .064));
-    let right = this.joyX + Number(this.walkKeys.has('d')) - Number(this.walkKeys.has('a'));
-    let forward = -this.joyY + Number(this.walkKeys.has('w')) - Number(this.walkKeys.has('s'));
+    let right = this.joyX + this.padAxes[0] + Number(this.walkKeys.has('d')) - Number(this.walkKeys.has('a'));
+    let forward = -this.joyY - this.padAxes[1] + Number(this.walkKeys.has('w')) - Number(this.walkKeys.has('s'));
     let multiplier = this.walkKeys.has('shift') ? 2 : this.walkKeys.has('ctrl') ? .5 : 1;
     if (right || forward) { this.walkDestination = undefined; }
     if (this.walkDestination) {
@@ -568,6 +588,7 @@ struct Index {
   private foregroundChanged(): void {
     this.scrubResume = false; this.clearDebug();
     this.sound.active(this.foreground);
+    this.gamepadEnabled = this.foreground && nativeRender.gamepadActive(true); if (!this.foreground) { nativeRender.gamepadActive(false); this.padAxes = [0, 0, 0, 0]; }
     this.active = this.foreground; this.motionTime = Date.now(); this.pickGeneration++; this.resetJoystick(); this.controls.cancel(); this.pointers.cancel();
     this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.collision?.pause(!this.foreground);
     this.backend.active(this.foreground); if (this.stream) { this.stream.active = this.foreground; }
@@ -582,11 +603,12 @@ struct Index {
     } catch (error) { this.localError = ((error as BusinessError).message || String(error)); } finally { this.busy = false; }
   }
   aboutToAppear(): void {
-    this.visible = true;
+    this.visible = true; this.gamepadEnabled = nativeRender.gamepadActive(true);
     nativeRender.onPresented((request: number) => { this.presented(request); });
     this.motionTime = Date.now();
     this.motionTimer = setInterval(() => {
       const now = Date.now(); const dt = now - this.motionTime; this.motionTime = now;
+      if (this.active) { this.gamepadInput(dt); }
       if (this.active && now - this.streamTime >= 50) {
         this.streamTime = now;
         this.stream?.tick(this.controls.current, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
@@ -642,6 +664,7 @@ struct Index {
     }, 500);
   }
   aboutToDisappear(): void {
+    nativeRender.gamepadActive(false); this.gamepadEnabled = false; this.padAxes = [0, 0, 0, 0];
     this.skyRevision++; this.skyAddress = ''; nativeRender.skybox('').catch(() => {});
     this.sound.clear();
     nativeRender.onPresented(null);
@@ -652,8 +675,8 @@ struct Index {
     this.controls.cancel(); this.pointers.cancel(); this.resetJoystick();
     this.backend.dispose();
   }
-  onPageShow(): void { this.sound.active(true); this.collision?.pause(false); this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); this.backend.active(true); setTimeout(() => { this.resumeOpening(); }, 0); }
-  onPageHide(): void { this.sound.active(false); this.clearNav(); this.scrubResume = false; this.clearDebug(); this.collision?.pause(true); this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); this.backend.active(false); }
+  onPageShow(): void { this.gamepadEnabled = nativeRender.gamepadActive(true); this.sound.active(true); this.collision?.pause(false); this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); this.backend.active(true); setTimeout(() => { this.resumeOpening(); }, 0); }
+  onPageHide(): void { nativeRender.gamepadActive(false); this.gamepadEnabled = false; this.padAxes = [0, 0, 0, 0]; this.sound.active(false); this.clearNav(); this.scrubResume = false; this.clearDebug(); this.collision?.pause(true); this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); this.backend.active(false); }
   private updateCamera(): void {
     this.sound.configure(this.viewer.profile?.settings.soundUrl ?? '');
     this.sound.shown(!this.opening);
