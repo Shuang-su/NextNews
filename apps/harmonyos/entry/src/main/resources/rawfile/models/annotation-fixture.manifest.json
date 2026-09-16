@@ -1,0 +1,16 @@
+{
+  "label": "NextNews original annotation depth fixture",
+  "source": "scripts/harmonyos/make_annotation_fixture.py: generated annotation-source.ply",
+  "source_sha256": "7534a1e840e2aed30e85098940cb9d626a121c3f1e8911bb5d0e88187e78cce4",
+  "output": "annotation-fixture.ply",
+  "output_sha256": "d60f4ae8bdea58b29f4322b5453be3dac526edfd2f62b7b9bd74cac2d4803ac6",
+  "input_count": 3,
+  "output_count": 3,
+  "sh_degree": 0,
+  "sampling": "even source indices floor(i * input_count / output_count)",
+  "high_order_sh_removed": false,
+  "opacity_infinity_to_logit_20": 0,
+  "quaternion": "wxyz normalized",
+  "coordinate_transform": "none",
+  "license": "MIT — NextNews original analytic fixture"
+}

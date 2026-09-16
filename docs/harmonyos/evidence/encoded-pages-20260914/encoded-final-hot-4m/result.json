@@ -1,0 +1,17 @@
+{
+  "texture": "sog-codes",
+  "cache": "gpu",
+  "budget": 4000000,
+  "trials": 20,
+  "endToEndP50Ms": 541.0,
+  "endToEndP95Ms": 577.0,
+  "nativeSubmitToSwapP95Ms": 493.58,
+  "allUploadsZero": true,
+  "fileOnlyFreshTargetPages": false,
+  "fullCoverage": true,
+  "frameTimeGateTested": true,
+  "failure": [],
+  "continuousFrames": 518,
+  "continuousPresentIntervalP95Ms": 56.649,
+  "continuousDrawP95Ms": 56.209
+}

@@ -1,3 +1,5 @@
+#include <qos/qos.h>
+#include <hilog/log.h>
 #include "renderer.h"
 #include <algorithm>
 #include <chrono>
@@ -14,6 +16,29 @@ const char *Vertex = R"GLSL(#version 300 es
 precision highp float;
 layout(location=0) in uint splatIndex;
 uniform highp sampler2D splatData;
+uniform highp usampler2D encodedCodes;
+uniform highp sampler2D codebooks;
+uniform bool encoded;
+vec4 bytes(uint v){return vec4(v&255u,(v>>8u)&255u,(v>>16u)&255u,v>>24u);}
+float book(uint code,uint row,int component){return texelFetch(codebooks,ivec2(int(code&255u),int(row)),0)[component];}
+void readEncoded(out vec3 position,out vec4 color,out mat3 covariance){
+    ivec2 address=ivec2(int(splatIndex%4096u),int(splatIndex/4096u));
+    position=texelFetch(splatData,address,0).xyz;
+    uvec4 data=texelFetch(encodedCodes,address,0);uint row=data.w;
+    color=vec4(vec3(book(data.z,row,1),book(data.z>>8u,row,1),book(data.z>>16u,row,1)),float(data.z>>24u)/255.0);
+    vec3 abc=(bytes(data.x).xyz/255.0-.5)*1.41421356237;
+    float d=sqrt(max(0.0,1.0-dot(abc,abc)));vec4 q;
+    uint mode=data.x>>24u;
+    if(mode==252u)q=vec4(d,abc);else if(mode==253u)q=vec4(abc.x,d,abc.yz);else if(mode==254u)q=vec4(abc.xy,d,abc.z);else q=vec4(abc,d);
+    q=normalize(q);float w=q.x,x=q.y,y=q.z,z=q.w;
+    mat3 r=mat3(1.0-2.0*(y*y+z*z),2.0*(x*y+z*w),2.0*(x*z-y*w),
+                2.0*(x*y-z*w),1.0-2.0*(x*x+z*z),2.0*(y*z+x*w),
+                2.0*(x*z+y*w),2.0*(y*z-x*w),1.0-2.0*(x*x+y*y));
+    vec3 scale=vec3(book(data.y,row,0),book(data.y>>8u,row,0),book(data.y>>16u,row,0));
+    covariance=(r*mat3(scale.x,0,0,0,scale.y,0,0,0,scale.z))*transpose(r);
+    covariance[0][2]=-covariance[0][2];covariance[2][0]=-covariance[2][0];
+    covariance[1][2]=-covariance[1][2];covariance[2][1]=-covariance[2][1];
+}
 vec4 readSplat(uint offset) { uint address=splatIndex*4u+offset;return texelFetch(splatData,ivec2(int(address%4096u),int(address/4096u)),0); }
 uniform mat4 view;
 uniform vec2 viewport;
@@ -24,18 +49,20 @@ uniform bool optimized;
 out vec2 gaussian;
 out vec4 tint;
 void main() {
-    vec4 t0=readSplat(0u),t1=readSplat(1u);
-    vec3 position=t0.xyz;vec4 color=vec4(t0.w,t1.xyz);
+    vec3 position;vec4 color;mat3 covariance;
+    if(encoded){readEncoded(position,color,covariance);}
+    else {vec4 t0=readSplat(0u),t1=readSplat(1u),t2=readSplat(2u),t3=readSplat(3u);
+        position=t0.xyz;color=vec4(t0.w,t1.xyz);
+        vec3 covA=vec3(t1.w,t2.xy),covB=vec3(t2.zw,t3.x);
+        covariance=mat3(covA.x,covA.y,covA.z,covA.y,covB.x,covB.y,covA.z,covB.y,covB.z);
+    }
     tint=color;
     vec3 center=(view*vec4(position,1.0)).xyz;
     float z=-center.z;
     if(z<=nearPlane || z>=farPlane || color.a<0.0039) {
         gl_Position=vec4(2.0,2.0,2.0,1.0); gaussian=vec2(0.0); return;
     }
-    vec4 t2=readSplat(2u),t3=readSplat(3u);
-    vec3 covA=vec3(t1.w,t2.xy),covB=vec3(t2.zw,t3.x);
     float focal=viewport.y/(2.0*tanHalfFov);
-    mat3 covariance=mat3(covA.x,covA.y,covA.z,covA.y,covB.x,covB.y,covA.z,covB.y,covB.z);
     mat3 rotation=mat3(view);
     mat3 c=rotation*covariance*transpose(rotation);
     // Perspective projection derivative, screen coordinates in pixels.
@@ -105,10 +132,12 @@ void Renderer::Start(void *window,int width,int height) {
 void Renderer::Stop() {
     { std::lock_guard<std::mutex> lock(mutex_); stop_=true; cancel_=true; }
     changed_.notify_all();sortChanged_.notify_all();loadChanged_.notify_all(); if(worker_.joinable()) worker_.join();if(sorter_.joinable())sorter_.join();if(loader_.joinable())loader_.join();
-    preparedScene_.reset();preparedPixels_.clear();preparedIndices_.clear();
+    preparedScene_.reset();preparedPage_.reset();preparedPixels_.clear();preparedIndices_.clear();
     sortPending_=sortReady_=false;sortScene_.reset();sortedScene_.reset();sortedIndices_.clear();
 }
 void Renderer::SortLoop() {
+    const int qos=OH_QoS_SetThreadQoS(QOS_USER_INITIATED);
+    OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","Thread QoS SortLoop() result=%{public}d",qos);
     for(;;) {
         std::shared_ptr<Scene> scene;View view;
         {std::unique_lock<std::mutex> lock(mutex_);sortChanged_.wait(lock,[&]{return stop_||sortPending_;});
@@ -124,37 +153,48 @@ void Renderer::SortLoop() {
 }
 void Renderer::Resize(int width,int height) { {std::lock_guard<std::mutex> lock(mutex_);width_=std::max(1,width);height_=std::max(1,height);dirty_=true;}changed_.notify_one(); }
 void Renderer::Load(std::string path) {
-    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();chunkPaths_.clear();chunksDirty_=false;requestedPath_=path;pendingPath_=std::move(path);cancel_=true;status_.state="loading";status_.message="Loading model";}
+    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();preparedPage_.reset();chunksPaged_=false;chunkPaths_.clear();chunksDirty_=false;requestedPath_=path;pendingPath_=std::move(path);cancel_=true;status_.state="loading";status_.message="Loading model";}
     loadChanged_.notify_one();
 }
-void Renderer::SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges) {
-    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();chunkPaths_=std::move(paths);chunkBounds_=bounds;chunkRanges_=std::move(ranges);
+void Renderer::SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges,bool paged,uint64_t revision,bool encoded) {
+    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();preparedPage_.reset();chunksPaged_=paged;chunksEncoded_=encoded;requestRevision_=revision;requestAt_=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count();status_.requestRevision=revision;chunkPaths_=std::move(paths);chunkBounds_=bounds;chunkRanges_=std::move(ranges);
      pendingPath_.clear();requestedPath_.clear();chunksDirty_=!chunkPaths_.empty();cancel_=true;dirty_=true;
      status_.state=chunkPaths_.empty()?"ready":"loading";status_.message=chunkPaths_.empty()?"Stream stopped":"Streaming chunks";}
     loadChanged_.notify_one();changed_.notify_one();
 }
+void Renderer::TraceFrames(bool enabled){std::lock_guard<std::mutex> lock(mutex_);traceFrames_=enabled;lastTraceFrame_=0;}
+void Renderer::DropCaches(){std::lock_guard<std::mutex> lock(mutex_);dropCaches_=true;}
 void Renderer::SetCamera(Camera camera) {
     {std::lock_guard<std::mutex> lock(mutex_);camera_=camera;dirty_=true;}changed_.notify_one();
 }
 void Renderer::SetActive(bool active) { {std::lock_guard<std::mutex> lock(mutex_);active_=active;dirty_=true;}changed_.notify_one();loadChanged_.notify_one(); }
+void Renderer::SetBackground(std::array<float,3> color) {
+    { std::lock_guard<std::mutex> lock(mutex_); if(background_==color)return; background_=color;dirty_=true; }
+    changed_.notify_one();
+}
+void Renderer::SetAnnotations(std::shared_ptr<const HotspotData> data){{std::lock_guard<std::mutex> lock(mutex_);annotationData_=std::move(data);dirty_=true;}changed_.notify_one();}
+void Renderer::SetAnnotationStyle(HotspotStyle style){{std::lock_guard<std::mutex> lock(mutex_);if(style.visible==annotationStyle_.visible&&style.hover==annotationStyle_.hover&&style.pixels==annotationStyle_.pixels)return;annotationStyle_=style;dirty_=true;}changed_.notify_one();}
 std::vector<float> Renderer::Pick(float x,float y) {
     std::shared_ptr<Scene> scene;Camera camera;int width,height;
     {std::lock_guard<std::mutex> lock(mutex_);scene=scene_;camera=camera_;width=width_;height=height_;}
+    if(!scene) return {};
     return splat::Pick(*scene,MakeView(*scene,camera),x,y,width,height);
 }
-Status Renderer::GetStatus() {std::lock_guard<std::mutex> lock(mutex_);status_.width=width_;status_.height=height_;return status_;}
+Status Renderer::GetStatus() {std::lock_guard<std::mutex> lock(mutex_);status_.width=width_;status_.height=height_;if(scene_){status_.bounds={scene_->center[0],scene_->center[1],scene_->center[2],scene_->radius};}return status_;}
 void Renderer::InitGL(void *window) {
     dataCapacity_=0;uploadDirty_=true; window_ = window; bufferWidth_ = bufferHeight_ = 0;
     display_=eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if(display_==EGL_NO_DISPLAY || !eglInitialize(display_,nullptr,nullptr)) throw std::runtime_error("EGL display initialization failed");
-    const EGLint configAttrs[]={EGL_SURFACE_TYPE,EGL_WINDOW_BIT,EGL_RENDERABLE_TYPE,EGL_OPENGL_ES3_BIT,EGL_RED_SIZE,8,EGL_GREEN_SIZE,8,EGL_BLUE_SIZE,8,EGL_ALPHA_SIZE,8,EGL_NONE};
-    EGLConfig config; EGLint count;
-    if(!eglChooseConfig(display_,configAttrs,&config,1,&count)||!count) throw std::runtime_error("OpenGL ES 3 window configuration unavailable");
+    EGLint configAttrs[]={EGL_SURFACE_TYPE,EGL_WINDOW_BIT,EGL_RENDERABLE_TYPE,EGL_OPENGL_ES3_BIT,EGL_RED_SIZE,8,EGL_GREEN_SIZE,8,EGL_BLUE_SIZE,8,EGL_ALPHA_SIZE,8,EGL_DEPTH_SIZE,24,EGL_NONE};
+    EGLConfig config; EGLint count=0;
+    for(int depth:{24,16,0}){configAttrs[13]=depth;if(eglChooseConfig(display_,configAttrs,&config,1,&count)&&count)break;}
+    if(!count) throw std::runtime_error("OpenGL ES 3 window configuration unavailable");
     const EGLint attrs[]={EGL_CONTEXT_CLIENT_VERSION,3,EGL_NONE};
     context_=eglCreateContext(display_,config,EGL_NO_CONTEXT,attrs);
     surface_=eglCreateWindowSurface(display_,config,reinterpret_cast<EGLNativeWindowType>(window),nullptr);
     if(context_==EGL_NO_CONTEXT||surface_==EGL_NO_SURFACE||!eglMakeCurrent(display_,surface_,surface_,context_)) throw std::runtime_error("EGL surface/context creation failed");
     eglSwapInterval(display_,1);
+    glGetIntegerv(GL_DEPTH_BITS,&depthBits_);
     const auto *version=glGetString(GL_VERSION), *renderer=glGetString(GL_RENDERER);
     {std::lock_guard<std::mutex> lock(mutex_);status_.graphics=std::string(version?reinterpret_cast<const char*>(version):"unknown")+" / "+(renderer?reinterpret_cast<const char*>(renderer):"unknown");}
     // Optional, asynchronous hardware timing. Never wait for query completion.
@@ -170,13 +210,17 @@ void Renderer::InitGL(void *window) {
     viewLocation_=glGetUniformLocation(program_,"view");viewportLocation_=glGetUniformLocation(program_,"viewport");nearLocation_=glGetUniformLocation(program_,"nearPlane");farLocation_=glGetUniformLocation(program_,"farPlane");dataLocation_=glGetUniformLocation(program_,"splatData");optimizedLocation_=glGetUniformLocation(program_,"optimized");
     glGenVertexArrays(1,&vao_);glBindVertexArray(vao_);glGenBuffers(1,&buffer_);glBindBuffer(GL_ARRAY_BUFFER,buffer_);
     glEnableVertexAttribArray(0);glVertexAttribIPointer(0,1,GL_UNSIGNED_INT,sizeof(uint32_t),nullptr);glVertexAttribDivisor(0,1);
-    GLint maxTexture=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxTexture);if(maxTexture<4096)throw std::runtime_error("4096-wide data textures unavailable");
+    GLint maxTexture=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxTexture);atlasRows_=std::min(maxTexture,8192);atlas_.Reset(atlasRows_*4);encodedRows_=std::min(maxTexture,4096);encodedAtlas_.Reset(encodedRows_*16);encodedBookSlots_.assign(encodedRows_*16,UINT32_MAX);bookAtlas_.Reset(2048);
+    if(maxTexture<4096)throw std::runtime_error("4096-wide data textures unavailable");
     glGenTextures(1,&dataTexture_);glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,dataTexture_);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
     glEnable(GL_BLEND);glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA);glDisable(GL_DEPTH_TEST);glDepthMask(GL_FALSE);glDisable(GL_CULL_FACE);
 }
 void Renderer::DestroyGL() {
+    if(encodedCenters_)glDeleteTextures(1,&encodedCenters_);if(encodedCodes_)glDeleteTextures(1,&encodedCodes_);if(codebookTexture_)glDeleteTextures(1,&codebookTexture_);
+    encodedCenters_=encodedCodes_=codebookTexture_=0;encodedDrawable_=false;encodedBookSlots_.clear();encodedAtlas_.Reset(0);bookAtlas_.Reset(0);activeEncodedPages_.clear();activeBooks_.clear();
+    if(atlasTexture_)glDeleteTextures(1,&atlasTexture_);atlasTexture_=0;atlasDrawable_=false;atlas_.Reset(0);activePages_.clear();stagingPage_.reset();
     if(stagingTexture_)glDeleteTextures(1,&stagingTexture_);stagingTexture_=0;
     if(spareTexture_)glDeleteTextures(1,&spareTexture_);spareTexture_=0;spareCapacity_=dataCapacity_=0;
     stagingScene_.reset();stagingPixels_.clear();stagingIndices_.clear();preuploaded_=false;
@@ -184,13 +228,14 @@ void Renderer::DestroyGL() {
     if(display_==EGL_NO_DISPLAY)return;
     if(context_!=EGL_NO_CONTEXT && surface_!=EGL_NO_SURFACE){
         eglMakeCurrent(display_,surface_,surface_,context_);
+        hotspots_.Destroy();depthBits_=0;
         if(timerQueries_[0])glDeleteQueries(4,timerQueries_);
         if(dataTexture_)glDeleteTextures(1,&dataTexture_);
         if(buffer_)glDeleteBuffers(1,&buffer_);if(vao_)glDeleteVertexArrays(1,&vao_);if(program_)glDeleteProgram(program_);
     }
     timerResult_=nullptr;timerSlot_=0;
     std::fill_n(timerQueries_,4,0);std::fill_n(timerPending_,4,false);std::fill_n(timerInvalid_,4,false);
-    {std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=-1;}
+    {std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=-1;status_.annotationDepth=0;}
     dataTexture_=buffer_=vao_=program_=0;eglMakeCurrent(display_,EGL_NO_SURFACE,EGL_NO_SURFACE,EGL_NO_CONTEXT);
     if(surface_!=EGL_NO_SURFACE)eglDestroySurface(display_,surface_);
     if(context_!=EGL_NO_CONTEXT)eglDestroyContext(display_,context_);
@@ -241,7 +286,7 @@ void Renderer::AdvanceUpload() {
     if(stagingRow_==rows){
         std::lock_guard<std::mutex> lock(mutex_);
         if(stagingGeneration_==loadGeneration_){
-            retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);initialIndices_=std::move(stagingIndices_);
+            activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);initialIndices_=std::move(stagingIndices_);
             spareTexture_=dataTexture_;spareCapacity_=dataCapacity_;
             spareRows_=std::move(dataRows_);dataRows_=std::move(stagingRows_);stagingPreviousRows_.clear();
             status_.uploadedRows=stagingUploadedRows_;status_.reusedRows=stagingReusedRows_;
@@ -250,7 +295,7 @@ void Renderer::AdvanceUpload() {
             sortScene_.reset();sortedScene_.reset();sortedIndices_.clear();
             if(stagingResetCamera_)camera_=Camera{};
             sortScene_=scene_;sortView_=MakeView(*scene_,camera_);sortPending_=true;sortChanged_.notify_one();
-            status_.count=scene_->points.size();status_.state="ready";status_.message="Resident set ready";
+            status_.count=scene_->Count();status_.state="ready";status_.message="Resident set ready";
         }
     }
     std::lock_guard<std::mutex> lock(mutex_);
@@ -270,7 +315,7 @@ void Renderer::Draw(const View &view,int width,int height) {
     const std::array<float,3> direction={view.matrix[2],view.matrix[6],view.matrix[10]};
     bool resort=uploadDirty_;std::vector<uint32_t> sorted;double sortMs=0;
     if(uploadDirty_) {
-        if(initialIndices_.size()==scene_->points.size())sorted=std::move(initialIndices_);
+        if(initialIndices_.size()==scene_->Count())sorted=std::move(initialIndices_);
         else sorted=SortIndices(*scene_,view);
         sortMs=Ms(start);sortDirection_=direction;
     }
@@ -286,22 +331,33 @@ void Renderer::Draw(const View &view,int width,int height) {
         }
     }
     const auto drawStart=Clock::now();
-    glViewport(0,0,width,height);glClearColor(.035f,.045f,.065f,1);glClear(GL_COLOR_BUFFER_BIT);glUseProgram(program_);
+    std::shared_ptr<const HotspotData> annotations;HotspotStyle style;std::array<float,3> background;
+    {std::lock_guard<std::mutex> lock(mutex_);annotations=annotationData_;style=annotationStyle_;background=background_;}
+    const bool annotationReady=depthBits_>0&&hotspots_.Prepare(annotations);
+    {std::lock_guard<std::mutex> lock(mutex_);status_.annotationDepth=annotationReady?depthBits_:0;}
+    glViewport(0,0,width,height);glClearColor(background[0],background[1],background[2],1);glClear(GL_COLOR_BUFFER_BIT);
+    if(annotationReady&&style.visible){glDepthMask(GL_TRUE);glClearDepthf(1);glClear(GL_DEPTH_BUFFER_BIT);hotspots_.Draw(view,width,height,style,false);}
+    if(annotationReady&&style.visible){glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);}else glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);glUseProgram(program_);
     glUniform1i(optimizedLocation_,optimized_.load());
     glUniformMatrix4fv(viewLocation_,1,GL_FALSE,view.matrix.data());
     glUniform2f(viewportLocation_,float(width),float(height));
     glUniform1f(glGetUniformLocation(program_,"tanHalfFov"),view.tanHalfFov);glUniform1f(nearLocation_,view.nearPlane);glUniform1f(farLocation_,view.farPlane);
-    glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,dataTexture_);glUniform1i(dataLocation_,0);
-    if(uploadDirty_ && !preuploaded_) {
-        const size_t height=std::max(size_t(1),(scene_->points.size()*4+4095)/4096);
+    glUniform1i(glGetUniformLocation(program_,"encoded"),scene_->paged&&encodedDrawable_);
+    glUniform1i(glGetUniformLocation(program_,"encodedCodes"),1);glActiveTexture(GL_TEXTURE1);glBindTexture(GL_TEXTURE_2D,encodedCodes_);
+    glUniform1i(glGetUniformLocation(program_,"codebooks"),2);glActiveTexture(GL_TEXTURE2);glBindTexture(GL_TEXTURE_2D,codebookTexture_);
+    glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,scene_->paged?(encodedDrawable_?encodedCenters_:atlasTexture_):dataTexture_);glUniform1i(dataLocation_,0);
+    if(uploadDirty_ && !preuploaded_ && !scene_->paged) {
+        const size_t height=std::max(size_t(1),(scene_->Count()*4+4095)/4096);
         if(uploadPixels_.empty()) {
             uploadPixels_.resize(height*4096*4,0);
-            for(size_t i=0;i<scene_->points.size();++i) {const auto &g=scene_->points[i];float *p=uploadPixels_.data()+i*16;
+            for(size_t i=0;i<scene_->Count();++i) {const auto &g=scene_->points[i];float *p=uploadPixels_.data()+i*16;
                 std::copy_n(g.position,3,p);std::copy_n(g.color,4,p+3);std::copy_n(g.covariance,6,p+7);}
         }
         glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA32F,4096,height,0,GL_RGBA,GL_FLOAT,uploadPixels_.data());dataCapacity_=height;
         std::vector<float>().swap(uploadPixels_);
     }
+    if(resort && scene_->paged)for(auto &index:sorted)index=scene_->addresses.at(index);
     glBindVertexArray(vao_);glBindBuffer(GL_ARRAY_BUFFER,buffer_);if(resort){glBufferData(GL_ARRAY_BUFFER,sorted.size()*sizeof(uint32_t),sorted.data(),GL_DYNAMIC_DRAW);uploadDirty_=false;preuploaded_=false;}
     bool timed=false;
     if(timerResult_) {
@@ -314,28 +370,41 @@ void Renderer::Draw(const View &view,int width,int height) {
         }
         if(!timerPending_[timerSlot_]){timerInvalid_[timerSlot_]=false;glBeginQuery(0x88BF,timerQueries_[timerSlot_]);timed=true;}
     }
-    glDrawArraysInstanced(GL_TRIANGLE_STRIP,0,4,GLsizei(scene_->points.size()));
+    glDrawArraysInstanced(GL_TRIANGLE_STRIP,0,4,GLsizei(scene_->paged && !atlasDrawable_ ? 0 : scene_->Count()));
     if(timed){glEndQuery(0x88BF);timerPending_[timerSlot_]=true;timerSlot_=(timerSlot_+1)%4;}
+    if(annotationReady&&style.visible)hotspots_.Draw(view,width,height,style,true);
     const GLenum error=glGetError();if(error!=GL_NO_ERROR)throw std::runtime_error("OpenGL error: "+std::to_string(error));
     if(!eglSwapBuffers(display_,surface_))throw std::runtime_error("EGL swap failed");
-    std::lock_guard<std::mutex> lock(mutex_);status_.frames++;status_.sortMs=sortMs;status_.frameMs=Ms(drawStart);status_.fps=1000.0/std::max(Ms(start),.001);status_.bytes=(preparedPixels_.capacity()+stagingPixels_.capacity())*sizeof(float)+cacheBytes_.load()+scene_->points.capacity()*sizeof(Gaussian)+scene_->points.size()*68+sorted.capacity()*sizeof(uint32_t);
+    std::lock_guard<std::mutex> lock(mutex_);
+    if(pendingDisplayRevision_ && scene_->paged && atlasDrawable_){
+        status_.displayRevision=pendingDisplayRevision_;status_.refineMs=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count()-pendingDisplayAt_;
+        OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","PageDisplay revision=%{public}llu count=%{public}zu prepareMs=%{public}.2f sortMs=%{public}.2f refineMs=%{public}.2f uploadedBytes=%{public}.0f pageHits=%{public}.0f frameMs=%{public}.2f",(unsigned long long)pendingDisplayRevision_,scene_->Count(),pendingPrepareMs_,pendingSortMs_,status_.refineMs,status_.uploadedBytes,status_.pageHits,Ms(drawStart));
+        pendingDisplayRevision_=0;
+    }
+    if(traceFrames_){const double now=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count();
+        if(lastTraceFrame_>0)OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","StreamPresent intervalMs=%{public}.3f submitMs=%{public}.3f count=%{public}zu revision=%{public}.0f",now-lastTraceFrame_,Ms(drawStart),scene_->Count(),status_.displayRevision);
+        lastTraceFrame_=now;}
+    status_.frames++;status_.sortMs=sortMs;status_.frameMs=Ms(drawStart);status_.fps=1000.0/std::max(Ms(start),.001);status_.bytes=(preparedPixels_.capacity()+stagingPixels_.capacity())*sizeof(float)+cacheBytes_.load()+scene_->points.capacity()*sizeof(Gaussian)+scene_->Count()*68+sorted.capacity()*sizeof(uint32_t);
 }
 void Renderer::LoadLoop() {
+    const int qos=OH_QoS_SetThreadQoS(QOS_USER_INITIATED);
+    OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","Thread QoS LoadLoop() result=%{public}d",qos);
     for (;;) {
         std::vector<std::vector<float>> retiredPixels;std::vector<std::shared_ptr<Scene>> retiredScenes;
-        std::string path;std::vector<std::string> chunks;std::array<float,4> bounds{};std::vector<uint32_t> ranges;uint64_t generation;
+        std::string path;std::vector<std::string> chunks;std::array<float,4> bounds{};std::vector<uint32_t> ranges;uint64_t generation,revision=0;bool paged=false,encoded=false,dropCaches=false;double requestAt=0;
         {
             std::unique_lock<std::mutex> lock(mutex_);
             loadChanged_.wait(lock,[&]{return stop_||!retiredPixels_.empty()||!retiredScenes_.empty()||(active_&&(!pendingPath_.empty()||chunksDirty_));});
             retiredPixels.swap(retiredPixels_);retiredScenes.swap(retiredScenes_);
             if(stop_)return;
             if(!active_)continue;
-            generation=loadGeneration_;path=std::move(pendingPath_);pendingPath_.clear();
+            generation=loadGeneration_;paged=chunksPaged_;encoded=chunksEncoded_;revision=requestRevision_;requestAt=requestAt_;path=std::move(pendingPath_);pendingPath_.clear();
             if(chunksDirty_){chunks=chunkPaths_;bounds=chunkBounds_;ranges=chunkRanges_;chunksDirty_=false;}
-            cancel_=false;
+            if(!path.empty()||!chunks.empty()){dropCaches=dropCaches_;dropCaches_=false;}cancel_=false;
         }
         retiredPixels.clear();retiredScenes.clear();
         if(path.empty()&&chunks.empty())continue;
+        if(dropCaches){decoded_.Clear();selected_.Clear();pageCache_.Clear();sourceIds_.clear();}
         // Prepare CPU uploads and the first sorted index buffer without occupying EGL.
         auto publish=[&](std::shared_ptr<Scene> loaded,bool reset,double loadMs,const std::vector<SourceSpan> &spans) {
             Camera camera;{std::lock_guard<std::mutex> lock(mutex_);camera=reset?Camera{}:camera_;}
@@ -366,7 +435,11 @@ void Renderer::LoadLoop() {
                     std::lock_guard<std::mutex> lock(mutex_);if(!cancel_){status_.state="error";status_.message=e.what();}
                 }
             }
-            if(!chunks.empty()) {
+            if(!chunks.empty() && paged){
+                try{PreparePages(chunks,bounds,ranges,generation,revision,requestAt,encoded);}
+                catch(const std::exception &e){std::lock_guard<std::mutex> lock(mutex_);if(!cancel_ && generation==loadGeneration_){status_.state="error";status_.message=e.what();}}
+            }
+            if(!chunks.empty() && !paged) {
                 const auto start=Clock::now();
                 try {
                     size_t decodedFiles=0,subsetHits=0;
@@ -405,17 +478,19 @@ void Renderer::LoadLoop() {
                 }
             }
 
-        cacheBytes_=decoded_.Bytes()+selected_.Bytes();changed_.notify_one();
+        cacheBytes_=decoded_.Bytes()+selected_.Bytes()+pageCache_.Bytes();changed_.notify_one();
     }
 }
 void Renderer::Loop(void *window) {
+    const int qos=OH_QoS_SetThreadQoS(QOS_USER_INTERACTIVE);
+    OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","Thread QoS Loop(void *window) result=%{public}d",qos);
     try {
         InitGL(window);
         for(;;) {
             Camera camera;int width,height;
             {
                 std::unique_lock<std::mutex> lock(mutex_);
-                changed_.wait(lock,[&]{return stop_||(active_&&(dirty_||preparedScene_));});
+                changed_.wait(lock,[&]{return stop_||(active_&&(dirty_||preparedScene_||preparedPage_));});
                 if(stop_)break;
                 if(preparedScene_ && !stagingScene_){
                     stagingScene_=std::move(preparedScene_);stagingPixels_=std::move(preparedPixels_);
@@ -424,9 +499,11 @@ void Renderer::Loop(void *window) {
                     stagingRows_=std::move(preparedRows_);stagingPreviousRows_.clear();
                     stagingUploadedRows_=stagingReusedRows_=0;
                 }
+                if(preparedPage_ && !stagingPage_)stagingPage_=std::move(preparedPage_);
                 camera=camera_;width=width_;height=height_;dirty_=false;
             }
             AdvanceUpload();
+            AdvancePages();
             {std::lock_guard<std::mutex> lock(mutex_);camera=camera_;}
             Draw(MakeView(*scene_,camera),width,height);
             {std::lock_guard<std::mutex> lock(mutex_);if(status_.state=="waiting"){status_.state="ready";status_.message="OpenGL ES surface ready";}}

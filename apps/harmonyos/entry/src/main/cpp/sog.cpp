@@ -8,6 +8,9 @@
 #include <map>
 #include <memory>
 #include <stdexcept>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
 namespace splat {
 namespace {
 using Bytes=std::vector<uint8_t>;
@@ -46,6 +49,32 @@ std::map<std::string,Bytes> Unzip(const std::string &path) {
     }
     return files;
 }
+// Unbundled SuperSplat SOG uses the same decoder and GPU tables as ZIP SOG.
+// Open relative to a directory descriptor: metadata cannot escape the cache.
+std::map<std::string,Bytes> Unbundled(const std::string &path) {
+    const auto slash=path.find_last_of('/');
+    if(slash==std::string::npos||path.substr(slash+1)!="meta.json")throw std::runtime_error("Invalid SOG metadata path");
+    struct Handle { int fd; ~Handle(){if(fd>=0)close(fd);} } dir{open(path.substr(0,slash).c_str(),O_RDONLY|O_DIRECTORY|O_NOFOLLOW)};
+    if(dir.fd<0)throw std::runtime_error("Cannot open SOG directory");
+    size_t total=0;
+    auto read=[&](const std::string &name,size_t limit){
+        if(name.empty()||name=="."||name==".."||name.find_first_of("/\\")!=std::string::npos||name.find('\0')!=std::string::npos)throw std::runtime_error("Invalid SOG component name");
+        Handle file{openat(dir.fd,name.c_str(),O_RDONLY|O_NOFOLLOW)};struct stat st{};
+        if(file.fd<0||fstat(file.fd,&st)||!S_ISREG(st.st_mode)||st.st_size<=0||uint64_t(st.st_size)>limit||(total+=st.st_size)>128*1024*1024)throw std::runtime_error("SOG component size/type limit");
+        Bytes bytes(st.st_size);size_t offset=0;
+        while(offset<bytes.size()){auto n=::read(file.fd,bytes.data()+offset,bytes.size()-offset);if(n<=0)throw std::runtime_error("Incomplete SOG component");offset+=n;}
+        return bytes;
+    };
+    std::map<std::string,Bytes> files;files.emplace("meta.json",read("meta.json",1024*1024));
+    const auto &bytes=files.at("meta.json");
+    auto meta=nlohmann::json::parse(bytes.begin(),bytes.end(),[](int depth,nlohmann::json::parse_event_t,nlohmann::json &){if(depth>32)throw std::runtime_error("SOG metadata nesting limit");return true;});
+    for(const auto *field:{"means","quats","scales","sh0"}) {
+        const auto names=meta.at(field).at("files").get<std::vector<std::string>>();
+        if(names.size()!=(std::string(field)=="means"?2u:1u))throw std::runtime_error("SOG component count");
+        for(const auto &name:names){if(name=="meta.json"||files.count(name))throw std::runtime_error("Duplicate SOG component");files.emplace(name,read(name,32*1024*1024));}
+    }
+    return files;
+}
 Bytes Pixels(const std::map<std::string,Bytes> &files,const std::string &name,size_t count,int &width,int &height) {
     const auto &b=files.at(name);int w=0,h=0;
     if(!WebPGetInfo(b.data(),b.size(),&w,&h)||w<1||h<1||size_t(w)*h<count||size_t(w)*h>MaxGaussians+16384)throw std::runtime_error("SOG texture dimensions");
@@ -55,8 +84,8 @@ Bytes Pixels(const std::map<std::string,Bytes> &files,const std::string &name,si
     return out;
 }
 }
-Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel) {
-    const auto files=Unzip(path);const auto &mb=files.at("meta.json");
+Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel,bool encoded) {
+    const auto files=path.size()>=10&&path.substr(path.size()-10)=="/meta.json"?Unbundled(path):Unzip(path);const auto &mb=files.at("meta.json");
     if(mb.size()>1024*1024)throw std::runtime_error("SOG metadata too large");
     auto m=nlohmann::json::parse(mb.begin(),mb.end(),[](int depth,nlohmann::json::parse_event_t,nlohmann::json &){if(depth>32)throw std::runtime_error("SOG metadata nesting limit");return true;});
     if(m.at("version")!=2)throw std::runtime_error("SOG v2 required");
@@ -73,25 +102,38 @@ Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel) {
     auto quat=Pixels(files,m.at("quats").at("files").at(0).get<std::string>(),count,width,height);
     auto scale=Pixels(files,m.at("scales").at("files").at(0).get<std::string>(),count,width,height);
     auto color=Pixels(files,m.at("sh0").at("files").at(0).get<std::string>(),count,width,height);
-    Scene scene;scene.points.resize(count);float mins[3]={INFINITY,INFINITY,INFINITY},maxs[3]={-INFINITY,-INFINITY,-INFINITY};
-    for(int i=0;i<count;++i){if(cancel&&cancel->load())throw std::runtime_error("Load cancelled");auto &g=scene.points[i];
-        for(int k=0;k<3;++k){const double t=(uint16_t(high[i*4+k])<<8|low[i*4+k])/65535.;const double v=lo[k]*(1-t)+hi[k]*t;
-            g.position[k]=std::copysign(std::expm1(std::abs(v)),v);mins[k]=std::min(mins[k],g.position[k]);maxs[k]=std::max(maxs[k],g.position[k]);
-            g.color[k]=std::clamp(.5f+.28209479177387814f*sh[color[i*4+k]],0.f,1.f);}
-        g.color[3]=color[i*4+3]/255.f;
-        const float a=(quat[i*4]/255.f-.5f)*1.41421356237f,b=(quat[i*4+1]/255.f-.5f)*1.41421356237f,c=(quat[i*4+2]/255.f-.5f)*1.41421356237f;
-        const float d=std::sqrt(std::max(0.f,1-a*a-b*b-c*c));float w,x,y,z;
-        switch(quat[i*4+3]){case 252:w=d;x=a;y=b;z=c;break;case 253:w=a;x=d;y=b;z=c;break;case 254:w=a;x=b;y=d;z=c;break;case 255:w=a;x=b;y=c;z=d;break;default:throw std::runtime_error("SOG quaternion mode");}
-        const float inv=1/std::sqrt(w*w+x*x+y*y+z*z);w*=inv;x*=inv;y*=inv;z*=inv;
-        const float r[3][3]={{1-2*(y*y+z*z),2*(x*y-z*w),2*(x*z+y*w)}, {2*(x*y+z*w),1-2*(x*x+z*z),2*(y*z-x*w)}, {2*(x*z-y*w),2*(y*z+x*w),1-2*(x*x+y*y)}};
-        float cov[3][3]{};for(int u=0;u<3;++u)for(int v=0;v<3;++v)for(int k=0;k<3;++k)cov[u][v]+=r[u][k]*r[v][k]*std::exp(2*sc[scale[i*4+k]]);
-        const float packed[]={cov[0][0],cov[0][1],cov[0][2],cov[1][1],cov[1][2],cov[2][2]};std::copy_n(packed,6,g.covariance);
+    Scene scene;auto tables=std::make_shared<SogTables>();std::copy_n(sc.begin(),256,tables->scale.begin());std::copy_n(sh.begin(),256,tables->color.begin());
+    if(encoded){scene.tables=tables;scene.positions.resize(count);scene.codes.resize(count);}else scene.points.resize(count);
+    // Quantized means have only 65,536 distinct values per axis. Preserve the
+    // exact double interpolation/expm1 formula, then reuse its float result.
+    std::array<std::vector<float>,3> means;
+    if(count>65536)for(int k=0;k<3;++k){means[k].resize(65536);for(int q=0;q<65536;++q){
+        if((q&4095)==0&&cancel&&cancel->load())throw std::runtime_error("Load cancelled");
+        const double t=q/65535.,v=lo[k]*(1-t)+hi[k]*t;means[k][q]=std::copysign(std::expm1(std::abs(v)),v);
+    }}
+    float mins[3]={INFINITY,INFINITY,INFINITY},maxs[3]={-INFINITY,-INFINITY,-INFINITY};
+    for(int i=0;i<count;++i){if(cancel&&cancel->load())throw std::runtime_error("Load cancelled");
+        float position[3];
+        for(int k=0;k<3;++k){const auto quantized=uint16_t(high[i*4+k])<<8|low[i*4+k];
+            if(means[k].empty()){const double t=quantized/65535.,v=lo[k]*(1-t)+hi[k]*t;position[k]=std::copysign(std::expm1(std::abs(v)),v);}
+            else position[k]=means[k][quantized];
+            mins[k]=std::min(mins[k],position[k]);maxs[k]=std::max(maxs[k],position[k]);}
+        if(quat[i*4+3]<252)throw std::runtime_error("SOG quaternion mode");
+        const SogCodes codes{U32(quat,i*4),U32(scale,i*4)&0xffffffu,U32(color,i*4)};
+        if(encoded){std::copy_n(position,3,scene.positions[i].begin());scene.codes[i]=codes;}
+        else scene.points[i]=DecodeSog(position,codes,*tables);
     }
     double radius2=0;for(int k=0;k<3;++k){scene.center[k]=(mins[k]+maxs[k])*.5f;radius2+=double(maxs[k]-mins[k])*(maxs[k]-mins[k])*.25;}
     scene.radius=std::max(.001f,float(std::sqrt(radius2)));return scene;
 }
-Scene ReadModel(const std::string &path,const std::atomic<bool> *cancel) {
-    auto scene=path.size()>=4&&path.substr(path.size()-4)==".sog"?ReadSog(path,cancel):ReadPly(path,cancel);
+Scene ReadModel(const std::string &path,const std::atomic<bool> *cancel,bool encoded) {
+    auto scene=(path.size()>=4&&path.substr(path.size()-4)==".sog")||(path.size()>=10&&path.substr(path.size()-10)=="/meta.json")?ReadSog(path,cancel,encoded):ReadPly(path,cancel);
     ApplyViewerTransform(scene);return scene;
 }
+std::array<float,4> InspectModel(const std::string &path) {
+    // ReadModel already performs the Viewer import transform exactly once.
+    auto scene=ReadModel(path,nullptr,true);
+    return {scene.center[0],scene.center[1],scene.center[2],scene.radius};
+}
+
 }

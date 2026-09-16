@@ -67,3 +67,73 @@ still rebuilt most data. Recorded the limitation instead of claiming complete
 SuperSplat parity. 2M motion regression passed (59 intervals); process PSS
 sampled 1.54 GiB. Host ASan/UBSan row/cache/parser/math tests and signed
 deployment passed. “Upload” means CPU-to-GPU, not network re-download.
+
+### Stable pages and multitouch follow-up
+
+Implemented the experimental stable source-page renderer, AABB/FOV/rear-penalty
+selector, byte-counted LRU caches, persistent SHA-256-checked file caching,
+versioned first-swap records and a 20-pose full-target-coverage benchmark.
+`docs/harmonyos/stable-pages-20260914.md` records the intermediate 2M results and
+known differences from SuperSplat. Default rendering remains the compatibility
+route. The single-SOG Huawei comparison is separate from native tiled loading.
+
+The user reported right-thumb contact stealing the left-thumb flight stick.
+Root cause: reading global `touches[0]`, and resetting on any pointer-up. Added
+independent stick/viewport pointer ownership and suppressed tap gestures after
+combined input. Host regression covers both arrival orders, array reordering,
+unrelated releases, owner release/cancel, no automatic ownership transfer and
+subsequent independent taps.
+
+Installed the fix on Mate 80 Pro Max/API26 and injected simultaneous two-finger
+motion using the system `uinput -T -m` interface. Right-first held stick geometry
+was exactly unchanged ([173,2163,288,2278]); left-first upward movement changed
+only vertical geometry ([173,2116,288,2231]). Owner-up and system-cancel logs both
+reported owner=-1 and zero x/y. A long two-finger hold invoked system recognition;
+that cancellation is recorded separately from the shorter normal release.
+Evidence: `evidence/stable-pages-20260914/multitouch.json`.
+
+Registered LOD selection in native C++ after profiling ArkTS selection at tens
+of milliseconds. Verified exact parity against the ArkTS selector for 3,443
+leaves and eight pose/budget pairs, then observed 1–4 ms selection on device.
+The latest 20-trial native-selector results are preserved alongside the earlier
+AABB measurements. All trials still require full target coverage and report actual
+Gaussian data uploads. Performance remains experimental rather than a passed
+comparison with SuperSplat.
+
+### SOG 编码页、Web 真机基线与缓存压力
+
+在稳定页分支继续实现 SOG 编码纹理：GPU 每个高斯 64→32 字节，保留浮点
+对照；加入双文件解码预读、量化位置查找表、相邻物理页合并上传和码表引用
+保护。缓存压力保留当前/上一目标文件，没有空间时停止可选预取，避免重复
+下载和立即淘汰。仍使用既有 SDK，兼容路径继续作为启动默认。
+
+Mate 80 Pro Max / API26 每种条件各 20 次最终记录：
+
+- 200 万 GPU 热缓存 P95 312 ms，连续帧间隔 P95 30.4 ms。
+- 400 万 GPU 热缓存 P95 555 ms，连续帧间隔 P95 56.6 ms。
+- 800 万 GPU 热缓存 P95 985 ms，连续帧间隔 P95 149.0 ms，仍为实验档。
+- 三档均为完整目标覆盖、网络 payload 0、高斯页上传 0。
+- 200 万仅文件缓存 P95 3479 ms、网络 payload 0；早期单解码逐页上传为
+  6612 ms。没有达到计划中的 1500 ms。
+
+同手机增加 ArkWeb / SuperSplat 1.31.2 / PlayCanvas 2.22.1 WebGL2 对照，
+相同源数据、SH0、初始镜头、FOV75 和 1320×2623。Web 三档就绪 P95 为
+247.9 / 337.8 / 398.0 ms。选择集合、就绪判据、缓存/预取策略仍存在差异，
+不据此宣称完整对标成功。最初画布反复 resize 的结果作废；修复旧 ready
+状态跨视角和 hilog 环形缓冲丢采样问题后重新测量。
+
+华为单块同源 SOG 路径几何可见、颜色灰褐；同数量 PLY 转换路径恢复颜色。
+未改变模型缩放来掩盖差异，也未将 tiled 接口返回成功计作真实流式验收。
+华为分块和同轨迹性能比较继续是未完成项。
+
+最终编码/浮点 200 万固定镜头 ROI 最大 8 位像素差 1，P99 差 0；三次
+Home/前台循环后 ROI 差 0。多点触控 ID 隔离修复保留，主机回归覆盖两种
+手指到达顺序、触点数组重排、独立抬起和取消。原生 ASan/UBSan 检查缓存、
+双解码并发/取消/异常；524,598 高斯逐个核对编码解码和独立 PLY；12 组
+Native/ArkTS 选择结果一致。构建、签名、真机安装均成功。
+
+源码与完整报告：[encoded-pages-20260914.md](../harmonyos/encoded-pages-20260914.md)。
+逐次 CSV、时间线、内存快照摘要与截图在该报告的 evidence 目录。
+调试 HAP 保留本机 `artifacts/harmonyos/NextNews-debug.hap`，SHA-256：
+`38dfa6f072a2226bc93be98adf0fbcdfef51614d4e2c728f2c7d92903c3bd11f`。
+签名材料、安装缓存和用户原始数据未提交。

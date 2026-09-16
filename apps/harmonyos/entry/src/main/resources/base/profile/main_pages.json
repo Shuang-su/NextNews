@@ -1,6 +1,7 @@
 {
   "src": [
     "pages/Index",
-    "pages/SpatialViewer"
+    "pages/SpatialViewer",
+    "pages/WebComparison"
   ]
 }

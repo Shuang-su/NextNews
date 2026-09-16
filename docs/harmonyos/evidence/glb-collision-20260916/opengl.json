@@ -1,0 +1,41 @@
+{
+  "backend": "OpenGL",
+  "collisionSource": "http://127.0.0.1:8781/room.glb",
+  "scope": "whole-scene 2M",
+  "samples": 81,
+  "performanceAcceptance": false,
+  "visualReviewRequired": true,
+  "first": {
+    "x": 331.5092468261719,
+    "y": -81.62000274658203,
+    "z": 305.30859375,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "last": {
+    "x": 330.19991768669166,
+    "y": -81.620002746582,
+    "z": 302.5722074935703,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "ranges": {
+    "x": [
+      330.19991768669166,
+      331.5092468261719
+    ],
+    "y": [
+      -81.62000274658203,
+      -80.9223671910265
+    ],
+    "z": [
+      302.5722074935703,
+      305.30859375
+    ]
+  },
+  "visualReviewed": true,
+  "physicsEvidence": "synthetic wall x=330, radius 0.2; position trace; not physical building alignment",
+  "fullAcceptance": false,
+  "device": "Mate 80 Pro Max / SGT-AL10",
+  "api": 26
+}

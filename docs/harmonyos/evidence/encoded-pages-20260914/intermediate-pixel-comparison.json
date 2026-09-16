@@ -1,0 +1,12 @@
+{
+  "roi": [
+    0,
+    450,
+    1320,
+    1280
+  ],
+  "meanAbsolute8bitError": 0.0001551661190215407,
+  "p99Absolute8bitError": 0.0,
+  "maxAbsolute8bitError": 1,
+  "pixelsDifferentFraction": 0.00044724351953267616
+}

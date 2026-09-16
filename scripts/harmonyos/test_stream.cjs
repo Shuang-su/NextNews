@@ -33,20 +33,24 @@ if(process.argv[2]) {
  const count=chosen.reduce((n,l,i)=>n+full.leaves[i].lods[l][2],0);assert.ok(count<=2000000);
  console.log('PASS source hierarchy',full.leaves.length,count);
 }
-// Equal-size front/back/side leaves: viewport detail must not be spent behind the camera.
+// Equal-size leaves: rear penalty prioritizes the front while retaining offscreen detail.
 const view={version:2,bounds:[0,0,0,10],levels:2,
  chunks:[{file:'chunk-0000.sog',count:3000,bytes:30000,bounds:[0,0,0,10]}],
  leaves:[{bounds:[0,0,-5,.2],lods:[[0,0,900],[0,900,10]]},
  {bounds:[0,0,5,.2],lods:[[0,1000,900],[0,1900,10]]},
  {bounds:[3,0,-5,.2],lods:[[0,2000,900],[0,2900,10]]}]};
 validate(view);
-assert.deepEqual(Array.from(box.exports.selectLods(view,[0,0,1,0,0,0],true,2000,45,1)),[0,1,1]);
+assert.deepEqual(Array.from(box.exports.selectLods(view,[0,0,1,0,0,0],true,2000,45,1)),[0,1,0]);
 assert.deepEqual(Array.from(box.exports.selectLods(view,[0,0,1,0,0,0],true,2000,75,1)),[0,1,0]);
-assert.deepEqual(Array.from(box.exports.selectLods(view,[Math.PI,0,1,0,0,0],true,2000,45,1)),[1,0,1]);
-console.log('PASS viewport refinement: front/back, FOV, camera turn, retained coarse coverage');
+assert.deepEqual(Array.from(box.exports.selectLods(view,[Math.PI,0,1,0,0,0],true,1000,45,1)),[1,0,1]);
+const malformed=JSON.parse(JSON.stringify(view));malformed.leaves[0].aabb=[1,0,0,-1,1,1];assert.throws(()=>validate(malformed));
+const nearby=JSON.parse(JSON.stringify(view));
+nearby.leaves[2].aabb=[-.01,-.01,-.01,100,.01,.01]; // camera intersects a long thin box
+assert.equal(box.exports.selectLods(nearby,[0,0,1,0,0,0],true,1000,45,1)[2],0);
+console.log('PASS AABB distance, rear penalty, offscreen detail, fixed budget, invalid box');
 (async()=>{
  let inflight=0,peak=0,published=0;
- const fakeFs={OpenMode:{CREATE:1,READ_WRITE:2,TRUNC:4},open:async()=>({fd:1}),write:async(_fd,b)=>b.byteLength,close:async()=>{},unlink:async()=>{}};
+ const fakeFs={OpenMode:{CREATE:1,READ_WRITE:2,TRUNC:4},open:async()=>({fd:1}),write:async(_fd,b)=>b.byteLength,close:async()=>{},rename:async()=>{},unlink:async()=>{}};
  const render={status:()=>({state:'ready'}),chunks:()=>published++};
  const sandbox={exports:{},require:n=>n==='@kit.CoreFileKit'?{fileIo:fakeFs}:n==='libsplat.so'?{default:render}:{}};
  vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,sandbox);
@@ -60,12 +64,29 @@ console.log('PASS viewport refinement: front/back, FOV, camera turn, retained co
  assert.equal(session.cache.size,6);assert.equal(published,1,'unchanged scene should not reupload');
  console.log('PASS streaming scheduler: four requests, early full-preload frame, unchanged selection');
  const turning=new sandbox.exports.StreamSession(()=>{});
- turning.manifest=view;turning.budget=2000;turning.busy=true;
+ turning.manifest=view;turning.budget=1000;turning.busy=true;
  turning.cache.set('chunk-0000.sog','/cache/chunk-0000.sog');
  const beforeTurn=published;
  turning.tick([0,0,1,0,0,0],true,45,1);
  turning.tick([Math.PI,0,1,0,0,0],true,45,1);
  assert.equal(published,beforeTurn+2,'cached front/back selections must publish during pending downloads');
  console.log('PASS cached camera turn does not wait for the network batch');
+
+ const pressure=new sandbox.exports.StreamSession(()=>{}),removed=[];
+ fakeFs.unlink=async path=>removed.push(path);
+ pressure.manifest={version:2,bounds:[0,0,0,1],levels:3,
+  chunks:Array.from({length:4},(_,i)=>({file:`chunk-000${i}.sog`,count:10,bytes:16,bounds:[0,0,0,1]})),
+  leaves:[{bounds:[0,0,0,1],lods:[[2,0,10],[1,0,10],[0,0,10]]}]};
+ pressure.updateSelection=()=>{};pressure.selection=[1];pressure.publishCached=()=>[];
+ pressure.targetFiles=new Set(['chunk-0001.sog']);pressure.previousFiles=new Set(['chunk-0002.sog']);
+ for(let i=0;i<4;i++)pressure.cache.set(`chunk-000${i}.sog`,`/cache/chunk-000${i}.sog`);
+ pressure.loadedBytes=536870912+16;
+ await pressure.pump([0,0,1,0,0,0],true,75,1);
+ assert.deepEqual(removed,['/cache/chunk-0003.sog']);
+ assert.ok(pressure.cache.has('chunk-0002.sog'),'previous view stays pinned');
+ pressure.cache.delete('chunk-0002.sog');let requests=0;pressure.fetch=async()=>{requests++;return new ArrayBuffer(16);};
+ await pressure.pump([0,0,1,0,0,0],true,75,1);
+ assert.equal(requests,0,'full cache must not fetch and immediately evict prefetch');
+ console.log('PASS disk pressure: current/previous views pinned; no prefetch churn without headroom');
 
 })().catch(e=>{console.error(e);process.exitCode=1;});

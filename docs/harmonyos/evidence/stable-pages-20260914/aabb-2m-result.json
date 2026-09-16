@@ -1,0 +1,11 @@
+{
+  "budget": 2000000,
+  "trials": 20,
+  "endToEndP50Ms": 235.0,
+  "endToEndP95Ms": 270.0,
+  "nativeSubmitToSwapP95Ms": 178.08,
+  "allUploadsZero": true,
+  "fullCoverage": true,
+  "frameTimeGateTested": false,
+  "failure": []
+}

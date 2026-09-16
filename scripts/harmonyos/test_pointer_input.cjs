@@ -1,0 +1,28 @@
+const fs=require('fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const ts=require('/Applications/DevEco-Studio.app/Contents/tools/ohpm/node_modules/typescript');
+const box={exports:{},require:()=>({})};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('apps/harmonyos/entry/src/main/ets/pages/PointerInput.ets','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,box);
+const Input=box.exports.PointerInput, input=new Input();
+const right={id:2,x:900,y:300},left={id:7,x:48,y:48};
+input.viewport('down',[right],[right]);
+input.joystick('down',[right,left],[left]);
+assert.equal(input.stickId,7);assert.equal(input.x,0);assert.equal(input.y,0);
+let moved={id:7,x:48,y:18};
+input.joystick('move',[right,moved],[moved]);assert.equal(input.x,0);assert.equal(input.y,-1);
+input.joystick('move',[moved,right],[right]);assert.equal(input.y,-1,'touch ordering cannot redirect movement');
+assert.deepEqual(Array.from(input.viewport('move',[right,moved],[right]),p=>p.id),[2]);
+input.joystick('up',[moved],[right]);assert.equal(input.stickId,7);assert.equal(input.y,-1,'unrelated release cannot stop movement');
+input.joystick('up',[right],[moved]);assert.equal(input.stickId,-1);assert.equal(input.x,0);assert.equal(input.y,0);
+input.joystick('move',[right],[right]);assert.equal(input.stickId,-1,'cannot transfer ownership without down');
+assert.equal(input.blockTap,true,'two-handed gesture cannot focus or toggle on release');
+input.viewport('up',[],[right]);input.viewport('down',[right],[right]);assert.equal(input.blockTap,false);
+input.joystick('down',[left],[left]);input.cancel();assert.equal(input.stickId,-1);assert.equal(input.y,0);
+input.joystick('down',[right],[right]);assert.equal(input.stickId,-1,'outside touches cannot acquire stick');
+// Reverse finger order; releasing/replacing the stick leaves the view pointer intact.
+input.joystick('down',[left],[left]);input.viewport('down',[left,right],[right]);
+input.joystick('cancel',[],[left]);assert.deepEqual(Array.from(input.viewport('move',[right],[right]),p=>p.id),[2]);
+console.log('PASS right-first/left-first, pointer reorder, independent release, cancel, no capture transfer, tap suppression');
+const drag=new Input();drag.viewport('down',[{id:1,x:0,y:0}],[{id:1,x:0,y:0}]);drag.viewport('move',[{id:1,x:9,y:0}],[]);drag.viewport('move',[{id:1,x:0,y:0}],[]);assert.equal(drag.blockTap,true,'returning to down point does not convert drag to tap');
+drag.viewport('up',[],[{id:1,x:0,y:0}]);drag.viewport('down',[{id:5,x:10,y:10}],[{id:5,x:10,y:10}]);assert.equal(drag.blockTap,false,'fresh pointer resets drag suppression');
+const tap=box.exports.tapPosition;assert.equal(tap([]).length,0);assert.equal(tap([undefined]).length,0);assert.equal(tap([{localX:NaN,localY:2}]).length,0);assert.deepEqual(Array.from(tap([undefined,{localX:30,localY:40}])),[30,40]);const mutable={localX:20,localY:10},point=tap([mutable]);mutable.localX=100;assert.equal(point[0],20);
+console.log('PASS sparse gesture fingers, invalid coordinates, copied event data and drag suppression');

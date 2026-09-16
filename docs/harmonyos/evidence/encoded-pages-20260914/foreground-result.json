@@ -1,0 +1,13 @@
+{
+  "cycles": 3,
+  "restoredVisibleCount": 2000000,
+  "roi": [
+    0,
+    450,
+    1320,
+    1280
+  ],
+  "pixelMaxDifference": 0,
+  "pixelMeanDifference": 0.0,
+  "scope": "home/foreground, not forced surface destruction or memory pressure"
+}

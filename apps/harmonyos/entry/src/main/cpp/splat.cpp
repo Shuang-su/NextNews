@@ -115,6 +115,7 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
 }
 
 void ApplyViewerTransform(Scene &scene) {
+    if(scene.tables){for(auto &p:scene.positions){p[0]=-p[0];p[1]=-p[1];}scene.tables->viewerTransform=!scene.tables->viewerTransform;}
     // SuperSplat viewer's import entity: setLocalEulerAngles(0, 0, 180).
     for(auto &g:scene.points) {g.position[0]=-g.position[0];g.position[1]=-g.position[1];g.covariance[2]=-g.covariance[2];g.covariance[4]=-g.covariance[4];}
     scene.center[0]=-scene.center[0];scene.center[1]=-scene.center[1];
@@ -124,20 +125,23 @@ View MakeView(const Scene &scene, const Camera &camera) {
     const float right[] = {std::cos(y), 0, -std::sin(y)};
     const float up[] = {-std::sin(y)*std::sin(p), std::cos(p), -std::cos(y)*std::sin(p)};
     const float back[] = {std::sin(y)*std::cos(p), std::sin(p), std::cos(y)*std::cos(p)};
-    const float distance = camera.fly > .5f ? 0.f : scene.radius * 3.f * std::clamp(camera.zoom, .05f, 20.f);
+    const float distance = camera.fly > .5f ? 0.f : std::max(.01f, scene.radius * 3.f * camera.zoom);
     const float target[] = {camera.panX, camera.panY, camera.panZ};
     float eye[3]; for (int k=0;k<3;++k) eye[k]=scene.center[k]+back[k]*distance+target[k]*scene.radius;
     View v{}; auto &m = v.matrix;
     for(int k=0;k<3;++k) { m[k*4]=right[k]; m[k*4+1]=up[k]; m[k*4+2]=back[k]; }
     for(int k=0;k<3;++k) { m[12]-=right[k]*eye[k]; m[13]-=up[k]*eye[k]; m[14]-=back[k]*eye[k]; }
-    m[15]=1; v.tanHalfFov=std::tan(std::clamp(camera.fov, 1.01f, 178.99f)*.00872664626f); v.nearPlane=scene.radius*.001f; v.farPlane=scene.radius*100.f; return v;
+    m[15]=1; v.tanHalfFov=std::tan(std::clamp(camera.fov, 1.01f, 178.99f)*.00872664626f); const float centerDepth=-(m[2]*scene.center[0]+m[6]*scene.center[1]+m[10]*scene.center[2]+m[14]);
+    // Keep boundary centers inside despite float rounding at the fitted far plane.
+    v.farPlane=std::nextafter(std::max(centerDepth+scene.radius, .01f), INFINITY);
+    v.nearPlane=std::min(1.f,std::max(centerDepth-scene.radius,v.farPlane/16384.f)); return v;
 }
 std::vector<float> Pick(const Scene &scene,const View &view,float x,float y,int width,int height) {
     struct Hit { float depth,alpha; size_t index; }; std::vector<Hit> hits;
     const auto &m=view.matrix;const float f=height/(2.f*view.tanHalfFov);
     const float px=(x-.5f)*width,py=(.5f-y)*height;
-    for(size_t i=0;i<scene.points.size();++i) {
-        const auto &g=scene.points[i];float v[3]={m[12],m[13],m[14]};
+    for(size_t i=0;i<scene.Count();++i) {
+        const auto &g=scene.At(i);float v[3]={m[12],m[13],m[14]};
         for(int r=0;r<3;++r)for(int k=0;k<3;++k)v[r]+=m[k*4+r]*g.position[k];
         const float z=-v[2];if(z<=view.nearPlane||z>=view.farPlane||g.color[3]<.004f)continue;
         const float c[3][3]={{g.covariance[0],g.covariance[1],g.covariance[2]},
@@ -155,24 +159,34 @@ std::vector<float> Pick(const Scene &scene,const View &view,float x,float y,int 
         if(power<=9&&alpha>=1.f/255)hits.push_back({z,alpha,i});
     }
     std::stable_sort(hits.begin(),hits.end(),[](const Hit &a,const Hit &b){return a.depth<b.depth;});
-    float transmittance=1;size_t chosen=0;bool found=false;
-    for(const auto &h:hits){transmittance*=1-h.alpha;chosen=h.index;if(transmittance<=.5f){found=true;break;}}
+    float transmittance=1,depth=0;bool found=false;
+    for(const auto &h:hits){transmittance*=1-h.alpha;depth=h.depth;if(transmittance<=.5f){found=true;break;}}
     if(!found)return {};
-    std::vector<float> result(3);for(int k=0;k<3;++k)result[k]=(scene.points[chosen].position[k]-scene.center[k])/scene.radius;
+    // Return the clicked ray at the composited pick depth, not the Gaussian
+    // center. Large splats must not pull every click to the same screen point.
+    const float cameraPoint[]={px*depth/f-m[12],py*depth/f-m[13],-depth-m[14]};
+    std::vector<float> result(3);
+    for(int k=0;k<3;++k)result[k]=(m[k*4]*cameraPoint[0]+m[k*4+1]*cameraPoint[1]+m[k*4+2]*cameraPoint[2]-scene.center[k])/scene.radius;
     return result;
 }
 std::vector<uint32_t> SortIndices(const Scene &scene, const View &view) {
     struct Item {uint32_t key,index;};
-    std::vector<Item> order(scene.points.size()),temp(scene.points.size());
+    // One independent workspace per loader/sorter thread, reused across cameras.
+    struct Scratch{std::vector<Item> order,temp;};
+    thread_local Scratch scratch;
+    auto &order=scratch.order;auto &temp=scratch.temp;
+    order.resize(scene.Count());temp.resize(scene.Count());
+    size_t hist[4][256]{};
     const auto &m=view.matrix;
     for(uint32_t i=0;i<order.size();++i) {
-        const auto *p=scene.points[i].position;
+        const auto *p=scene.Position(i);
         float depth=m[2]*p[0]+m[6]*p[1]+m[10]*p[2]; // Translation cannot change depth order.
         if(depth==0)depth=0;uint32_t bits;std::memcpy(&bits,&depth,4);
-        order[i]={bits^((bits&0x80000000u)?0xffffffffu:0x80000000u),i};
+        const uint32_t key=bits^((bits&0x80000000u)?0xffffffffu:0x80000000u);
+        order[i]={key,i};++hist[0][key&255];++hist[1][(key>>8)&255];++hist[2][(key>>16)&255];++hist[3][key>>24];
     }
-    for(unsigned shift=0;shift<32;shift+=8) {
-        size_t counts[256]{};for(const auto &v:order)++counts[(v.key>>shift)&255];
+    for(unsigned pass=0;pass<4;++pass) {
+        const unsigned shift=pass*8;auto &counts=hist[pass];
         size_t offset=0;for(auto &c:counts){const auto n=c;c=offset;offset+=n;}
         for(const auto &v:order)temp[counts[(v.key>>shift)&255]++]=v;
         order.swap(temp);
@@ -181,6 +195,6 @@ std::vector<uint32_t> SortIndices(const Scene &scene, const View &view) {
 }
 std::vector<Gaussian> Sort(const Scene &scene,const View &view) {
     const auto indices=SortIndices(scene,view);std::vector<Gaussian> result;result.reserve(indices.size());
-    for(auto i:indices)result.push_back(scene.points[i]);return result;
+    for(auto i:indices)result.push_back(scene.At(i));return result;
 }
 }

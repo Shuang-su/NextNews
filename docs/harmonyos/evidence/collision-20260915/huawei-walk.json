@@ -1,0 +1,40 @@
+{
+  "backend": "Huawei",
+  "scope": "80k single converted sample; not whole-scene comparison",
+  "samples": 86,
+  "performanceAcceptance": false,
+  "visualReviewRequired": true,
+  "first": {
+    "x": 331.5092468261719,
+    "y": -81.62,
+    "z": 305.30859375,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "last": {
+    "x": 329.224531849761,
+    "y": -81.61999999999998,
+    "z": 302.64866326955405,
+    "grounded": 1.0,
+    "blocked": 0.0
+  },
+  "ranges": {
+    "x": [
+      329.224531849761,
+      331.5092468261719
+    ],
+    "y": [
+      -81.62,
+      -81.0343733333333
+    ],
+    "z": [
+      302.64866326955405,
+      305.30859375
+    ]
+  },
+  "visualReviewed": true,
+  "resumeCaptureDelaySeconds": 5,
+  "fullAcceptance": false,
+  "device": "Mate 80 Pro Max / SGT-AL10",
+  "api": 26
+}

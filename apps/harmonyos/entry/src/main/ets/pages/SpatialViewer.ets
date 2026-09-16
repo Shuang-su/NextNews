@@ -1,3 +1,4 @@
+import { comparisonSog, ComparisonAsset } from './ComparisonSog';
 import { common } from '@kit.AbilityKit';
 import { SpatialStream } from './SpatialStream';
 import { ViewerProfile } from './ViewerProfile';
@@ -10,6 +11,7 @@ import { SAMPLE_BOUNDS, SampleBounds } from './ModelBounds';
 @Entry
 @Component
 struct SpatialViewer {
+  private gsNode: spatialRender.GSNode | undefined = undefined;
   private tiled: SpatialStream | undefined = undefined;
   @State tiledUrl: string = 'http://127.0.0.1:8768/huafa.scene.json';
   private profile: ViewerProfile | undefined = undefined;
@@ -28,10 +30,10 @@ struct SpatialViewer {
     this.camera.fov = p.fov * Math.PI / 180;
   }
   private async profileCamera(play: boolean): Promise<void> {
-    if (this.selectedIndex !== 2 && this.selectedIndex !== 3 || !this.camera) { this.message = '请先加载华发转换产物'; return; }
+    if (this.selectedIndex !== 2 && this.selectedIndex !== 3 && this.selectedIndex !== 4 && this.selectedIndex !== 5 || !this.camera) { this.message = '请先加载华发转换产物'; return; }
     try {
       this.stopProfile(); this.stopBenchmark();
-      if (!play || !this.profile) { this.profile = await ViewerProfile.load(this.getUIContext().getHostContext() as common.UIAbilityContext); }
+      if (!play || !this.profile) { this.profile = await ViewerProfile.load(this.getUIContext().getHostContext() as common.UIAbilityContext, [...this.bounds.center, this.bounds.radius]); }
       this.profilePose(play ? this.profile.animation.sample(this.profile.time) : this.profile.initial()); this.profilePlaying = play;
       let previous = Date.now();
       if (play) { this.profileTimer = setInterval(() => {
@@ -66,7 +68,7 @@ struct SpatialViewer {
   aboutToDisappear(): void {
     this.visible = false; this.generation++; this.tiled?.stop(); this.stopBenchmark(); this.stopProfile();
     this.camera = undefined;
-    this.scene?.destroy(); this.scene = undefined;
+    this.scene?.destroy(); this.scene = undefined; this.gsNode = undefined;
     if (!this.busy) { this.tiled?.dispose(); }
   }
   onPageHide(): void { this.stopBenchmark(); if (this.camera) { this.camera.enabled = false; } }
@@ -132,7 +134,7 @@ struct SpatialViewer {
       // Component3D's Scene option is construction-time state: detach before replacing it.
       const oldScene = this.scene; this.scene = undefined; this.camera = undefined;
       await new Promise<void>((resolve) => { setTimeout(resolve, 32); });
-      oldScene?.destroy(); await oldStream?.dispose();
+      oldScene?.destroy(); this.gsNode = undefined; await oldStream?.dispose();
       if (!this.visible || request !== this.generation) { return; }
       const context = Scene.getDefaultRenderContext();
       console.info(`SpatialViewer contextAvailable=${context !== null}`);
@@ -144,16 +146,19 @@ struct SpatialViewer {
       pending = await Scene.load();
       console.info(`SpatialViewer sceneCreated elapsedMs=${Date.now() - start}`);
       stage = '加载 3DGS 模型';
+      let asset: ComparisonAsset | undefined = undefined;
+      if (index === 4 || index === 5) { asset = await comparisonSog(this.getUIContext().getHostContext() as common.UIAbilityContext, index === 5); }
       if (index !== 3) {
         const model = await spatialRender.GSPlugin.loadGSNode(pending,
-          { uri: `OhosRawFile://models/${SAMPLE_BOUNDS[index].file}` }, pending.root ?? undefined);
-        model.rotation = { x: 0, y: 0, z: 1, w: 0 };
+          { uri: asset ? `file://${asset.path}` : `OhosRawFile://models/${SAMPLE_BOUNDS[index].file}` }, pending.root ?? undefined);
+        model.rotation = { x: 0, y: 0, z: 1, w: 0 }; this.gsNode = model;
       }
       stage = '创建相机';
       const camera = await pending.getResourceFactory().createCamera({ name: 'comparisonCamera' });
       if (!this.visible || request !== this.generation) { return; }
-      const source = SAMPLE_BOUNDS[index === 3 ? 2 : index];
+      const source = SAMPLE_BOUNDS[index >= 3 ? 2 : index];
       this.bounds = { file: source.file, center: [-source.center[0], -source.center[1], source.center[2]], radius: source.radius };
+      if (asset) { this.bounds = { file: index === 5 ? 'comparison-sh0.ply' : 'chunk-0008.sog', center: asset.bounds.slice(0, 3), radius: asset.bounds[3] }; }
       camera.fov = Math.PI / 4; camera.nearPlane = this.bounds.radius * 0.001;
       camera.farPlane = this.bounds.radius * 100; camera.enabled = this.foreground;
       pending.environment.backgroundType = EnvironmentBackgroundType.BACKGROUND_NONE;
@@ -171,6 +176,7 @@ struct SpatialViewer {
         await adapter.open(this.tiledUrl, this.getUIContext().getHostContext() as common.UIAbilityContext, pending, camera);
         await this.profileCamera(false);
       }
+      if (index === 4 || index === 5) { await this.profileCamera(false); }
       this.scene = pending; pending = undefined;
       if (index !== 3) { this.message = `${this.bounds.file} · 加载接口 ${Date.now() - start} ms · SH0 输入\nSpatialReconKit / ArkGraphics3D · Rz 180°`; }
     } catch (error) {
@@ -180,7 +186,7 @@ struct SpatialViewer {
         console.error(`SpatialViewer ${stage}: code=${(error as BusinessError)?.code ?? -1} ${detail}`);
       }
     } finally {
-      pending?.destroy();
+      if (pending) { pending.destroy(); this.gsNode = undefined; }
       if (!this.visible) { this.tiled?.dispose(); }
       if (request === this.generation) { this.busy = false; }
     }
@@ -232,6 +238,10 @@ struct SpatialViewer {
           Button(this.profilePlaying ? '暂停配置动画' : '播放配置动画').fontSize(12).onClick(() => { if (this.profilePlaying) { this.stopProfile(); } else { this.profileCamera(true); } });
         }
         TextInput({ text: this.tiledUrl }).fontSize(12).fontColor('#EDF6FC').backgroundColor('#28354A').onChange((url: string) => { this.tiledUrl = url; });
+        Row({ space: 6 }) {
+          Button('同源 SOG · loadGSNode').fontSize(12).enabled(!this.busy).onClick(() => this.load(4));
+          Button('同源 PLY').fontSize(12).enabled(!this.busy).onClick(() => this.load(5));
+        }
         Button('连接原生流式').enabled(!this.busy).onClick(() => this.load(3));
         Text(this.benchmarkResult).fontSize(12).fontColor('#EBC478');
       }.padding(12).width('100%').backgroundColor('#BB07131F').position({ x: 0, y: '100%' }).translate({ y: '-100%' });

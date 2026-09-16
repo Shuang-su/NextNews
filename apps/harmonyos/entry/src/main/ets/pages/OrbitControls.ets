@@ -7,13 +7,17 @@ export class OrbitControls {
   height: number = 1;
   fly: boolean = false;
   speed: number = 1;
+  sceneRadius: number = 1;
   fov: number = 45;
   keys: string[] = [];
+  axes: number[] = [0, 0, 0];
+  private velocity: number[] = [0, 0, 0];
+  private displacement: number[] = [0, 0, 0];
   private previous: OrbitTouch[] = [];
   reset(): void {
     this.current = [0, 0, 1, 0, 0, 0]; this.target = [0, 0, 1, 0, 0, 0]; this.fly = false; this.keys = []; this.cancel();
   }
-  cancel(): void { this.previous = []; this.keys = []; }
+  cancel(): void { this.previous = []; this.keys = []; this.axes = [0, 0, 0]; this.velocity = [0, 0, 0]; this.displacement = [0, 0, 0]; }
   resize(width: number, height: number): void {
     // Viewport layout changes must preserve the world-space camera pose.
     this.width = Math.max(1, width); this.height = Math.max(1, height); this.cancel();
@@ -34,28 +38,34 @@ export class OrbitControls {
     const eye = [this.current[3] + Math.sin(y) * Math.cos(p) * d,
       this.current[4] + Math.sin(p) * d, this.current[5] + Math.cos(y) * Math.cos(p) * d];
     const dx = eye[0] - point[0]; const dy = eye[1] - point[1]; const dz = eye[2] - point[2];
-    const distance = Math.hypot(dx, dy, dz); if (distance < 0.15 || distance > 60) { return; }
+    const distance = Math.hypot(dx, dy, dz); if (distance * this.sceneRadius < 0.01) { return; }
     const yaw = Math.atan2(dx, dz);
     this.target = [y + Math.atan2(Math.sin(yaw - y), Math.cos(yaw - y)),
       Math.max(-1.5, Math.min(1.5, Math.asin(dy / distance))), distance / 3,
       ...(this.fly ? eye : point)];
     this.current = this.target.slice(); this.cancel();
   }
-  move(right: number, up: number, forward: number): void {
-    const y = this.current[0]; const p = this.current[1];
-    this.target[3] += Math.cos(y) * right - Math.sin(y) * Math.cos(p) * forward;
-    this.target[4] += up - Math.sin(p) * forward;
-    this.target[5] -= Math.sin(y) * right + Math.cos(y) * Math.cos(p) * forward;
-    for (let i = 3; i < 6; i++) { this.target[i] = Math.max(-100, Math.min(100, this.target[i])); }
+  moveWorld(right: number, up: number, forward: number): void {
+    const values = [right, up, forward];
+    if (!values.every((v: number) => Number.isFinite(v))) { return; }
+    for (let i = 0; i < 3; i++) { this.displacement[i] += values[i]; }
+  }
+  wheel(delta: number): void {
+    if (!Number.isFinite(delta)) { return; }
+    if (this.fly) { this.moveWorld(0, 0, -delta * .06 / 60); }
+    else { this.zoom(Math.exp(Math.max(-1, Math.min(1, delta * .002)))); }
   }
   key(key: string, down: boolean): void {
     this.keys = this.keys.filter((k: string) => k !== key);
     if (down) { this.keys.push(key); }
   }
   zoom(factor: number): void {
-    if (this.fly) { this.move(0, 0, -Math.log(Math.max(0.01, factor))); return; }
+    if (!Number.isFinite(factor) || factor <= 0) { return; }
+    if (this.fly) { this.moveWorld(0, 0, -Math.log(Math.max(0.01, factor))); return; }
 
-    this.target[2] = Math.max(0.05, Math.min(20, this.target[2] * factor));
+    const next = this.target[2] * factor;
+    // Official zoomRange is 0.01 world units to Infinity, not a scene fraction.
+    if (Number.isFinite(next)) { this.target[2] = Math.max(0.01 / (3 * this.sceneRadius), next); }
   }
   pan(dx: number, dy: number): void {
     // Radius-normalized world target. 45-degree vertical FOV, distance = radius * 3 * zoom.
@@ -77,7 +87,7 @@ export class OrbitControls {
       this.target[0] -= turn; this.current[0] -= turn;
     }
   }
-  touch(points: OrbitTouch[], panMode: boolean): void {
+  touch(points: OrbitTouch[], panMode: boolean, gaming: boolean = false): void {
     const next = points.slice().sort((a: OrbitTouch, b: OrbitTouch) => a.id - b.id);
     const old = this.previous;
     this.previous = next;
@@ -87,23 +97,43 @@ export class OrbitControls {
       const dx = next[0].x - old[0].x; const dy = next[0].y - old[0].y;
       if (panMode) { this.pan(dx, dy); } else { this.rotate(dx, dy); }
     } else {
+      // In gaming mode only the separately owned joystick moves the camera.
+      if (this.fly && gaming) { return; }
       const dx = (next[0].x + next[1].x - old[0].x - old[1].x) / 2;
       const dy = (next[0].y + next[1].y - old[0].y - old[1].y) / 2;
-      this.pan(dx, dy);
+      if (this.fly) {
+        const scale = 6 * this.target[2] * this.sceneRadius * Math.tan(this.fov * Math.PI / 360) / this.height;
+        this.moveWorld(-dx * scale, dy * scale, 0);
+      } else { this.pan(dx, dy); }
       const before = Math.hypot(old[1].x - old[0].x, old[1].y - old[0].y);
       const after = Math.hypot(next[1].x - next[0].x, next[1].y - next[0].y);
-      if (before > 4 && after > 4) { this.zoom(before / after); }
+      if (before > 4 && after > 4) { if (this.fly) { this.moveWorld(0, 0, (after - before) * .4 / 60); } else { this.zoom(before / after); } }
     }
   }
   tick(elapsedMs: number): boolean {
+    let changed = false;
     if (this.fly) {
-      const speed = this.speed * Math.min(64, elapsedMs) / 1000;
-      this.move((Number(this.keys.includes('d')) - Number(this.keys.includes('a'))) * speed,
-        (Number(this.keys.includes('e')) - Number(this.keys.includes('q'))) * speed,
-        (Number(this.keys.includes('w')) - Number(this.keys.includes('s'))) * speed);
+      const dt = Math.max(0, Math.min(64, elapsedMs)) / 1000;
+      const keyAxis = [Number(this.keys.includes('d')) - Number(this.keys.includes('a')),
+        Number(this.keys.includes('e')) - Number(this.keys.includes('q')),
+        Number(this.keys.includes('w')) - Number(this.keys.includes('s'))];
+      const length = Math.hypot(...keyAxis), multiplier = this.keys.includes('shift') ? 4 : this.keys.includes('ctrl') ? .25 : 1;
+      const desired = keyAxis.map((v: number) => length ? v / length * 4 * this.speed * multiplier : 0);
+      const damping = Math.hypot(...desired) > Math.hypot(...this.velocity) ? .992 : .993;
+      const blend = 1 - Math.pow(damping, dt * 1000);
+      this.velocity = this.velocity.map((v: number, i: number) => v + (desired[i] - v) * blend);
+      if (length === 0 && Math.hypot(...this.velocity) < .01) { this.velocity = [0, 0, 0]; }
+      const delta = this.axes.map((v: number, i: number) => ((v * 4 * this.speed + this.velocity[i]) * dt + this.displacement[i]) / this.sceneRadius);
+      this.displacement = [0, 0, 0];
+      const y = this.current[0], p = this.current[1], right = delta[0], up = delta[1], forward = delta[2];
+      // Official first-person movement is in camera basis and world units.
+      const offset = [Math.cos(y) * right - Math.sin(y) * Math.sin(p) * up - Math.sin(y) * Math.cos(p) * forward,
+        Math.cos(p) * up - Math.sin(p) * forward,
+        -Math.sin(y) * right - Math.cos(y) * Math.sin(p) * up - Math.cos(y) * Math.cos(p) * forward];
+      for (let i = 0; i < 3; i++) { this.current[i + 3] += offset[i]; this.target[i + 3] += offset[i]; }
+      changed = offset.some((v: number) => v !== 0);
     }
     const alpha = 1 - Math.pow(0.95, Math.max(0, Math.min(64, elapsedMs)));
-    let changed = false;
     for (let i = 0; i < 6; i++) {
       const delta = this.target[i] - this.current[i];
       if (delta !== 0) {

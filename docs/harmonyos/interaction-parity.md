@@ -57,3 +57,20 @@ CPU 仍执行后台 radix 排序；没有宣称改成 GPU 排序或完整迁移 
 | 碰撞行走、XR、天空盒及后处理设置 | 尚未实现 |
 
 以上最后两项需要对应资源和独立接口，不以无效图标冒充可用能力。
+
+## Multitouch ownership regression (2026-09-14)
+
+The flight stick previously read `event.touches[0]`. With a right-hand finger
+already on the viewport, a left-hand stick press could therefore use the right
+finger's coordinates. Any finger-up also reset the stick.
+
+`PointerInput` now captures the changed down pointer inside the stick and keeps
+that ID until its own up/cancel. Array order and unrelated releases cannot
+transfer ownership. The viewport separately tracks its down pointers, excluding
+the stick, so looking while flying does not accidentally become a two-finger
+pan/pinch. Combined gestures suppress tap focus/mode switching. Hiding the stick,
+switching modes, or backgrounding cancels movement.
+
+Run `node scripts/harmonyos/test_pointer_input.cjs` for right-first/left-first,
+reordered touches, independent release, cancellation, recapture prevention and
+tap suppression cases. Device injection evidence is recorded in the work log.

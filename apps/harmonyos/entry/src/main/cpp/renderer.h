@@ -2,6 +2,8 @@
 #include "splat.h"
 #include "upload_rows.h"
 #include "scene_cache.h"
+#include "page_atlas.h"
+#include "hotspots.h"
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <condition_variable>
@@ -15,8 +17,11 @@ struct Status {
     std::string state = "waiting", message = "Waiting for render surface", graphics;
     size_t count = 0, bytes = 0, frames = 0;
     int width = 1, height = 1;
+    int annotationDepth = 0;
+    std::array<float,4> bounds{0,0,0,1};
     double gpuMs = -1, uploadMs = 0;
     size_t uploadedRows = 0, reusedRows = 0, decodedFiles = 0, subsetHits = 0;
+    double requestRevision=0,displayRevision=0,prepareMs=0,refineMs=0,uploadedBytes=0,pageHits=0;
     double loadMs = 0, sortMs = 0, frameMs = 0, fps = 0;
 };
 class Renderer {
@@ -28,8 +33,13 @@ public:
     void Resize(int width, int height);
     void Load(std::string path);
     void SetCamera(Camera camera);
-    void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {});
+    void SetBackground(std::array<float,3> color);
+    void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {},bool paged=false,uint64_t revision=0,bool encoded=false);
     void SetActive(bool active);
+    void SetAnnotations(std::shared_ptr<const HotspotData> data);
+    void SetAnnotationStyle(HotspotStyle style);
+    void DropCaches();
+    void TraceFrames(bool enabled);
     void SetOptimized(bool enabled);
     Status GetStatus();
     std::vector<float> Pick(float x,float y);
@@ -39,6 +49,42 @@ private:
     void LoadLoop();
     void InitGL(void *window);
     void DestroyGL();
+    struct PageLoad {
+        std::shared_ptr<Scene> scene;
+        std::vector<PageKey> keys;
+        std::vector<std::shared_ptr<Scene>> pages;
+        std::vector<uint32_t> indices;
+        uint64_t generation=0,revision=0;
+        double requestAt=0,prepareMs=0,sortMs=0;
+        std::array<float,3> sortDirection{};
+        size_t cursor=0,uploaded=0,hits=0;
+        bool planned=false,encoded=false;
+        std::vector<PageKey> books;
+        std::vector<uint32_t> bookSlots;
+        std::vector<uint32_t> uploadOrder;
+    };
+    void PreparePages(const std::vector<std::string>& paths,const std::array<float,4>& bounds,const std::vector<uint32_t>& ranges,uint64_t generation,uint64_t revision,double requestAt,bool encoded);
+    void AdvancePages();
+    std::shared_ptr<PageLoad> preparedPage_,stagingPage_;
+    PageAtlas atlas_,encodedAtlas_,bookAtlas_;
+    GLuint encodedCenters_=0,encodedCodes_=0,codebookTexture_=0;
+    std::vector<PageKey> activeEncodedPages_,activeBooks_;
+    std::vector<uint32_t> encodedBookSlots_;
+    bool encodedDrawable_=false;
+    bool chunksEncoded_=false;
+    uint32_t encodedRows_=0;
+    GLuint atlasTexture_=0;
+    bool atlasDrawable_=false;
+    uint32_t atlasRows_=0;
+    std::vector<PageKey> activePages_;
+    SceneCache<PageKey> pageCache_{384*1024*1024};
+    bool chunksPaged_=false;
+    bool dropCaches_=false,traceFrames_=false;
+    double lastTraceFrame_=0;
+    uint64_t requestRevision_=0;
+    double requestAt_=0;
+    uint64_t pendingDisplayRevision_=0;
+    double pendingDisplayAt_=0,pendingPrepareMs_=0,pendingSortMs_=0;
     void AdvanceUpload();
     void Draw(const View &view, int width, int height);
     std::mutex mutex_;
@@ -80,13 +126,18 @@ private:
     std::vector<std::string> chunkPaths_;
     std::array<float,4> chunkBounds_{};
     std::vector<uint32_t> chunkRanges_;
-    SceneCache<std::string> decoded_{8000000};
-    SceneCache<std::pair<std::string,std::vector<uint32_t>>> selected_{8000000};
+    SceneCache<std::string> decoded_{256*1024*1024};
+    SceneCache<std::pair<std::string,std::vector<uint32_t>>> selected_{256*1024*1024};
     bool chunksDirty_ = false;
     Camera camera_;
+    std::array<float,3> background_{0,0,0};
     Status status_;
     std::shared_ptr<Scene> scene_ = std::make_shared<Scene>();
     bool uploadDirty_ = true;
+    Hotspots hotspots_;
+    std::shared_ptr<const HotspotData> annotationData_;
+    HotspotStyle annotationStyle_;
+    int depthBits_=0;
     std::array<float,3> sortDirection_{};
     EGLDisplay display_ = EGL_NO_DISPLAY;
     EGLContext context_ = EGL_NO_CONTEXT;

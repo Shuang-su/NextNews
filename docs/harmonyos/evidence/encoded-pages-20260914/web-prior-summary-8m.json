@@ -1,0 +1,28 @@
+{
+  "renderer": "webgl2",
+  "userAgent": "Mozilla/5.0 (Phone; OpenHarmony 7.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36  ArkWeb/7.0.0.105 Mobile",
+  "trials": 20,
+  "readyP95Ms": 500.5,
+  "frameP95Ms": 284.79999999701977,
+  "frames": 145,
+  "width": 1320,
+  "height": 2623,
+  "budget": 8000000,
+  "drawn": 7946053,
+  "camera": {
+    "position": [
+      331.5092468261719,
+      -73.70159149169922,
+      305.30859375
+    ],
+    "target": [
+      294.58247057795904,
+      -76.48368607030395,
+      272.58759588286796
+    ],
+    "fov": 75
+  },
+  "trajectory": "yaw + 0.65 sin(1.2t), pitch + 0.08 sin(0.7t)",
+  "note": "Engine frame:ready; selection algorithm differs; not a NextNews coverage gate",
+  "cacheCondition": "two warm-up poses; upstream browser/CPU/GPU caches not separated"
+}

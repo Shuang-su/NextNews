@@ -1,5 +1,10 @@
 # HarmonyOS native 3DGS development
 
+Latest installed Viewer: [world-speed flight and held elevation](flight-input-20260916.md).
+[OpenGL depth annotations](depth-enabled-20260916.md) are now enabled and phone-verified for the recorded cases; Huawei remains a 2D fallback.
+Latest uninstalled candidate: [configured background color](background-20260916.md), including [world-space wheel/pinch displacement](displacement-input-20260916.md).
+The [v1.31.2 parity matrix](viewer-parity-v1312.md) distinguishes preview checks from unfinished acceptance.
+
 ## Architecture
 
 The application uses ArkTS/ArkUI (Stage model), a surface XComponent, a C++17
@@ -7,7 +12,8 @@ native library and OpenGL ES 3.0. Models and streamed selections are decoded, me
 a separate worker sorts camera updates. Streaming textures upload to a staging texture in at most 4 MiB batches per frame; the previous resident scene remains drawable until the replacement is ready. Rendering uses instanced Gaussian ellipses,
 projected anisotropic covariance and back-to-front premultiplied alpha blending.
 The first version uses SH0 color, a 45° vertical field of view and orbit controls.
-This is a native renderer; there is no ArkWeb dependency.
+The main renderer uses native OpenGL ES. The separate **SuperSplat Web 对照**
+page uses ArkWeb to run a pinned upstream viewer on the same phone.
 
 `libsplat.so` exports `load(path)`, `camera(yaw,pitch,zoom,targetX,targetY,targetZ,fly)`,
 `pick(x,y)`, `chunks(paths,bounds,ranges)`, `setActive(boolean)`, and `status()`. Model parsing is asynchronous relative to
@@ -182,3 +188,43 @@ selected ranges. Retained GPU textures skip exactly matching rows (up to
 4 MiB of changed rows per frame). This does not yet eliminate whole-scene
 CPU packing. See the streaming pipeline report for memory costs and phone
 evidence; `test_stream_cache.py` exercises row identities and LRU eviction.
+
+The experimental **流式：稳定页** switch retains source GPU pages and sends a
+versioned selection of addresses. See [stable-pages-20260914.md](stable-pages-20260914.md)
+for implementation, measured gates and current limitations. `benchmark_pages.py`
+records 20 full-coverage camera turns; `--file-only` drops reusable CPU/GPU source
+identities while retaining the previous drawable scene and cached files. The
+legacy path remains the default pending complete acceptance.
+
+The **纹理：SOG 编码（实验）** switch adds 32-byte GPU Gaussians, two-file native
+decode prefetch and row-coalesced uploads. It also unlocks the experimental 8M
+budget. The **SuperSplat Web 对照** and **同源 PLY** controls provide separate
+upstream/Huawei checks; see [encoded-pages-20260914.md](encoded-pages-20260914.md)
+for reproducible commands, measurements and limits of the comparison.
+
+Multitouch controls use independent pointer ownership for the flight stick and
+viewport. Run `node scripts/harmonyos/test_pointer_input.cjs` for the regression.
+
+## Common Viewer preview (2026-09-15)
+
+The common Viewer preview supersedes the historical toolbar/key descriptions above:
+F frames the scene, Space plays/pauses the configured animation, 1/2 select orbit/fly,
+G changes gaming controls, and double-click focuses into orbit. The shared single-model
+OpenGL/Huawei page includes viewer-settings migration, annotations and a timeline.
+See [scope, device evidence and incomplete parity matrix](viewer-common-20260915.md).
+`verify_viewer_common.py` is the current smoke test; historical `verify_toolbar.py`
+expects superseded custom double-click/keyboard behavior.
+
+## Shared walk / voxel preview (2026-09-15)
+
+Key 3 enters experimental walk after collision resources are loaded; Space jumps in
+walk. The native module uses the official fixed step and shared world coordinates
+for OpenGL and Huawei. It supports single and tiled v1.0/v1.1 voxels, byte caches
+and unknown-region blocking. See [scope, commands and phone evidence](collision-preview-20260915.md).
+`verify_walk.py --backend OpenGL|Huawei` captures the actual 32-tile scene or the
+Huawei single sample respectively; these are separate functional tests.
+
+The follow-up adds static GLB collision and cancellation/cache-retry handling.
+See [GLB scope and phone evidence](glb-collision-20260916.md) and the
+[complete remaining parity matrix](viewer-parity-v1312.md). No current preview
+claims full Viewer parity or passing the 2M/4M/8M performance gates.

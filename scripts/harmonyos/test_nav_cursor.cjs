@@ -1,0 +1,11 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const ts=require('/Applications/DevEco-Studio.app/Contents/tools/ohpm/node_modules/typescript');
+const box={exports:{},require:()=>({})};vm.runInNewContext(ts.transpileModule(fs.readFileSync('apps/harmonyos/entry/src/main/ets/pages/ViewerNavCursor.ets','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,box);
+const Cursor=box.exports.ViewerNavCursor,c=new Cursor(),pose={position:[0,0,10],target:[0,0,0],fov:60};
+assert.equal(c.rings(pose,400,800).length,0);c.set([0,0,0],pose,'orbit');
+const ring=c.rings(pose,400,800);assert.equal(ring.length,2);assert.equal(ring[0].length,24);
+const xs=ring[0].filter((_,i)=>i%2===0),ys=ring[0].filter((_,i)=>i%2===1);assert.ok(Math.abs(Math.max(...xs)-Math.min(...xs)-48)<1e-6);assert.ok(Math.abs(Math.max(...ys)-Math.min(...ys)-48)<1e-6);
+assert.ok(Math.abs(Math.hypot(ring[1][0]-200,ring[1][1]-400)/Math.hypot(ring[0][0]-200,ring[0][1]-400)-.85)<1e-6);
+const moved={position:[2,0,10],target:[2,0,0],fov:60};assert.notEqual(c.rings(moved,400,800)[0][0],ring[0][0]);assert.equal(c.rings({position:[0,0,-10],target:[0,0,-20],fov:60},400,800).length,0);
+c.set([0,0,9],pose,'fly');assert.equal(c.rings(pose,400,800).length,0);c.set([0,0,9],pose,'orbit');assert.equal(c.rings(pose,400,800).length,2);c.clear();assert.equal(c.rings(pose,400,800).length,0);
+console.log('PASS target follows world/camera, 48px/0.85 ring, behind-camera clip, mode distance and clear');

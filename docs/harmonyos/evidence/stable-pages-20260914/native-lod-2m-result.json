@@ -1,0 +1,12 @@
+{
+  "cache": "gpu",
+  "budget": 2000000,
+  "trials": 20,
+  "endToEndP50Ms": 285.0,
+  "endToEndP95Ms": 311.0,
+  "nativeSubmitToSwapP95Ms": 241.23,
+  "allUploadsZero": true,
+  "fullCoverage": true,
+  "frameTimeGateTested": false,
+  "failure": []
+}
