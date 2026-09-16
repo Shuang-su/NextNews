@@ -1,3 +1,4 @@
+import { sogComponents, SogMetadata } from './ViewerLodManifest';
 import { metaFlowIndexUrl, resolveMetaFlow } from './MetaFlowScene';
 import { ViewerScene, describeScene } from './ViewerScene';
 import { http } from '@kit.NetworkKit';
@@ -6,6 +7,7 @@ import { util, url } from '@kit.ArkTS';
 import { cryptoFramework } from '@kit.CryptoArchitectureKit';
 import { viewerRequests } from './ViewerRequests';
 import { ViewerSettings, parseViewerSettings, createSettings } from './ViewerSettings';
+interface SogReceipt { names: string[]; sizes: number[]; }
 export interface CatalogProject {
   modelId: string; modelTitle: string; modelType: string; modelFileUrl?: string; modelSetting?: string | Object;
   lodMeta?: string; lodSettings?: string; lodBin?: string; thumbnailUrl?: string; coverUrl?: string;
@@ -104,8 +106,13 @@ export class ViewerCatalog {
       settings.postEffectSettings.grading.enabled = false; settings.postEffectSettings.vignette.enabled = false; settings.postEffectSettings.fringing.enabled = false;
     }
     const scene = describeScene(config.content, config.settings || address, settings, config.poster, config.collision || config.voxelManifest || config.voxel);
-    const project: CatalogProject = { modelId: '0', modelTitle: config.title,
-      modelType: new url.URL(config.content).pathname.endsWith('.json') ? 'lod' : 'default' };
+    let type = 'default';
+    if (new url.URL(config.content).pathname.endsWith('.json')) {
+      const source = JSON.parse(await this.text(config.content)) as SogMetadata;
+      if (source.version === 2 && source.means) { sogComponents(source, 1); }
+      else { type = 'lod'; }
+    }
+    const project: CatalogProject = { modelId: '0', modelTitle: config.title, modelType: type };
     return { project, content: scene.content, configuration: scene.configuration, poster: scene.poster,
       settings: scene.settings, collision: scene.collision, player: config };
   }
@@ -130,6 +137,7 @@ export class ViewerCatalog {
     return this.resource(asset.content, directory, progress);
   }
   async resource(content: string, directory: string, progress?: (percent: number) => void): Promise<string> {
+    if (new url.URL(content).pathname.endsWith('.json')) { return this.looseSog(content, directory, progress); }
     const extension = new url.URL(content).pathname.endsWith('.sog') ? '.sog' : new url.URL(content).pathname.endsWith('.ply') ? '.ply' : '';
     if (!extension) { throw new Error('单体模型暂时仅支持 SOG / 标准 3DGS PLY'); }
     const hash = cryptoFramework.createMd('SHA256'); await hash.update({ data: new util.TextEncoder().encodeInto(content) });
@@ -142,4 +150,41 @@ export class ViewerCatalog {
     finally { await fs.close(file); }
     if (this.stopped) { throw new Error('项目加载已取消'); } await fs.rename(`${path}.part`, path); return path;
   }
+  private async writeResource(path: string, data: ArrayBuffer): Promise<void> {
+    if (this.stopped) { throw new Error('项目加载已取消'); }
+    const file = await fs.open(`${path}.part`, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
+    try { let offset = 0; while (offset < data.byteLength) { const n = await fs.write(file.fd, data.slice(offset)); if (n <= 0) { throw new Error('资源缓存写入失败'); } offset += n; } }
+    finally { await fs.close(file); }
+    if (this.stopped) { throw new Error('项目加载已取消'); }
+    await fs.rename(`${path}.part`, path);
+  }
+  private async looseSog(address: string, directory: string, progress?: (percent: number) => void): Promise<string> {
+    progress?.(-1);
+    const metadata = await this.fetch(address, 1048576);
+    const text = new util.TextDecoder('utf-8', { fatal: true }).decodeWithStream(new Uint8Array(metadata));
+    const names = sogComponents(JSON.parse(text) as SogMetadata, 1);
+    const digest = cryptoFramework.createMd('SHA256'); await digest.update({ data: new util.TextEncoder().encodeInto(address + text) });
+    const key = Array.from((await digest.digest()).data).map((v: number) => v.toString(16).padStart(2, '0')).join('');
+    const folder = `${directory}/cdn-${key}.parts`, path = `${folder}/meta.json`;
+    try {
+      const receipt = JSON.parse(await fs.readText(`${folder}/ready.json`)) as SogReceipt;
+      if (receipt.names.length !== names.length || receipt.sizes.length !== names.length || (await fs.stat(path)).size !== metadata.byteLength) { throw new Error('缓存元数据不完整'); }
+      for (let i = 0; i < names.length; i++) { if (receipt.names[i] !== names[i] || !Number.isInteger(receipt.sizes[i]) || receipt.sizes[i] < 1 || receipt.sizes[i] > 33554432 || (await fs.stat(`${folder}/${names[i]}`)).size !== receipt.sizes[i]) { throw new Error('缓存纹理不完整'); } }
+      if (this.stopped) { throw new Error('项目加载已取消'); } progress?.(100); return path;
+    } catch (_) {}
+    if (this.stopped) { throw new Error('项目加载已取消'); }
+    try { await fs.mkdir(folder); } catch (_) { if (!await fs.access(folder)) { throw new Error('无法创建 SOG 缓存'); } }
+    try { await fs.unlink(`${folder}/ready.json`); } catch (_) {}
+    const sizes: number[] = []; let total = metadata.byteLength;
+    for (const name of names) {
+      const bytes = await this.fetch(new url.URL(name, address).toString(), 33554432);
+      total += bytes.byteLength; if (total > 134217728) { throw new Error('单体 SOG 超过 128 MiB'); }
+      await this.writeResource(`${folder}/${name}`, bytes); sizes.push(bytes.byteLength);
+    }
+    await this.writeResource(path, metadata);
+    const receipt: SogReceipt = { names, sizes };
+    await this.writeResource(`${folder}/ready.json`, new util.TextEncoder().encodeInto(JSON.stringify(receipt)).buffer as ArrayBuffer);
+    progress?.(100); return path;
+  }
+
 }

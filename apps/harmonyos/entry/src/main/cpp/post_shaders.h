@@ -252,9 +252,9 @@ vec3 toneMap6(vec3 color) {
 			return mix(vec3(0.5), color, con);
 		}
 		vec3 applyGrading(vec3 color) {
-			return colorGradingHDR(color, 
-				brightnessContrastSaturation.x, 
-				brightnessContrastSaturation.z, 
+			return colorGradingHDR(color,
+				brightnessContrastSaturation.x,
+				brightnessContrastSaturation.z,
 				brightnessContrastSaturation.y);
 		}
 	#endif
@@ -264,9 +264,9 @@ vec3 toneMap6(vec3 color) {
 	#ifdef VIGNETTE
 		uniform vec4 vignetterParams;
 		uniform vec3 vignetteColor;
-		
+
 		float dVignette;
-		
+
 		float calcVignette(vec2 uv) {
 			float inner = vignetterParams.x;
 			float outer = vignetterParams.y;

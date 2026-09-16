@@ -45,4 +45,4 @@ void main(){vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));uv0=p;gl
 '''
 out='#pragma once\n// Adapted from PlayCanvas Engine (MIT); see docs/harmonyos/THIRD_PARTY_NOTICES.md.\nnamespace splat {\n'
 for name,src in [('PostTone',tones),('PostVertex',vertex),('PostCompose',header+common+body+main),('PostDown',header+chunk('render-pass/frag/downsample.js')),('PostUp',header+chunk('render-pass/frag/upsample.js'))]:out+='inline const char* '+name+'=R"POST('+src+')POST";\n'
-out+='}\n';Path('apps/harmonyos/entry/src/main/cpp/post_shaders.h').write_text(out)
+out+='}\n';Path('apps/harmonyos/entry/src/main/cpp/post_shaders.h').write_text('\n'.join(line.rstrip() for line in out.splitlines()) + '\n')
