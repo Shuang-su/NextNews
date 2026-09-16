@@ -14,6 +14,7 @@ export interface RenderStatus {
   annotationDepth: number;
   openingRequest: number;
   openingPresented: number;
+  errorRequest: number;
   count: number;
   frames: number;
   width: number;

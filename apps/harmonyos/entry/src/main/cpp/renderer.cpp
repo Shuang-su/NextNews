@@ -199,16 +199,16 @@ void Renderer::SortLoop() {
             {std::lock_guard<std::mutex> lock(mutex_);if(stop_)return;
              if(scene_!=scene)continue;sortedIndices_=std::move(indices);sortedScene_=scene;sortReady_=true;completedSortMs_=elapsed;dirty_=true;}
             changed_.notify_one();
-        }catch(const std::exception &e){std::lock_guard<std::mutex> lock(mutex_);status_.state="error";status_.message=e.what();}
+        }catch(const std::exception &e){std::lock_guard<std::mutex> lock(mutex_);status_.state="error";status_.errorRequest=status_.openingRequest;status_.message=e.what();}
     }
 }
 void Renderer::Resize(int width,int height) { {std::lock_guard<std::mutex> lock(mutex_);width_=std::max(1,width);height_=std::max(1,height);dirty_=true;}changed_.notify_one(); }
 void Renderer::Load(std::string path) {
-    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();preparedPage_.reset();chunksPaged_=false;chunkPaths_.clear();chunksDirty_=false;requestedPath_=path;pendingPath_=std::move(path);cancel_=true;status_.state="loading";status_.message="Loading model";}
+    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;loadOpeningRequest_=status_.openingRequest;preparedScene_.reset();preparedPage_.reset();chunksPaged_=false;chunkPaths_.clear();chunksDirty_=false;requestedPath_=path;pendingPath_=std::move(path);cancel_=true;status_.state="loading";status_.message="Loading model";}
     loadChanged_.notify_one();
 }
 void Renderer::SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges,bool paged,uint64_t revision,bool encoded) {
-    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;preparedScene_.reset();preparedPage_.reset();chunksPaged_=paged;chunksEncoded_=encoded;requestRevision_=revision;requestAt_=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count();status_.requestRevision=revision;chunkPaths_=std::move(paths);chunkBounds_=bounds;chunkRanges_=std::move(ranges);
+    {std::lock_guard<std::mutex> lock(mutex_);++loadGeneration_;loadOpeningRequest_=status_.openingRequest;preparedScene_.reset();preparedPage_.reset();chunksPaged_=paged;chunksEncoded_=encoded;requestRevision_=revision;requestAt_=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count();status_.requestRevision=revision;chunkPaths_=std::move(paths);chunkBounds_=bounds;chunkRanges_=std::move(ranges);
      pendingPath_.clear();requestedPath_.clear();chunksDirty_=!chunkPaths_.empty();cancel_=true;dirty_=true;
      status_.state=chunkPaths_.empty()?"ready":"loading";status_.message=chunkPaths_.empty()?"Stream stopped":"Streaming chunks";}
     loadChanged_.notify_one();changed_.notify_one();
@@ -513,14 +513,14 @@ void Renderer::LoadLoop() {
     OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","Thread QoS LoadLoop() result=%{public}d",qos);
     for (;;) {
         std::vector<std::vector<float>> retiredPixels;std::vector<std::shared_ptr<Scene>> retiredScenes;
-        std::string path;std::vector<std::string> chunks;std::array<float,4> bounds{};std::vector<uint32_t> ranges;uint64_t generation,revision=0;bool paged=false,encoded=false,dropCaches=false;double requestAt=0;
+        std::string path;std::vector<std::string> chunks;std::array<float,4> bounds{};std::vector<uint32_t> ranges;uint64_t generation,openingRequest=0,revision=0;bool paged=false,encoded=false,dropCaches=false;double requestAt=0;
         {
             std::unique_lock<std::mutex> lock(mutex_);
             loadChanged_.wait(lock,[&]{return stop_||!retiredPixels_.empty()||!retiredScenes_.empty()||(active_&&(!pendingPath_.empty()||chunksDirty_));});
             retiredPixels.swap(retiredPixels_);retiredScenes.swap(retiredScenes_);
             if(stop_)return;
             if(!active_)continue;
-            generation=loadGeneration_;paged=chunksPaged_;encoded=chunksEncoded_;revision=requestRevision_;requestAt=requestAt_;path=std::move(pendingPath_);pendingPath_.clear();
+            generation=loadGeneration_;openingRequest=loadOpeningRequest_;paged=chunksPaged_;encoded=chunksEncoded_;revision=requestRevision_;requestAt=requestAt_;path=std::move(pendingPath_);pendingPath_.clear();
             if(chunksDirty_){chunks=chunkPaths_;bounds=chunkBounds_;ranges=chunkRanges_;chunksDirty_=false;}
             if(!path.empty()||!chunks.empty()){dropCaches=dropCaches_;dropCaches_=false;}cancel_=false;
         }
@@ -555,12 +555,12 @@ void Renderer::LoadLoop() {
                     const uint32_t count=loaded.points.size();
                     publish(std::make_shared<Scene>(std::move(loaded)),false,Ms(start),{{nextSourceId_++,0,count}});
                 } catch(const std::exception &e) {
-                    std::lock_guard<std::mutex> lock(mutex_);if(!cancel_){status_.state="error";status_.message=e.what();}
+                    std::lock_guard<std::mutex> lock(mutex_);if(!cancel_ && generation==loadGeneration_ && openingRequest==status_.openingRequest){status_.state="error";status_.errorRequest=openingRequest;status_.message=e.what();}
                 }
             }
             if(!chunks.empty() && paged){
                 try{PreparePages(chunks,bounds,ranges,generation,revision,requestAt,encoded);}
-                catch(const std::exception &e){std::lock_guard<std::mutex> lock(mutex_);if(!cancel_ && generation==loadGeneration_){status_.state="error";status_.message=e.what();}}
+                catch(const std::exception &e){std::lock_guard<std::mutex> lock(mutex_);if(!cancel_ && generation==loadGeneration_ && openingRequest==status_.openingRequest){status_.state="error";status_.errorRequest=openingRequest;status_.message=e.what();}}
             }
             if(!chunks.empty() && !paged) {
                 const auto start=Clock::now();
@@ -597,7 +597,7 @@ void Renderer::LoadLoop() {
                     {std::lock_guard<std::mutex> lock(mutex_);status_.decodedFiles=decodedFiles;status_.subsetHits=subsetHits;}
                     publish(std::make_shared<Scene>(std::move(combined)),false,Ms(start),spans);
                 } catch(const std::exception &e) {
-                    std::lock_guard<std::mutex> lock(mutex_);if(!cancel_){status_.state="error";status_.message=e.what();}
+                    std::lock_guard<std::mutex> lock(mutex_);if(!cancel_ && generation==loadGeneration_ && openingRequest==status_.openingRequest){status_.state="error";status_.errorRequest=openingRequest;status_.message=e.what();}
                 }
             }
 
@@ -636,7 +636,7 @@ void Renderer::Loop(void *window) {
             Draw(MakeView(*scene_,camera),width,height);
             {std::lock_guard<std::mutex> lock(mutex_);if(status_.state=="waiting"){status_.state="ready";status_.message="OpenGL ES surface ready";}}
         }
-    }catch(const std::exception &e){std::lock_guard<std::mutex> lock(mutex_);status_.state="error";status_.message=e.what();}
+    }catch(const std::exception &e){std::lock_guard<std::mutex> lock(mutex_);status_.state="error";status_.errorRequest=status_.openingRequest;status_.message=e.what();}
     DestroyGL();
 }
 }

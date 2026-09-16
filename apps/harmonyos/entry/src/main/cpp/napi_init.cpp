@@ -251,7 +251,7 @@ napi_value Status(napi_env env,napi_callback_info) {
     String(env,result,"postError",s.postError);
     Number(env,result,"shSource",s.shSource);Number(env,result,"shActive",s.shActive);Number(env,result,"shBytes",s.shBytes);
     Number(env,result,"postBytes",s.postBytes);Number(env,result,"postActive",s.postActive);
-    Number(env,result,"annotationDepth",s.annotationDepth);Number(env,result,"openingRequest",s.openingRequest);Number(env,result,"openingPresented",s.openingPresented);
+    Number(env,result,"annotationDepth",s.annotationDepth);Number(env,result,"openingRequest",s.openingRequest);Number(env,result,"openingPresented",s.openingPresented);Number(env,result,"errorRequest",s.errorRequest);
     Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"uploadMs",s.uploadMs);Number(env,result,"uploadedRows",s.uploadedRows);Number(env,result,"reusedRows",s.reusedRows);Number(env,result,"decodedFiles",s.decodedFiles);Number(env,result,"subsetHits",s.subsetHits);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);Number(env,result,"requestRevision",s.requestRevision);Number(env,result,"displayRevision",s.displayRevision);Number(env,result,"prepareMs",s.prepareMs);Number(env,result,"refineMs",s.refineMs);Number(env,result,"uploadedBytes",s.uploadedBytes);Number(env,result,"pageHits",s.pageHits);return result;
 }
 struct PickWork { napi_async_work work; napi_deferred deferred; float x,y;std::vector<float> point;std::string error; };

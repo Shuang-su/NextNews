@@ -2,7 +2,7 @@
 import argparse,io,json,math,zipfile
 from pathlib import Path
 from PIL import Image
-parser=argparse.ArgumentParser();parser.add_argument('output',type=Path);parser.add_argument('--degree',type=int,choices=[1,2,3],default=1);args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('output',type=Path);parser.add_argument('--degree',type=int,choices=[1,2,3],default=1);parser.add_argument('--highest-band',action='store_true',help='Use a nonzero zonal term in the highest stored SH band');args=parser.parse_args()
 def webp(w,h,data):
  f=io.BytesIO();Image.frombytes('RGBA',(w,h),bytes(data)).save(f,format='WEBP',lossless=True,exact=True);return f.getvalue()
 n={1:3,2:8,3:15}[args.degree];bound=math.log1p(.525)
@@ -14,7 +14,7 @@ for y in range(16):
   for value in [(x-7.5)*.07,(y-7.5)*.07]:
    log=math.copysign(math.log1p(abs(value)),value);q.append(round((log+bound)/(2*bound)*65535))
   low.extend([q[0]&255,q[1]&255,0,255]);high.extend([q[0]>>8,q[1]>>8,0,255])
-centroids=bytearray([0,0,0,255]*64*n);centroids[4:8]=bytes([1,0,2,255])
+centroids=bytearray([0,0,0,255]*64*n);coefficient={1:1,2:5,3:11}[args.degree] if args.highest_band else 1;centroids[coefficient*4:coefficient*4+4]=bytes([1,0,2,255])
 files={'l.webp':webp(16,16,low),'u.webp':webp(16,16,high),'s.webp':webp(16,16,[0,0,0,255]*256),'q.webp':webp(16,16,[128,128,128,252]*256),'c.webp':webp(16,16,[0,0,0,243]*256),'h.webp':webp(64*n,1,centroids),'i.webp':webp(16,16,[0,0,0,255]*256)}
 with zipfile.ZipFile(args.output,'x') as z:
  z.writestr('meta.json',json.dumps(meta))

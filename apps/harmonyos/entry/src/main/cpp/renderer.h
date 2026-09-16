@@ -30,7 +30,7 @@ struct Status {
     size_t shBytes = 0;
     int postActive = 0;
     int annotationDepth = 0;
-    uint64_t openingRequest = 0, openingPresented = 0;
+    uint64_t openingRequest = 0, openingPresented = 0, errorRequest = 0;
     std::array<float,4> bounds{0,0,0,1};
     double gpuMs = -1, uploadMs = 0;
     size_t uploadedRows = 0, reusedRows = 0, decodedFiles = 0, subsetHits = 0;
@@ -137,7 +137,7 @@ private:
     size_t stagingRow_ = 0;
     uint64_t stagingGeneration_ = 0;
     bool stagingResetCamera_ = false, preuploaded_ = false;
-    uint64_t loadGeneration_ = 0;
+    uint64_t loadGeneration_ = 0, loadOpeningRequest_ = 0;
     std::atomic<size_t> cacheBytes_{0};
     std::vector<std::vector<float>> retiredPixels_;
     std::vector<std::shared_ptr<Scene>> retiredScenes_;

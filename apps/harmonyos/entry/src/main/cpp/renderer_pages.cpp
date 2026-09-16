@@ -38,8 +38,8 @@ void Renderer::PreparePages(const std::vector<std::string>& paths,const std::arr
     DecodeQueue<std::shared_ptr<Scene>> jobs(cancel_,std::move(decodeFiles),[&](uint32_t file){
             OH_QoS_SetThreadQoS(QOS_USER_INITIATED);const double decodeAt=Now();
             if(cancel_)throw std::runtime_error("Load cancelled");
-            auto result=std::make_shared<Scene>(ReadModel(paths[file],&cancel_,encoded,encoded));
-            if(result->shDegree&&!encoded)throw std::runtime_error("High-order SH page streaming is not yet supported");
+            auto result=std::make_shared<Scene>(ReadModel(paths[file],&cancel_,encoded,true));
+            if(result->shDegree&&!encoded)throw std::runtime_error("High-order SH requires encoded SOG pages or compatibility mode; float pages cannot preserve it");
             OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","PageDecode revision=%{public}llu file=%{public}u count=%{public}zu decodeMs=%{public}.2f",(unsigned long long)revision,file,result->Count(),Now()-decodeAt);
             return result;
     });
@@ -106,7 +106,7 @@ void Renderer::AdvancePages(){
     const double start=Now();auto &atlas=work.encoded?encodedAtlas_:atlas_;
     if(!work.planned){
         if(!atlas.Plan(work.keys,work.encoded?activeEncodedPages_:activePages_)){
-            std::lock_guard<std::mutex> lock(mutex_);status_.state="error";status_.message="GPU page budget exhausted; current scene retained";stagingPage_.reset();return;
+            std::lock_guard<std::mutex> lock(mutex_);status_.state="error";status_.errorRequest=loadOpeningRequest_;status_.message="GPU page budget exhausted; current scene retained";stagingPage_.reset();return;
         }
         if(!work.encoded && !atlasTexture_){
             glGenTextures(1,&atlasTexture_);glBindTexture(GL_TEXTURE_2D,atlasTexture_);
@@ -132,7 +132,7 @@ void Renderer::AdvancePages(){
                 for(uint32_t page=0;page<count;page++)work.shKeys.push_back({source.first,page});
             }
             if(!shAtlas_.Plan(work.shKeys,activeShPages_)){
-                std::lock_guard<std::mutex> lock(mutex_);status_.state="error";status_.message="SH resident cache full; current view retained";stagingPage_.reset();return;
+                std::lock_guard<std::mutex> lock(mutex_);status_.state="error";status_.errorRequest=loadOpeningRequest_;status_.message="SH resident cache full; current view retained";stagingPage_.reset();return;
             }
             if(!work.shKeys.empty()){
                 texture(shCentroidAtlas_,GL_RGBA8UI,4096,4096);texture(shMapping_,GL_R32UI,ShSourcePages,2048);

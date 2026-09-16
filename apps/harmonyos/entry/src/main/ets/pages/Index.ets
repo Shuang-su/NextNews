@@ -1,3 +1,4 @@
+import { currentLoadFailure } from './ViewerLoadFailure';
 import { gamepadFrame } from './ViewerGamepad';
 import { ViewerSound } from './ViewerSound';
 import { ViewerLoading } from './ViewerLoading';
@@ -536,6 +537,7 @@ struct Index {
   @State loadStage: string = '准备场景';
   @State streamFailure: string = '';
   @State localError: string = '';
+  @State nativeFailure: string = '';
   @State title: string = 'NextNews · 3DGS';
   @State panMode: boolean = false;
   @State flyMode: boolean = false;
@@ -638,12 +640,13 @@ struct Index {
     }, 16);
     this.timer = setInterval(() => {
       if (this.backendName !== 'OpenGL') {
-        this.loading = false; this.streamWorking = false; if(!this.busy && this.spatialScene && !this.localError){this.opening=false;this.sound.shown(true);} this.message = this.backend.capabilities.note;
+        this.nativeFailure = ''; this.loading = false; this.streamWorking = false; if(!this.busy && this.spatialScene && !this.localError){this.opening=false;this.sound.shown(true);} this.message = this.backend.capabilities.note;
         this.graphics = 'SpatialReconKit / ArkGraphics3D';
         this.details = '华为渲染帧率和显存需使用系统工具采集。当前接口未提供等价的 GPU/排序统计。';
         return;
       }
       const state = nativeRender.status();
+      this.nativeFailure = currentLoadFailure(state.state, state.message, state.errorRequest, this.openingRequest);
       if (state.skyError) { this.skyMessage = state.skyError; }
       else if (state.skyReady && this.skyAddress) { this.skyMessage = `天空盒已就绪 · ${(state.skyBytes / 1048576).toFixed(1)} MiB`; }
       this.effectError = state.postError;
@@ -791,7 +794,7 @@ struct Index {
     const profile = !this.stream && settings?.experienceType === 'character' ? 1 : settings?.voxelManifestUrl ? 2 : 0;
     if (nativeRender.beginIntro(this.openingRequest, focus[0], focus[1], focus[2], this.stream?.manifest?.aabb ?? [], profile)) { this.introAwaitingVisible = false; }
   }
-  private clearProfile(): void { this.skyAddress = ''; this.skyRevision++; nativeRender.skybox('').catch(() => {}); this.skyMessage = '';  this.collisionSpace = 'auto'; this.effectsRevision++; this.firstAnimationExitOrbit = false; this.sourceEnvironment = ''; this.sourceCount = 0; this.environmentMessage = ''; this.sound.clear(); this.loadingPoster = ''; this.loadProgress = -1; nativeRender.intro(this.introEnabled && this.backendName === 'OpenGL', true); this.openingRequest = nativeRender.status().openingRequest; this.introAwaitingVisible = true; this.opening = true; this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.backend.effects(); this.syncAnnotations(); }
+  private clearProfile(): void { this.nativeFailure = ''; this.skyAddress = ''; this.skyRevision++; nativeRender.skybox('').catch(() => {}); this.skyMessage = '';  this.collisionSpace = 'auto'; this.effectsRevision++; this.firstAnimationExitOrbit = false; this.sourceEnvironment = ''; this.sourceCount = 0; this.environmentMessage = ''; this.sound.clear(); this.loadingPoster = ''; this.loadProgress = -1; nativeRender.intro(this.introEnabled && this.backendName === 'OpenGL', true); this.openingRequest = nativeRender.status().openingRequest; this.introAwaitingVisible = true; this.opening = true; this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.backend.effects(); this.syncAnnotations(); }
   private touch(event: TouchEvent): void {
     if (event.type === TouchType.Down) { this.sound.gesture(); }
     if (event.source === SourceType.Mouse) { return; }
@@ -1044,7 +1047,7 @@ struct Index {
         }
         Column() {
           Blank()
-          ViewerLoading({ progress: this.loadProgress, stage: this.localError || this.streamFailure || this.loadStage, failed: this.localError.length > 0 || this.streamFailure.length > 0,
+          ViewerLoading({ progress: this.loadProgress, stage: this.localError || this.nativeFailure || this.streamFailure || this.loadStage, failed: this.localError.length > 0 || this.nativeFailure.length > 0 || this.streamFailure.length > 0,
             onHidden: () => { this.beginVisibleIntro(); } })
         }.width('100%').height('100%').padding({ left: 16, right: 16, bottom: 120 })
           .hitTestBehavior(HitTestMode.None)
@@ -1058,7 +1061,7 @@ struct Index {
           Button('模型列表').fontSize(13).height(40).backgroundColor('#CC243247').fontColor('#FFFFFF').id('模型列表').onClick(() => { this.toolsVisible = true; this.modelsVisible = true; this.settingsVisible = this.helpVisible = this.diagnosticsVisible = false; this.catalogList(); })
           ViewerTool({ icon: this.toolsVisible ? $r('app.media.viewer_expand') : $r('app.media.viewer_collapse'), label: this.toolsVisible ? '隐藏工具' : '显示工具', selected: !this.toolsVisible, action: () => { this.toolsVisible = !this.toolsVisible; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
         }.width('100%')
-        if (!this.opening && this.localError) { Text(this.localError).fontSize(12).fontColor('#FF9090').maxLines(3) }
+        if (!this.opening && (this.localError || this.nativeFailure)) { Text(this.localError || this.nativeFailure).fontSize(12).fontColor('#FF9090').maxLines(3) }
         if (this.collisionDebug && this.collisionDebugMessage) {
           Text(this.collisionDebugMessage).fontSize(10).fontColor('#66F3DB').width('100%').backgroundColor('#99000000')
         }

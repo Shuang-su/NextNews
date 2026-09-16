@@ -11,3 +11,9 @@ Corrected gamepad monitor registration order from the official local guide and i
 ## Encoded stable-page SH
 
 Implemented compressed per-source SH books/centroids and protected GPU mapping pages, sharing the 4 MiB upload budget. Shared CPU SH books are charged once per cache. Three-source SH1/2/3 storage fixture rendered on Mate 80 Pro Max / API 26; SH0 switch produced gray baseline. Same-selection re-submit recorded three page hits and zero upload bytes. These are small-fixture checks, not large-scene performance acceptance. Details and remaining gaps: [stable-page SH report](../harmonyos/sh-pages-20260917.md).
+
+## SH higher-band validation and explicit float-page limitation
+
+Added a reproducible desktop GPU harness against independent associated Legendre SH evaluation: 2,910 production-shader samples passed, max error 1.51479e-7. Added nonzero highest-band fixture generation and inspected SH2/SH3 directional changes on the phone. Twenty same-selection retries on 768 Gaussians all reused three pages with zero upload; this is not large-scene performance acceptance. Removed silent source-SH dropping in unsupported float stable pages: those loads now report their limitation. Full details: [SH page report](../harmonyos/sh-pages-20260917.md).
+
+The phone negative-path check exposed an indefinite “preparing” overlay after native decode failure. Added scene-owned native error status and UI propagation, including stale-job rejection and a Chinese recovery hint for unsupported float-page SH. This is a loading error fix in addition to the SH numerical tests.
