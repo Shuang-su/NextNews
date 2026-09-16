@@ -33,3 +33,19 @@ for (const radius of [.001, 1, 1000]) {
  const before=z.controls.target[2]; for(const bad of [NaN,Infinity,0,-1])z.controls.zoom(bad);close(z.controls.target[2],before);
 }
 console.log('PASS world-unit orbit minimum across scene scales, unlimited outward zoom, invalid zoom rejection');
+
+// Joystick/button movement is world-space, rate based, with no release tail.
+for(const radius of [.1,1,1000])for(const frames of [30,60,120]) {
+ const r=new runtime.ViewerRuntime();r.bounds=[0,0,0,radius];r.controls.setFly(true);
+ const start=r.pose().position.slice();r.controls.axes=[0,0,1];
+ for(let i=0;i<frames;i++)r.tick(1000/frames);
+ close(r.pose().position[2]-start[2],-4,1e-8);
+ r.controls.axes=[0,0,0];const stopped=r.pose().position.slice();for(let i=0;i<60;i++)r.tick(1000/60);
+ stopped.forEach((v,i)=>close(r.pose().position[i],v));
+ r.controls.axes=[0,1,0];r.tick(50);close(r.pose().position[1]-stopped[1],.2);
+ r.controls.cancel();r.tick(50);close(r.pose().position[1]-stopped[1],.2);
+}
+const fly=new runtime.ViewerRuntime();fly.controls.setFly(true);fly.controls.key('w',true);fly.tick(16);
+const first=fly.controls.current[5];assert.ok(first<3&&first>2.99,'keyboard eases into movement');
+fly.controls.key('w',false);for(let i=0;i<100;i++)fly.tick(16);const stopped=fly.controls.current[5];fly.tick(16);close(fly.controls.current[5],stopped);
+console.log('PASS 4 world units/sec across scales and frame rates, release/cancel stop, held rise, keyboard acceleration/deceleration');

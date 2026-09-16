@@ -28,6 +28,9 @@ struct ViewerTool {
   @Prop label: string = '';
   @Prop selected: boolean = false;
   action: () => void = () => {};
+  hold: boolean = false;
+  onHold: (pressed: boolean) => void = () => {};
+  private owner: number = -1;
   onHoverChange: (label: string) => void = () => {};
   onKey: (event: KeyEvent) => boolean = () => false;
   build() {
@@ -35,8 +38,17 @@ struct ViewerTool {
       Image(this.icon).width(22).height(22).objectFit(ImageFit.Contain)
     }.width(44).height(44).borderRadius(22).backgroundColor(this.selected ? '#35FFFFFF' : '#00000000')
       .accessibilityText(this.label).id(this.label).onClick(() => {
-        this.action(); setTimeout(() => { this.getUIContext().getFocusController().requestFocus('viewer-surface'); }, 0);
+        if (!this.hold) { this.action(); } setTimeout(() => { this.getUIContext().getFocusController().requestFocus('viewer-surface'); }, 0);
       })
+      .onTouch((event: TouchEvent) => {
+        if (!this.hold) { return; } event.stopPropagation();
+        if (event.type === TouchType.Cancel) { this.owner = -1; this.onHold(false); }
+        else if (event.type === TouchType.Down && this.owner < 0) {
+          const point = event.changedTouches.find((p: TouchObject) => p && p.x >= 0 && p.y >= 0 && p.x <= 44 && p.y <= 44);
+          if (point) { this.owner = point.id; this.onHold(true); }
+        } else if (event.type === TouchType.Up && event.changedTouches.some((p: TouchObject) => p && p.id === this.owner)) { this.owner = -1; this.onHold(false); }
+      })
+      .onDisAppear(() => { this.owner = -1; if (this.hold) { this.onHold(false); } })
       .onKeyEvent((event: KeyEvent) => this.onKey(event))
       .onHover((hover: boolean) => { this.onHoverChange(hover ? this.label : ''); })
   }
@@ -416,6 +428,8 @@ struct Index {
   @State flySpeed: number = 1;
   @State gpuOptimized: boolean = true;
   @State hint: string = '';
+  private ascendHeld: boolean = false;
+  private descendHeld: boolean = false;
   @State joyX: number = 0;
   @State joyY: number = 0;
   @State @Watch('menuChanged') helpVisible: boolean = false;
@@ -479,10 +493,7 @@ struct Index {
         }
       } else if (this.active) {
         if (this.autoOrbit && !this.flyMode) { this.controls.target[0] += Math.min(dt, 64) * .0002; }
-        if (this.flyMode && (this.joyX !== 0 || this.joyY !== 0)) {
-          const speed = Math.min(dt, 64) * .0006 * this.flySpeed;
-          this.controls.move(this.joyX * speed, 0, -this.joyY * speed);
-        }
+        this.controls.axes = this.flyMode && this.gaming ? [this.joyX, Number(this.ascendHeld) - Number(this.descendHeld), -this.joyY] : [0, 0, 0];
         if (this.viewer.tick(dt)) { this.updateCamera(); }
       }
     }, 16);
@@ -627,7 +638,7 @@ struct Index {
   private touchPoints(points: TouchObject[]): OrbitTouch[] {
     return points.map((p: TouchObject): OrbitTouch => { return { id: p.id, x: p.x, y: p.y }; });
   }
-  private resetJoystick(): void { this.pointers.cancelStick(); this.joyX = 0; this.joyY = 0; }
+  private resetJoystick(): void { this.ascendHeld = false; this.descendHeld = false; this.controls.axes = [0, 0, 0]; this.pointers.cancelStick(); this.joyX = 0; this.joyY = 0; }
 
   private mouse(event: MouseEvent): void {
     if (event.action === MouseAction.Press || this.mouseButton !== MouseButton.None) { this.viewer.interrupt(); this.stopAnimation(); }
@@ -683,6 +694,7 @@ struct Index {
     if (event.type === KeyType.Down && key === 'g') { this.gaming = !this.gaming; this.viewer.gaming = this.gaming; this.resetJoystick(); return true; }
     if (event.type === KeyType.Down && (key === '1' || key === '2')) { this.setMode(key === '2'); return true; }
     if (key === 'r' && event.type === KeyType.Down) { this.reset(); return true; }
+    if (this.flyMode && ['shift', 'ctrl'].includes(key)) { this.controls.key(key, event.type === KeyType.Down); return true; }
     if ('wasdqe'.includes(key) && key.length === 1) {
       this.viewer.interrupt(); if (event.type === KeyType.Down) { this.stopAnimation(); if (!this.flyMode) { this.toggleMode(); } } this.gaming = true; this.viewer.gaming = true;
       this.controls.key(key, event.type === KeyType.Down); return true;
@@ -1027,8 +1039,8 @@ struct Index {
                   else if (event.type === TouchType.Down && this.jumpOwner < 0) { const point = event.changedTouches.find((p: TouchObject) => p.x >= 0 && p.y >= 0 && p.x <= 64 && p.y <= 64); if (point) { this.jumpOwner = point.id; this.jumpHeld = true; this.jumpQueued = true; } }
                   else if (event.type === TouchType.Up && event.changedTouches.some((p: TouchObject) => p.id === this.jumpOwner)) { this.jumpOwner = -1; this.jumpHeld = false; } })
               } else {
-              ViewerTool({ icon: $r('app.media.viewer_up'), label: '上升', selected: false, action: () => { this.controls.move(0, .12 * this.flySpeed, 0); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
-              ViewerTool({ icon: $r('app.media.viewer_down'), label: '下降', selected: false, action: () => { this.controls.move(0, -.12 * this.flySpeed, 0); }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+              ViewerTool({ icon: $r('app.media.viewer_up'), label: '上升', selected: false, hold: true, onHold: (pressed: boolean) => { this.ascendHeld = pressed; if (pressed) { this.stopAnimation(); this.viewer.interrupt(); } }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
+              ViewerTool({ icon: $r('app.media.viewer_down'), label: '下降', selected: false, hold: true, onHold: (pressed: boolean) => { this.descendHeld = pressed; if (pressed) { this.stopAnimation(); this.viewer.interrupt(); } }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
               }
             }.position({ x: '100%', y: '100%' }).translate({ x: -62, y: -206 })
           }

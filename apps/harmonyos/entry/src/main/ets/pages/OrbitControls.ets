@@ -10,11 +10,13 @@ export class OrbitControls {
   sceneRadius: number = 1;
   fov: number = 45;
   keys: string[] = [];
+  axes: number[] = [0, 0, 0];
+  private velocity: number[] = [0, 0, 0];
   private previous: OrbitTouch[] = [];
   reset(): void {
     this.current = [0, 0, 1, 0, 0, 0]; this.target = [0, 0, 1, 0, 0, 0]; this.fly = false; this.keys = []; this.cancel();
   }
-  cancel(): void { this.previous = []; this.keys = []; }
+  cancel(): void { this.previous = []; this.keys = []; this.axes = [0, 0, 0]; this.velocity = [0, 0, 0]; }
   resize(width: number, height: number): void {
     // Viewport layout changes must preserve the world-space camera pose.
     this.width = Math.max(1, width); this.height = Math.max(1, height); this.cancel();
@@ -100,14 +102,28 @@ export class OrbitControls {
     }
   }
   tick(elapsedMs: number): boolean {
+    let changed = false;
     if (this.fly) {
-      const speed = this.speed * Math.min(64, elapsedMs) / 1000;
-      this.move((Number(this.keys.includes('d')) - Number(this.keys.includes('a'))) * speed,
-        (Number(this.keys.includes('e')) - Number(this.keys.includes('q'))) * speed,
-        (Number(this.keys.includes('w')) - Number(this.keys.includes('s'))) * speed);
+      const dt = Math.max(0, Math.min(64, elapsedMs)) / 1000;
+      const keyAxis = [Number(this.keys.includes('d')) - Number(this.keys.includes('a')),
+        Number(this.keys.includes('e')) - Number(this.keys.includes('q')),
+        Number(this.keys.includes('w')) - Number(this.keys.includes('s'))];
+      const length = Math.hypot(...keyAxis), multiplier = this.keys.includes('shift') ? 4 : this.keys.includes('ctrl') ? .25 : 1;
+      const desired = keyAxis.map((v: number) => length ? v / length * 4 * this.speed * multiplier : 0);
+      const damping = Math.hypot(...desired) > Math.hypot(...this.velocity) ? .992 : .993;
+      const blend = 1 - Math.pow(damping, dt * 1000);
+      this.velocity = this.velocity.map((v: number, i: number) => v + (desired[i] - v) * blend);
+      if (length === 0 && Math.hypot(...this.velocity) < .01) { this.velocity = [0, 0, 0]; }
+      const delta = this.axes.map((v: number, i: number) => (v * 4 * this.speed + this.velocity[i]) * dt / this.sceneRadius);
+      const y = this.current[0], p = this.current[1], right = delta[0], up = delta[1], forward = delta[2];
+      // Official first-person movement is in camera basis and world units.
+      const offset = [Math.cos(y) * right - Math.sin(y) * Math.sin(p) * up - Math.sin(y) * Math.cos(p) * forward,
+        Math.cos(p) * up - Math.sin(p) * forward,
+        -Math.sin(y) * right - Math.cos(y) * Math.sin(p) * up - Math.cos(y) * Math.cos(p) * forward];
+      for (let i = 0; i < 3; i++) { this.current[i + 3] += offset[i]; this.target[i + 3] += offset[i]; }
+      changed = offset.some((v: number) => v !== 0);
     }
     const alpha = 1 - Math.pow(0.95, Math.max(0, Math.min(64, elapsedMs)));
-    let changed = false;
     for (let i = 0; i < 6; i++) {
       const delta = this.target[i] - this.current[i];
       if (delta !== 0) {
