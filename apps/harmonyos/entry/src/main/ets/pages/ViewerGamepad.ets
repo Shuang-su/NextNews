@@ -5,7 +5,8 @@ export function gamepadFrame(axes: number[], seconds: number, firstPerson: boole
   const zero: GamepadFrame = { right: 0, forward: 0, yaw: 0, pitch: 0, active: false };
   if (axes.length !== 4 || !axes.every((v: number) => Number.isFinite(v)) || !Number.isFinite(seconds) || !Number.isFinite(fov)) { return zero; }
   const dt = Math.max(0, Math.min(.064, seconds));
-  const values = axes.map((v: number) => Math.max(-1, Math.min(1, v)));
+  // Native validates each device axis; preserve the reference sum across devices.
+  const values = axes;
   const rotate = 18 * (firstPerson ? fov / 120 : 1) * dt * Math.PI / 180;
   return { right: values[0] * 4 * dt, forward: -values[1] * 4 * dt, yaw: -values[2] * rotate, pitch: values[3] * rotate, active: values.some((v: number) => v !== 0) };
 }

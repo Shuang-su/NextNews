@@ -9,3 +9,5 @@ near(f([1,0,0,0],.032,false,90).right,2*x.right);
 assert(!f([0,0,0,0],.016,true,60).active);assert(!f([NaN,0,0,0],.016,true,60).active);assert(!f([1,0],.016,true,60).active);
 near(f([1,0,0,0],10,false,90).right,.256);
 console.log('PASS MetaFlow raw stick values, 4 units/s, 18 degrees/s, FOV scaling, frame-time scaling and malformed axes');
+
+near(f([2,0,0,0],.016,false,90).right,.128); // two standard controllers sum without a second clamp
