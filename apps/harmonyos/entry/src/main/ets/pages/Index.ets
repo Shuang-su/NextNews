@@ -623,7 +623,7 @@ struct Index {
     this.stopAnimation();
     this.autoOrbit = false;
     const points = this.pointers.viewport(this.touchPhase(event.type), this.touchPoints(event.touches), this.touchPoints(event.changedTouches));
-    this.controls.touch(points, this.panMode);
+    this.controls.touch(points, this.panMode, this.gaming);
   }
   private gestureTap(event: GestureEvent, doubleTap: boolean): void {
     if (this.pointers.blockTap || this.pointers.stickId >= 0) { return; }
@@ -837,7 +837,7 @@ struct Index {
           TapGesture({ count: 1 }).onAction((event: GestureEvent) => { this.gestureTap(event, false); })
         ))
         .onKeyEvent((event: KeyEvent) => this.handleKey(event))
-        .onAxisEvent((event: AxisEvent) => { this.stopAnimation(); this.controls.zoom(Math.exp(Math.max(-1, Math.min(1, event.getVerticalAxisValue() * 0.002)))); });
+        .onAxisEvent((event: AxisEvent) => { this.stopAnimation(); this.controls.wheel(event.getVerticalAxisValue()); });
 
       if (this.collisionDebug) {
         Canvas(this.debugCanvas).width('100%').height('100%').hitTestBehavior(HitTestMode.None)

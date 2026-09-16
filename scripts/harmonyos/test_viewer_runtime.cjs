@@ -49,3 +49,18 @@ const fly=new runtime.ViewerRuntime();fly.controls.setFly(true);fly.controls.key
 const first=fly.controls.current[5];assert.ok(first<3&&first>2.99,'keyboard eases into movement');
 fly.controls.key('w',false);for(let i=0;i<100;i++)fly.tick(16);const stopped=fly.controls.current[5];fly.tick(16);close(fly.controls.current[5],stopped);
 console.log('PASS 4 world units/sec across scales and frame rates, release/cancel stop, held rise, keyboard acceleration/deceleration');
+
+for(const radius of [.1,1000]) {
+ const r=new runtime.ViewerRuntime();r.bounds=[0,0,0,radius];r.controls.resize(400,800);r.controls.setFly(true);
+ const start=r.pose().position.slice();r.controls.wheel(-120);r.tick(16);close(r.pose().position[2]-start[2],-.12);
+ const stopped=r.pose().position.slice();r.tick(16);close(r.pose().position[2],stopped[2]);
+ r.controls.zoom(Math.exp(-.2));r.tick(16);close(r.pose().position[2]-stopped[2],-.2);
+ const before=r.pose().position.slice();
+ r.controls.touch([{id:1,x:100,y:100},{id:2,x:200,y:100}],false);
+ r.controls.touch([{id:1,x:70,y:100},{id:2,x:230,y:100}],false);r.tick(16);close(r.pose().position[2]-before[2],-.4);
+ const gaming=r.pose().position.slice();
+ r.controls.touch([{id:1,x:50,y:200},{id:2,x:250,y:200}],false,true);r.tick(16);
+ gaming.forEach((v,i)=>close(r.pose().position[i],v));
+ r.controls.wheel(-120);r.controls.cancel();r.tick(16);gaming.forEach((v,i)=>close(r.pose().position[i],v));
+}
+console.log('PASS world-space wheel/button/pinch displacements, one-shot consumption, gaming two-finger isolation and cancellation');
