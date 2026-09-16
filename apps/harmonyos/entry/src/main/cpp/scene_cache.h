@@ -26,7 +26,7 @@ public:
     }
     void Put(const Key &key,std::shared_ptr<Scene> scene){
         auto old=entries_.find(key);if(old!=entries_.end())Erase(old);
-        const size_t bytes=scene->points.capacity()*sizeof(Gaussian)+scene->positions.capacity()*sizeof(std::array<float,3>)+scene->addresses.capacity()*sizeof(uint32_t)+scene->ranges.capacity()*sizeof(SceneRange)+scene->codes.capacity()*sizeof(SogCodes);
+        const size_t bytes=scene->harmonics.capacity()*sizeof(std::array<float,48>)+scene->points.capacity()*sizeof(Gaussian)+scene->positions.capacity()*sizeof(std::array<float,3>)+scene->addresses.capacity()*sizeof(uint32_t)+scene->ranges.capacity()*sizeof(SceneRange)+scene->codes.capacity()*sizeof(SogCodes);
         const auto extra=[&](){return scene->tables&&!tableRefs_.count(scene->tables.get())?sizeof(SogTables):0;};
         if(bytes+(scene->tables?sizeof(SogTables):0)>limit_)return;
         while(bytes_+bytes+extra()>limit_&&!lru_.empty())Erase(entries_.find(lru_.front()));

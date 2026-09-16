@@ -128,6 +128,11 @@ napi_value Gamepad(napi_env env,napi_callback_info){
  auto axes=splat::ReadGamepad();napi_value result;napi_create_array_with_length(env,4,&result);
  for(uint32_t i=0;i<4;i++){napi_value value;napi_create_double(env,axes[i],&value);napi_set_element(env,result,i,value);}return result;
 }
+napi_value ShDegree(napi_env env,napi_callback_info info){
+ napi_value arg;size_t argc=1;double degree=-1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
+ if(argc!=1||napi_get_value_double(env,arg,&degree)!=napi_ok||!std::isfinite(degree)||degree<0||degree>3||degree!=std::floor(degree)){napi_throw_range_error(env,nullptr,"Expected SH degree 0..3");return Undefined(env);}
+ splat::Renderer::Get().SetShDegree(int(degree));return Undefined(env);
+}
 napi_value Effects(napi_env env,napi_callback_info info) {
     napi_value arg{};size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);bool array=false;uint32_t length=0;
     if(argc!=1||napi_is_array(env,arg,&array)!=napi_ok||!array||napi_get_array_length(env,arg,&length)!=napi_ok||length!=22){napi_throw_type_error(env,nullptr,"Expected 22 effect parameters");return Undefined(env);}
@@ -244,6 +249,7 @@ napi_value Status(napi_env env,napi_callback_info) {
     String(env,result,"state",s.state);String(env,result,"message",s.message);String(env,result,"graphics",s.graphics);
     String(env,result,"skyError",s.skyError);Number(env,result,"skyBytes",s.skyBytes);Number(env,result,"skyReady",s.skyReady?1:0);
     String(env,result,"postError",s.postError);
+    Number(env,result,"shSource",s.shSource);Number(env,result,"shActive",s.shActive);Number(env,result,"shBytes",s.shBytes);
     Number(env,result,"postBytes",s.postBytes);Number(env,result,"postActive",s.postActive);
     Number(env,result,"annotationDepth",s.annotationDepth);Number(env,result,"openingRequest",s.openingRequest);Number(env,result,"openingPresented",s.openingPresented);
     Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"uploadMs",s.uploadMs);Number(env,result,"uploadedRows",s.uploadedRows);Number(env,result,"reusedRows",s.reusedRows);Number(env,result,"decodedFiles",s.decodedFiles);Number(env,result,"subsetHits",s.subsetHits);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);Number(env,result,"requestRevision",s.requestRevision);Number(env,result,"displayRevision",s.displayRevision);Number(env,result,"prepareMs",s.prepareMs);Number(env,result,"refineMs",s.refineMs);Number(env,result,"uploadedBytes",s.uploadedBytes);Number(env,result,"pageHits",s.pageHits);return result;
@@ -311,6 +317,7 @@ napi_value Init(napi_env env,napi_value exports) {
         {"gamepadActive",nullptr,GamepadActive,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"gamepad",nullptr,Gamepad,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"skybox",nullptr,Skybox,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"shDegree",nullptr,ShDegree,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"effects",nullptr,Effects,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"background",nullptr,Background,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"camera",nullptr,Camera,nullptr,nullptr,nullptr,napi_default,nullptr},

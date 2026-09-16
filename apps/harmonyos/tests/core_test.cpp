@@ -17,6 +17,17 @@ int main(int argc,char **argv) {
         auto view=splat::MakeView(scene,{});auto sorted=splat::Sort(scene,view);
         float previous=-INFINITY;
         for(const auto &g:sorted){auto &m=view.matrix;float depth=m[2]*g.position[0]+m[6]*g.position[1]+m[10]*g.position[2]+m[14];assert(depth>=previous);previous=depth;}
+        if(mode.rfind("sh",0)==0){
+            int degree=std::stoi(mode.substr(2));const int n=(degree+1)*(degree+1)-1;
+            assert(scene.shDegree==degree && scene.harmonics.size()==scene.Count());
+            const auto &sh=scene.harmonics[0];
+            for(int k=0;k<n;k++)for(int c=0;c<3;c++)assert(sh[3+k*3+c]==float(c*n+k+1));
+            for(int k=n;k<15;k++)for(int c=0;c<3;c++)assert(sh[3+k*3+c]==0);
+            assert(sh[0]==.5f && sh[1]==.5f && sh[2]==.5f);
+            assert(transformed.shTransform && !scene.shTransform);
+            assert(transformed.harmonics==scene.harmonics);
+            splat::ApplyViewerTransform(transformed);assert(!transformed.shTransform);
+        }
         if(mode=="analytic") {
             // A panned target stays at the orbit center after rotation (world-space target).
             splat::Camera orbit{.7f, .4f, 1.2f, .2f, -.3f, .6f};

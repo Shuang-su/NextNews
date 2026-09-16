@@ -41,6 +41,10 @@ struct Scene;
 struct SceneRange { std::shared_ptr<const Scene> source; uint32_t offset,count,logical; };
 struct Scene {
     std::vector<Gaussian> points;
+    // Optional coefficient-major RGB: DC color then 15 SH vectors. SH0 scenes allocate none.
+    std::vector<std::array<float,48>> harmonics;
+    int shDegree=0;
+    bool shTransform=false;
     bool paged=false;
     std::shared_ptr<SogTables> tables;
     std::vector<SogCodes> codes;

@@ -7,6 +7,9 @@ export interface RenderStatus {
   skyBytes: number; skyReady: number;
   postError: string;
   postBytes: number;
+  shSource: number;
+  shActive: number;
+  shBytes: number;
   postActive: number;
   annotationDepth: number;
   openingRequest: number;
@@ -81,3 +84,5 @@ export const skybox: (path: string) => Promise<void>;
 
 export const gamepadActive: (enabled: boolean) => boolean;
 export const gamepad: () => number[];
+
+export const shDegree: (degree: number) => void;

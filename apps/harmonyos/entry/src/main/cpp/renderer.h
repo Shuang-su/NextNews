@@ -7,6 +7,7 @@
 #include "intro.h"
 #include "post_process.h"
 #include "skybox.h"
+#include "sh_texture.h"
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <condition_variable>
@@ -24,6 +25,8 @@ struct Status {
     std::string skyError;size_t skyBytes=0;bool skyReady=false;
     std::string postError;
     size_t postBytes = 0;
+    int shSource = 0, shActive = 0;
+    size_t shBytes = 0;
     int postActive = 0;
     int annotationDepth = 0;
     uint64_t openingRequest = 0, openingPresented = 0;
@@ -50,6 +53,7 @@ public:
     bool SkyboxCurrent(uint64_t request);
     bool SetSkybox(uint64_t request,std::shared_ptr<const SkyImage> image);
     void SetEffects(Effects settings);
+    void SetShDegree(int degree);
     void SetBackground(std::array<float,3> color);
     void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {},bool paged=false,uint64_t revision=0,bool encoded=false);
     void SetActive(bool active);
@@ -152,8 +156,10 @@ private:
     std::function<void(uint64_t,uint64_t)> presentedCallback_;
     Intro intro_;
     Effects effects_{};
+    int shDegree_ = 3;
     bool effectsFailed_ = false;
     PostProcess post_;
+    ShTexture shTexture_,stagingShTexture_;
     Skybox sky_;
     std::shared_ptr<const SkyImage> skyImage_;
     uint64_t skyRequest_=0;

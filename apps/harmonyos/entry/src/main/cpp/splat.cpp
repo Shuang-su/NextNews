@@ -77,8 +77,16 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
         if (p == properties.end() || (p->type != "float" && p->type != "float32")) throw std::runtime_error("Missing float Gaussian field: " + fields[i]);
         offsets[i] = p->offset;
     }
-    for (const auto &p : properties) if (p.name.rfind("f_rest_", 0) == 0) throw std::runtime_error("Convert to SH0 before importing");
-    Scene scene; scene.points.reserve(count);
+    size_t restCount=0;for(const auto &p:properties)if(p.name.rfind("f_rest_",0)==0)++restCount;
+    if(restCount!=0&&restCount!=9&&restCount!=24&&restCount!=45)throw std::runtime_error("Incomplete or unsupported SH degree");
+    std::vector<size_t> shOffsets;
+    for(size_t i=0;i<restCount;++i){
+        const auto name="f_rest_"+std::to_string(i);auto p=std::find_if(properties.begin(),properties.end(),[&](const auto &v){return v.name==name;});
+        if(p==properties.end()||(p->type!="float"&&p->type!="float32"))throw std::runtime_error("Missing float SH coefficient: "+name);
+        shOffsets.push_back(p->offset);
+    }
+    Scene scene; scene.points.reserve(count);scene.shDegree=restCount==9?1:restCount==24?2:restCount==45?3:0;
+    if(restCount)scene.harmonics.reserve(count);
     std::array<float, 3> lo = {INFINITY, INFINITY, INFINITY}, hi = {-INFINITY, -INFINITY, -INFINITY};
     std::vector<char> row(stride);
     for (size_t i = 0; i < count; ++i) {
@@ -95,6 +103,17 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
             g.position[k] = v[k]; lo[k] = std::min(lo[k], v[k]); hi[k] = std::max(hi[k], v[k]);
             g.color[k] = std::clamp(.5f + .28209479177387814f * v[3 + k], 0.f, 1.f);
             if (v[7 + k] < -30 || v[7 + k] > 14) throw std::runtime_error("Gaussian log-scale exceeds supported range");
+        }
+        if(restCount){
+            std::array<float,48> sh{};
+            for(int c=0;c<3;c++)sh[c]=.5f+.28209479177387814f*v[3+c];
+            const size_t coefficients=restCount/3;
+            for(size_t c=0;c<3;c++)for(size_t k=0;k<coefficients;k++){
+                const float value=FloatLE(row.data()+shOffsets[c*coefficients+k]);
+                if(!std::isfinite(value)||std::abs(value)>1e6f)throw std::runtime_error("Invalid SH coefficient");
+                sh[3+k*3+c]=value;
+            }
+            scene.harmonics.push_back(sh);
         }
         g.color[3] = Sigmoid(v[6]);
         double length = 0; for (int k = 10; k < 14; ++k) length += double(v[k]) * v[k];
@@ -116,6 +135,7 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
 }
 
 void ApplyViewerTransform(Scene &scene) {
+    scene.shTransform=!scene.shTransform;
     if(scene.tables){for(auto &p:scene.positions){p[0]=-p[0];p[1]=-p[1];}scene.tables->viewerTransform=!scene.tables->viewerTransform;}
     // SuperSplat viewer's import entity: setLocalEulerAngles(0, 0, 180).
     for(auto &g:scene.points) {g.position[0]=-g.position[0];g.position[1]=-g.position[1];g.covariance[2]=-g.covariance[2];g.covariance[4]=-g.covariance[4];}

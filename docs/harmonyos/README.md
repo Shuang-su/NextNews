@@ -1,6 +1,8 @@
 # HarmonyOS native 3DGS development
 
-Latest implementation batches: [scene/audio/environment](metaflow-scene-20260916.md), [native post effects](metaflow-postfx-20260916.md), [panorama skybox](metaflow-skybox-20260916.md), and [gamepad/cache isolation](gamepad-20260916.md).
+Latest implementation batch: [PLY SH1–3 direction-dependent color](sh-20260917.md).
+
+Previous implementation batches: [scene/audio/environment](metaflow-scene-20260916.md), [native post effects](metaflow-postfx-20260916.md), [panorama skybox](metaflow-skybox-20260916.md), and [gamepad/cache isolation](gamepad-20260916.md).
 The current [parity matrix](viewer-parity-v1312.md) supersedes historical implementation/status descriptions below; full Viewer and performance acceptance remains incomplete.
 
 Previous installed Viewer: [first-open-only loading and reveal handoff](firstframe-20260916.md), including the background and displacement candidates below.

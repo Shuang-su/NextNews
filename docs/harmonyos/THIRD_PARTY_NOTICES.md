@@ -107,3 +107,7 @@ https://github.com/nothings/stb/blob/013ac3beddff3dbffafd5177e7972067cd2b5083/st
 The complete MIT/public-domain dual license is retained in the header. This
 build enables only HDR, PNG and JPEG. Skybox RGBP decoding and spherical mapping
 follow the existing PlayCanvas 2.21.3 / MetaFlow source attribution above.
+
+## Direction-dependent Gaussian color
+
+`sh_shader.h` retains the SH1–3 polynomials from PlayCanvas 2.21.3 `gsplatEvalSH.js`, under the MIT license above. Regenerate using `scripts/harmonyos/generate_sh_shader.py` and the pinned package. Model-to-world direction conversion, texture upload ownership and PLY coefficient validation are NextNews code.
