@@ -61,3 +61,5 @@ export const collisionPause: () => void;
 export const collisionReset: () => number[];
 export const collisionStatus: () => CollisionStatus;
 export const collisionDebug: (generation: number, x: number, y: number, z: number) => Promise<number[]>;
+
+export const intro: (enabled: boolean, waitForModel: boolean) => void;

@@ -32,6 +32,12 @@ napi_value Camera(napi_env env,napi_callback_info info) {
     if(v[7]<=1||v[7]>=179){napi_throw_range_error(env,nullptr,"Invalid FOV");return Undefined(env);}
     splat::Renderer::Get().SetCamera({float(v[0]),float(v[1]),float(v[2]),float(v[3]),float(v[4]),float(v[5]),float(v[6]),float(v[7])});return Undefined(env);
 }
+napi_value Intro(napi_env env,napi_callback_info info) {
+    napi_value args[2];size_t argc=2;bool enabled=false,wait=false;
+    napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+    if(argc!=2||napi_get_value_bool(env,args[0],&enabled)!=napi_ok||napi_get_value_bool(env,args[1],&wait)!=napi_ok){napi_throw_type_error(env,nullptr,"Expected enabled and waitForModel booleans");return Undefined(env);}
+    splat::Renderer::Get().SetIntro(enabled,wait);return Undefined(env);
+}
 napi_value Background(napi_env env,napi_callback_info info) {
     napi_value args[3];size_t argc=3;double values[3];napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
     if(argc!=3){napi_throw_type_error(env,nullptr,"Expected three background color values");return Undefined(env);}
@@ -187,6 +193,7 @@ napi_value Init(napi_env env,napi_value exports) {
         {"load",nullptr,Load,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"chunks",nullptr,Chunks,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"optimize",nullptr,Optimize,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"intro",nullptr,Intro,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"background",nullptr,Background,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"camera",nullptr,Camera,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"setActive",nullptr,Active,nullptr,nullptr,nullptr,napi_default,nullptr},

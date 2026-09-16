@@ -265,6 +265,7 @@ struct Index {
   @State @Watch('syncAnnotationStyle') showAnnotations: boolean = true;
   @State @Watch('syncAnnotationStyle') gaming: boolean = false;
   @State annotationDepth: number = 0;
+  @State introEnabled: boolean = true;
   @State @Watch('syncAnnotations') gpuAnnotations: boolean = true;
   @State hoveredAnnotation: number = -1;
   @State popupVisible: boolean = false;
@@ -615,7 +616,7 @@ struct Index {
     else { this.controls.reset(); this.controls.fov = 85; this.viewer.apply(framePose(this.viewer.bounds), false); }
     this.flyMode = this.controls.fly; this.timeline = 0; this.updateCamera();
   }
-  private clearProfile(): void { this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.syncAnnotations(); }
+  private clearProfile(): void { nativeRender.intro(this.introEnabled && this.backendName === 'OpenGL', true); this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.syncAnnotations(); }
   private touch(event: TouchEvent): void {
     if (event.source === SourceType.Mouse) { return; }
     if (event.type === TouchType.Down) { this.clearNav(); this.pickGeneration++; }
@@ -947,6 +948,8 @@ struct Index {
                 }
                 if (this.settingsVisible) {
                   Text('设置').fontSize(16).fontColor('#FFFFFF').width('100%')
+                  Button(this.introEnabled ? '粒子开场：开' : '粒子开场：关').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.introEnabled = !this.introEnabled; nativeRender.intro(this.introEnabled, false); })
+                  Button('重播粒子开场').fontSize(12).enabled(this.backendName === 'OpenGL' && this.introEnabled && !this.loading).onClick(() => { nativeRender.intro(true, false); this.settingsVisible = false; })
                   Button(this.gaming ? '游戏控制：开' : '游戏控制：关').fontSize(12).onClick(() => { this.gaming = !this.gaming; this.viewer.gaming = this.gaming; this.resetJoystick(); })
                   Button(this.showAnnotations ? '标注：显示' : '标注：隐藏').fontSize(12).onClick(() => { this.showAnnotations = !this.showAnnotations; })
                   Button(this.gpuAnnotations ? '深度标注：开' : '深度标注：关').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.gpuAnnotations = !this.gpuAnnotations; })

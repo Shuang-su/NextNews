@@ -4,6 +4,7 @@
 #include "scene_cache.h"
 #include "page_atlas.h"
 #include "hotspots.h"
+#include "intro.h"
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <condition_variable>
@@ -33,6 +34,7 @@ public:
     void Resize(int width, int height);
     void Load(std::string path);
     void SetCamera(Camera camera);
+    void SetIntro(bool enabled, bool waitForModel);
     void SetBackground(std::array<float,3> color);
     void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {},bool paged=false,uint64_t revision=0,bool encoded=false);
     void SetActive(bool active);
@@ -131,6 +133,7 @@ private:
     bool chunksDirty_ = false;
     Camera camera_;
     std::array<float,3> background_{0,0,0};
+    Intro intro_;
     Status status_;
     std::shared_ptr<Scene> scene_ = std::make_shared<Scene>();
     bool uploadDirty_ = true;

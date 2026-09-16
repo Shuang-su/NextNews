@@ -46,6 +46,7 @@ uniform float nearPlane;
 uniform float tanHalfFov;
 uniform float farPlane;
 uniform bool optimized;
+uniform float introProgress;
 out vec2 gaussian;
 out vec4 tint;
 void main() {
@@ -55,6 +56,14 @@ void main() {
         position=t0.xyz;color=vec4(t0.w,t1.xyz);
         vec3 covA=vec3(t1.w,t2.xy),covB=vec3(t2.zw,t3.x);
         covariance=mat3(covA.x,covA.y,covA.z,covA.y,covB.x,covB.y,covA.z,covB.y,covB.z);
+    }
+    // Position-based timing survives GPU page relocation. Keep centers fixed:
+    // the existing depth order remains valid throughout the opening.
+    if (introProgress < 1.0) {
+        float seed=fract(sin(dot(position,vec3(12.9898,78.233,37.719)))*43758.5453);
+        float reveal=smoothstep(seed*0.45,seed*0.45+0.55,introProgress);
+        color.a*=reveal;
+        covariance*=mix(0.025,1.0,reveal*reveal);
     }
     tint=color;
     vec3 center=(view*vec4(position,1.0)).xyz;
@@ -130,7 +139,7 @@ void Renderer::Start(void *window,int width,int height) {
     worker_=std::thread(&Renderer::Loop,this,window);
 }
 void Renderer::Stop() {
-    { std::lock_guard<std::mutex> lock(mutex_); stop_=true; cancel_=true; }
+    { std::lock_guard<std::mutex> lock(mutex_); stop_=true; cancel_=true; intro_.Pause(); }
     changed_.notify_all();sortChanged_.notify_all();loadChanged_.notify_all(); if(worker_.joinable()) worker_.join();if(sorter_.joinable())sorter_.join();if(loader_.joinable())loader_.join();
     preparedScene_.reset();preparedPage_.reset();preparedPixels_.clear();preparedIndices_.clear();
     sortPending_=sortReady_=false;sortScene_.reset();sortedScene_.reset();sortedIndices_.clear();
@@ -167,7 +176,11 @@ void Renderer::DropCaches(){std::lock_guard<std::mutex> lock(mutex_);dropCaches_
 void Renderer::SetCamera(Camera camera) {
     {std::lock_guard<std::mutex> lock(mutex_);camera_=camera;dirty_=true;}changed_.notify_one();
 }
-void Renderer::SetActive(bool active) { {std::lock_guard<std::mutex> lock(mutex_);active_=active;dirty_=true;}changed_.notify_one();loadChanged_.notify_one(); }
+void Renderer::SetActive(bool active) { {std::lock_guard<std::mutex> lock(mutex_);active_=active;intro_.Pause();dirty_=true;}changed_.notify_one();loadChanged_.notify_one(); }
+void Renderer::SetIntro(bool enabled,bool waitForModel) {
+    {std::lock_guard<std::mutex> lock(mutex_);intro_.Request(enabled,waitForModel);dirty_=true;}
+    changed_.notify_one();
+}
 void Renderer::SetBackground(std::array<float,3> color) {
     { std::lock_guard<std::mutex> lock(mutex_); if(background_==color)return; background_=color;dirty_=true; }
     changed_.notify_one();
@@ -286,7 +299,7 @@ void Renderer::AdvanceUpload() {
     if(stagingRow_==rows){
         std::lock_guard<std::mutex> lock(mutex_);
         if(stagingGeneration_==loadGeneration_){
-            activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);initialIndices_=std::move(stagingIndices_);
+            activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);if(scene_->Count())intro_.Commit();initialIndices_=std::move(stagingIndices_);
             spareTexture_=dataTexture_;spareCapacity_=dataCapacity_;
             spareRows_=std::move(dataRows_);dataRows_=std::move(stagingRows_);stagingPreviousRows_.clear();
             status_.uploadedRows=stagingUploadedRows_;status_.reusedRows=stagingReusedRows_;
@@ -331,8 +344,9 @@ void Renderer::Draw(const View &view,int width,int height) {
         }
     }
     const auto drawStart=Clock::now();
-    std::shared_ptr<const HotspotData> annotations;HotspotStyle style;std::array<float,3> background;
-    {std::lock_guard<std::mutex> lock(mutex_);annotations=annotationData_;style=annotationStyle_;background=background_;}
+    std::shared_ptr<const HotspotData> annotations;HotspotStyle style;std::array<float,3> background;float introProgress;
+    {std::lock_guard<std::mutex> lock(mutex_);annotations=annotationData_;style=annotationStyle_;background=background_;introProgress=intro_.Frame(std::chrono::duration<double>(Clock::now().time_since_epoch()).count());}
+    if(introProgress<1)style.visible=false;
     const bool annotationReady=depthBits_>0&&hotspots_.Prepare(annotations);
     {std::lock_guard<std::mutex> lock(mutex_);status_.annotationDepth=annotationReady?depthBits_:0;}
     glViewport(0,0,width,height);glClearColor(background[0],background[1],background[2],1);glClear(GL_COLOR_BUFFER_BIT);
@@ -340,6 +354,7 @@ void Renderer::Draw(const View &view,int width,int height) {
     if(annotationReady&&style.visible){glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);}else glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);glUseProgram(program_);
     glUniform1i(optimizedLocation_,optimized_.load());
+    glUniform1f(glGetUniformLocation(program_,"introProgress"),introProgress);
     glUniformMatrix4fv(viewLocation_,1,GL_FALSE,view.matrix.data());
     glUniform2f(viewportLocation_,float(width),float(height));
     glUniform1f(glGetUniformLocation(program_,"tanHalfFov"),view.tanHalfFov);glUniform1f(nearLocation_,view.nearPlane);glUniform1f(farLocation_,view.farPlane);
@@ -490,8 +505,13 @@ void Renderer::Loop(void *window) {
             Camera camera;int width,height;
             {
                 std::unique_lock<std::mutex> lock(mutex_);
-                changed_.wait(lock,[&]{return stop_||(active_&&(dirty_||preparedScene_||preparedPage_));});
+                if(active_ && intro_.Running()) {
+                    changed_.wait_for(lock,std::chrono::milliseconds(16),[&]{return stop_||!active_||dirty_||preparedScene_||preparedPage_;});
+                } else {
+                    changed_.wait(lock,[&]{return stop_||(active_&&(dirty_||preparedScene_||preparedPage_||intro_.Running()));});
+                }
                 if(stop_)break;
+                if(!active_)continue;
                 if(preparedScene_ && !stagingScene_){
                     stagingScene_=std::move(preparedScene_);stagingPixels_=std::move(preparedPixels_);
                     stagingIndices_=std::move(preparedIndices_);stagingResetCamera_=preparedResetCamera_;

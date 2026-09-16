@@ -44,3 +44,7 @@ AR/VR、标注/模型编辑和生成不在这次 Viewer 范围内。
 [位移输入接续候选](displacement-input-20260916.md)修复飞行滚轮/捏合/缩放按钮残留的场景半径放大和游戏双指附加移动。主机及签名构建通过，尚未安装/完成真机事件尺度对照。
 
 [背景色接入候选](background-20260916.md)：共用配置进入 OpenGL/Huawei clearColor，模型清理恢复黑色，参数/重建模拟测试和签名构建通过。安装时无连接设备，实际两后端画面待验收；天空盒和其他画质效果未完成。
+
+## Native opening enhancement (2026-09-16)
+
+[Particle opening](intro-20260916.md) is phone-verified for ordinary OpenGL samples, with enable/replay controls. It is not claimed as an upstream v1.31.2 effect. Encoded streaming and Huawei equivalence remain unverified.

@@ -69,3 +69,7 @@ HAP/签名构建、标注与原交互单测、原生 ASan/UBSan 通过。
 ## 自动接续：背景色
 
 将 background.color 从仅解析接入共用后端和实际 OpenGL/Huawei 相机清屏颜色，保留重建状态，切换模型清除旧配置。主机与构建签名通过。安装时未发现设备，候选未装；详见 background-20260916.md，后续不能将模拟后端测试当作画面通过。
+
+## Particle opening after main merge
+
+Continued from PR #2 merge on `codex/viewer-parity-next`. Added GPU opacity/size stagger, first-selection start, no LOD replay, pause/resume timeline and UI enable/replay controls. Built, signed and installed on Mate 80 Pro Max; inspected early/middle/final public-sample captures. Host timeline sanitizer and existing viewer/input/background regressions pass. See [report](../harmonyos/intro-20260916.md) for evidence and outstanding encoded-stream/Huawei/performance checks. No visionOS files changed.
