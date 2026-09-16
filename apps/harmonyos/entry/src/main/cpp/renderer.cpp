@@ -439,7 +439,7 @@ void Renderer::Draw(const View &view,int width,int height) {
     try {sky_.Prepare(skyFailed?nullptr:skyImage);sky_.Draw(view,width,height,post?0:int(effects[0]));}
     catch(const std::exception& error){sky_.Destroy();glActiveTexture(GL_TEXTURE0);while(glGetError()!=GL_NO_ERROR){}std::lock_guard<std::mutex> lock(mutex_);skyFailed_=true;status_.skyError=error.what();}
     {std::lock_guard<std::mutex> lock(mutex_);status_.skyBytes=sky_.Bytes();status_.skyReady=skyImage_&&skyImage_==skyImage&&!skyFailed_&&!sky_.Pending();if(sky_.Pending())dirty_=true;}
-    if(annotationReady&&style.visible){glDepthMask(GL_TRUE);glClearDepthf(1);glClear(GL_DEPTH_BUFFER_BIT);hotspots_.Draw(view,width,height,style,false);}
+    if(annotationReady&&style.visible){glDepthMask(GL_TRUE);glClearDepthf(1);glClear(GL_DEPTH_BUFFER_BIT);hotspots_.Draw(view,width,height,style,false,post?0:int(effects[0]));}
     if(annotationReady&&style.visible){glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);}else glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);glUseProgram(program_);
     int shDegree;{std::lock_guard<std::mutex> lock(mutex_);shDegree=shDegree_;}
@@ -489,7 +489,7 @@ void Renderer::Draw(const View &view,int width,int height) {
         if(!timerPending_[timerSlot_]){timerInvalid_[timerSlot_]=false;glBeginQuery(0x88BF,timerQueries_[timerSlot_]);timed=true;}
     }
     glDrawArraysInstanced(GL_TRIANGLE_STRIP,0,4,GLsizei(scene_->paged && !atlasDrawable_ ? 0 : scene_->Count()));
-    if(annotationReady&&style.visible)hotspots_.Draw(view,width,height,style,true);
+    if(annotationReady&&style.visible)hotspots_.Draw(view,width,height,style,true,post?0:int(effects[0]));
     if(post)post_.Finish();
     if(timed){glEndQuery(0x88BF);timerPending_[timerSlot_]=true;timerSlot_=(timerSlot_+1)%4;}
     {std::lock_guard<std::mutex> lock(mutex_);status_.postBytes=post_.Bytes();status_.postActive=post?1:0;}

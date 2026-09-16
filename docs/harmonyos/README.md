@@ -1,6 +1,8 @@
 # HarmonyOS native 3DGS development
 
-Latest implementation batch: [compressed SH in stable GPU pages](sh-pages-20260917.md).
+Latest implementation batch: [annotation tone mapping and corrected reference interpretation](annotation-tone-20260917.md).
+
+Previous implementation batch: [compressed SH in stable GPU pages](sh-pages-20260917.md).
 
 Previous implementation batch: [compressed SOG directional color and merge preservation](sog-sh-20260917.md), following [PLY SH1–3](sh-20260917.md).
 

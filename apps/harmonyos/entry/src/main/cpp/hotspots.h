@@ -10,7 +10,7 @@ struct HotspotStyle {bool visible=false;int hover=-1;float pixels=25;};
 class Hotspots {
 public:
     bool Prepare(const std::shared_ptr<const HotspotData>& data);
-    void Draw(const View&,int width,int height,HotspotStyle style,bool overlay);
+    void Draw(const View&,int width,int height,HotspotStyle style,bool overlay,int directTone=0);
     void Destroy();
     bool Failed()const{return failed_;}
 private:

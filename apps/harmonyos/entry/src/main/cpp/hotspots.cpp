@@ -1,4 +1,5 @@
 #include "hotspots.h"
+#include "post_shaders.h"
 #include <stdexcept>
 #include <hilog/log.h>
 namespace splat {
@@ -25,6 +26,8 @@ precision highp float;
 uniform highp sampler2D glyphs;
 uniform float opacity;
 uniform int hover;
+uniform int directTone;
+/*TONE_FUNCTIONS*/
 in vec2 local;
 flat in int label;
 out vec4 color;
@@ -42,7 +45,16 @@ void main(){
         ink=max(ink,texture(glyphs,uv).r);
     }
     vec3 tint=label-1==hover?vec3(1,.4,0):vec3(.8);
-    a*=opacity;color=vec4(tint*ink*a,a);
+    tint*=ink;
+    // MetaFlow StandardMaterial maps emissive color before alpha blending when
+    // CameraFrame is absent. CameraFrame applies tone mapping during composition.
+    if(directTone>1){
+        vec3 linear=pow(max(tint,vec3(0)),vec3(2.2));
+        if(directTone==2)linear=toneMap2(linear);else if(directTone==3)linear=toneMap3(linear);
+        else if(directTone==4)linear=toneMap4(linear);else if(directTone==5)linear=toneMap5(linear);else if(directTone==6)linear=toneMap6(linear);
+        tint=pow(max(linear,vec3(0))+0.0000001,vec3(1.0/2.2));
+    }
+    a*=opacity;color=vec4(tint*a,a);
 })GLSL";
 GLuint Shader(GLenum kind,const char *source){GLuint s=glCreateShader(kind);glShaderSource(s,1,&source,nullptr);glCompileShader(s);GLint ok=0;glGetShaderiv(s,GL_COMPILE_STATUS,&ok);if(!ok){glDeleteShader(s);throw std::runtime_error("Hotspot shader compile failed");}return s;}
 }
@@ -51,8 +63,9 @@ bool Hotspots::Prepare(const std::shared_ptr<const HotspotData>& data){
     if(failed_)return false;
     try{
         if(!program_){
+            std::string fragment=Fragment;const std::string marker="/*TONE_FUNCTIONS*/";fragment.replace(fragment.find(marker),marker.size(),PostTone);
             GLuint v=Shader(GL_VERTEX_SHADER,Vertex),f=0;
-            try{f=Shader(GL_FRAGMENT_SHADER,Fragment);}catch(...){glDeleteShader(v);throw;}
+            try{f=Shader(GL_FRAGMENT_SHADER,fragment.c_str());}catch(...){glDeleteShader(v);throw;}
             program_=glCreateProgram();glAttachShader(program_,v);glAttachShader(program_,f);glLinkProgram(program_);glDeleteShader(v);glDeleteShader(f);
             GLint ok=0;glGetProgramiv(program_,GL_LINK_STATUS,&ok);if(!ok)throw std::runtime_error("Hotspot program link failed");
             glGenTextures(1,&texture_);glActiveTexture(GL_TEXTURE3);glBindTexture(GL_TEXTURE_2D,texture_);
@@ -69,9 +82,10 @@ bool Hotspots::Prepare(const std::shared_ptr<const HotspotData>& data){
         return true;
     }catch(const std::exception &e){OH_LOG_Print(LOG_APP,LOG_ERROR,0xD003,"NextNewsViewer","%{public}s",e.what());Destroy();failed_=true;return false;}
 }
-void Hotspots::Draw(const View&v,int width,int height,HotspotStyle s,bool overlay){
+void Hotspots::Draw(const View&v,int width,int height,HotspotStyle s,bool overlay,int directTone){
     if(!program_||!uploaded_||!s.visible)return;
     glUseProgram(program_);glBindVertexArray(vao_);glActiveTexture(GL_TEXTURE3);glBindTexture(GL_TEXTURE_2D,texture_);
+    glUniform1i(glGetUniformLocation(program_,"directTone"),directTone);
     glUniform1i(glGetUniformLocation(program_,"glyphs"),3);glUniform1i(glGetUniformLocation(program_,"hover"),s.hover);
     glUniformMatrix4fv(glGetUniformLocation(program_,"view"),1,GL_FALSE,v.matrix.data());
     glUniform2f(glGetUniformLocation(program_,"viewport"),width,height);
