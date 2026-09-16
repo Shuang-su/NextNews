@@ -1,6 +1,7 @@
 # HarmonyOS native 3DGS development
 
 Latest Viewer phase: [collision wire debug and animation timeline](viewer-debug-timeline-20260916.md).
+Latest candidate: [annotation depth and anchored popovers](annotations-20260916.md), built but awaiting phone visual verification; depth markers remain experimental.
 The [v1.31.2 parity matrix](viewer-parity-v1312.md) distinguishes preview checks from unfinished acceptance.
 
 ## Architecture

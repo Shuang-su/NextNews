@@ -1,6 +1,7 @@
 import { ViewerCollision } from './ViewerCollision';
 import { ViewerProjection } from './ViewerProjection';
 import { ViewerTimeline } from './ViewerTimeline';
+import { AnnotationPopup, annotationPopup, annotationGlyphs } from './ViewerAnnotations';
 import { Scene } from '@kit.ArkGraphics3D';
 import { util } from '@kit.ArkTS';
 import { ViewerRuntime, ViewerMarker } from './ViewerRuntime';
@@ -13,7 +14,7 @@ import { fileIo as fs, picker } from '@kit.CoreFileKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import nativeRender from 'libsplat.so';
 import { ViewerProfile } from './ViewerProfile';
-import { ViewerPose, parseViewerSettings, createSettings, framePose } from './ViewerSettings';
+import { ViewerPose, ViewerAnnotation, parseViewerSettings, createSettings, framePose } from './ViewerSettings';
 import { SAMPLE_BOUNDS } from './ModelBounds';
 import { StreamSession } from './StreamSession';
 import { OrbitControls, OrbitTouch } from './OrbitControls';
@@ -166,14 +167,47 @@ struct Index {
   @State annotationTitle: string = '';
   @State annotationText: string = '';
   @State annotationCount: number = 0;
-  @State showAnnotations: boolean = true;
-  @State gaming: boolean = false;
+  @State @Watch('syncAnnotationStyle') showAnnotations: boolean = true;
+  @State @Watch('syncAnnotationStyle') gaming: boolean = false;
+  @State annotationDepth: number = 0;
+  @State @Watch('syncAnnotations') gpuAnnotations: boolean = false;
+  @State hoveredAnnotation: number = -1;
+  @State popupVisible: boolean = false;
+  @State popup: AnnotationPopup = { x: 8, y: 8, width: 200, arrow: 16, flipped: false };
+  private popupHeight: number = 100;
+  private glyphs: ArrayBuffer | undefined = undefined;
+  private annotatedProfile: ViewerProfile | undefined = undefined;
+  private annotatedBackend: string = '';
+  private annotatedGpu: boolean = false;
+  private syncAnnotationStyle(): void {
+    if (!this.visible) { return; }
+    const visible = this.gpuAnnotations && this.toolsVisible && this.showAnnotations && !(this.flyMode && this.gaming && !this.animationMode);
+    this.backend.annotationStyle(visible, this.hoveredAnnotation, this.getUIContext().vp2px(25));
+  }
+  private syncAnnotations(): void {
+    if (this.annotatedProfile !== this.viewer.profile || this.annotatedBackend !== this.backendName || this.annotatedGpu !== this.gpuAnnotations) {
+      this.annotatedProfile = this.viewer.profile; this.annotatedBackend = this.backendName; this.annotatedGpu = this.gpuAnnotations;
+      try {
+        const annotations: ViewerAnnotation[] = this.gpuAnnotations ? this.viewer.profile?.settings.annotations ?? [] : [];
+        const positions = new Float32Array(annotations.length * 3);
+        annotations.forEach((a: ViewerAnnotation, i: number) => { positions.set(a.position, i * 3); });
+        if (annotations.length && !this.glyphs) { this.glyphs = annotationGlyphs(); }
+        this.backend.annotations(positions.buffer as ArrayBuffer, this.glyphs ?? new ArrayBuffer(0));
+      } catch (error) { console.warn(`Annotation atlas: ${((error as BusinessError).message || String(error))}`); }
+    }
+    this.syncAnnotationStyle();
+  }
+  private positionPopup(): void {
+    const marker = this.viewer.anchor(this.viewer.selected); this.popupVisible = marker !== undefined;
+    if (marker) { this.popup = annotationPopup(marker.x, marker.y, this.controls.width, this.controls.height, this.popupHeight); }
+  }
+  private closeAnnotation(): void { this.viewer.selected = -1; this.hoveredAnnotation = -1; this.refreshAnnotations(); }
   @State timeline: number = 0;
   @State duration: number = 20;
   @State profileReady: boolean = false;
   private timelineUpdated: number = 0;
   @State profilePlaying: boolean = false;
-  @State animationMode: boolean = false;
+  @State @Watch('syncAnnotationStyle') animationMode: boolean = false;
   private scrubResume: boolean = false;
   private stopAnimation(): void { this.animationMode = false; this.profilePlaying = false; this.scrubResume = false; }
   private scrubAnimation(phase: string): void {
@@ -198,6 +232,7 @@ struct Index {
     this.annotationCount = this.viewer.profile?.settings.annotations.length ?? 0;
     const annotation = this.viewer.profile?.settings.annotations[this.annotationIndex];
     this.annotationTitle = annotation?.title ?? ''; this.annotationText = annotation?.text ?? '';
+    this.positionPopup(); this.syncAnnotations();
   }
   private activateAnnotation(index: number): void { this.leaveWalk();
     this.stopAnimation(); this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++;
@@ -286,17 +321,23 @@ struct Index {
   private timer: number = -1;
   private generation: number = 0;
   private visible: boolean = true;
-  @State toolsVisible: boolean = true;
-  @State settingsVisible: boolean = false;
-  @State modelsVisible: boolean = false;
+  @State @Watch('syncAnnotationStyle') toolsVisible: boolean = true;
+  @State @Watch('menuChanged') settingsVisible: boolean = false;
+  @State @Watch('menuChanged') modelsVisible: boolean = false;
   @State autoOrbit: boolean = false;
   @State flySpeed: number = 1;
   @State gpuOptimized: boolean = true;
   @State hint: string = '';
   @State joyX: number = 0;
   @State joyY: number = 0;
-  @State helpVisible: boolean = false;
-  @State diagnosticsVisible: boolean = false;
+  @State @Watch('menuChanged') helpVisible: boolean = false;
+  @State @Watch('menuChanged') diagnosticsVisible: boolean = false;
+  private menuScroller: Scroller = new Scroller();
+  private menuChanged(): void {
+    setTimeout(() => { if (this.visible && (this.settingsVisible || this.modelsVisible || this.helpVisible || this.diagnosticsVisible)) {
+      this.menuScroller.scrollTo({ xOffset: 0, yOffset: 0, animation: false });
+    } }, 0);
+  }
   private pointers: PointerInput = new PointerInput();
   private controls: OrbitControls = this.viewer.controls;
   private motionTimer: number = -1;
@@ -365,6 +406,7 @@ struct Index {
         return;
       }
       const state = nativeRender.status();
+      this.annotationDepth = state.annotationDepth;
       if (state.state === 'ready' && !this.stream && state.count > 0) { this.viewer.bounds = state.bounds; if (this.awaitingModelCamera) { this.awaitingModelCamera = false; this.updateCamera(); } }
       this.loading = state.state === 'loading';
       if (this.stream) { console.info(`StreamFrame state=${state.state} frames=${state.frames} count=${state.count} loadMs=${state.loadMs.toFixed(0)} frameMs=${state.frameMs.toFixed(1)} uploadMs=${state.uploadMs.toFixed(1)} uploadedRows=${state.uploadedRows} reusedRows=${state.reusedRows} decodedFiles=${state.decodedFiles} subsetHits=${state.subsetHits} request=${state.requestRevision} display=${state.displayRevision} prepareMs=${state.prepareMs.toFixed(1)} refineMs=${state.refineMs.toFixed(1)} uploadedBytes=${state.uploadedBytes} pageHits=${state.pageHits}`); }
@@ -372,7 +414,7 @@ struct Index {
         this.message = state.state === 'ready' ? '官方导航 · 环绕聚焦 / 飞行前往 · 双击聚焦' : state.message;
       }
       this.graphics = state.graphics;
-      this.details = `${state.count.toLocaleString()} 个高斯 · SH0\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\n单帧 ${state.frameMs.toFixed(1)} ms · 渲染耗时折算 ${state.fps.toFixed(1)} fps\n最近上传批次 ${state.uploadMs.toFixed(1)} ms · 上传/复用 ${state.uploadedRows}/${state.reusedRows} 行\nGPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
+      this.details = `${state.count.toLocaleString()} 个高斯 · SH0\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\n单帧 ${state.frameMs.toFixed(1)} ms · 渲染耗时折算 ${state.fps.toFixed(1)} fps\n最近上传批次 ${state.uploadMs.toFixed(1)} ms · 上传/复用 ${state.uploadedRows}/${state.reusedRows} 行\n高斯 GPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
     }, 500);
   }
   aboutToDisappear(): void {
@@ -472,9 +514,10 @@ struct Index {
     else { this.controls.reset(); this.controls.fov = 85; this.viewer.apply(framePose(this.viewer.bounds), false); }
     this.flyMode = this.controls.fly; this.timeline = 0; this.updateCamera();
   }
-  private clearProfile(): void { this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; }
+  private clearProfile(): void { this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.syncAnnotations(); }
   private touch(event: TouchEvent): void {
     if (event.source === SourceType.Mouse) { return; }
+    if (event.type === TouchType.Down && this.viewer.selected >= 0) { this.closeAnnotation(); }
     this.viewer.interrupt();
     this.stopAnimation();
     this.autoOrbit = false;
@@ -492,6 +535,7 @@ struct Index {
   private mouse(event: MouseEvent): void {
     if (event.action === MouseAction.Press || this.mouseButton !== MouseButton.None) { this.viewer.interrupt(); this.stopAnimation(); }
     if (event.action === MouseAction.Press) {
+      if (this.viewer.selected >= 0) { this.closeAnnotation(); }
       this.autoOrbit = false; if (this.pointers.stickId < 0) { this.pointers.blockTap = false; }
       this.getUIContext().getFocusController().requestFocus('viewer-surface');
       this.mouseButton = event.button; this.mouseX = event.x; this.mouseY = event.y;
@@ -599,6 +643,17 @@ struct Index {
       this.message = this.localError;
     } finally { this.busy = false; }
   }
+  private async annotationFixture(): Promise<void> {
+    this.gpuAnnotations = true;
+    await this.sample('annotation-fixture.ply', '标注遮挡夹具');
+    if (this.localError || this.title !== '标注遮挡夹具') { return; }
+    const request = this.generation;
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    const data = await context.resourceManager.getRawFileContent('annotation-fixture.json');
+    if (!this.visible || request !== this.generation) { return; }
+    this.viewer.configure(parseViewerSettings(new util.TextDecoder('utf-8', { fatal: true }).decodeWithStream(data)));
+    this.viewer.initial(); this.flyMode = this.controls.fly; this.diagnosticsVisible = false; this.updateCamera();
+  }
   private async loadComparison(): Promise<void> {
     if (this.busy) { return; } this.busy = true; this.stopStream(); this.localError = '';
     const request = ++this.generation;
@@ -679,10 +734,16 @@ struct Index {
       }
       if (this.toolsVisible && this.showAnnotations && !(this.flyMode && this.gaming && !this.animationMode)) {
         ForEach(this.markers, (marker: ViewerMarker) => {
-          Button(`${marker.index + 1}`, { type: ButtonType.Circle }).width(44).height(44).fontSize(14)
-            .fontColor('#FFFFFF').backgroundColor(this.annotationIndex === marker.index ? '#e98443' : '#80000000')
-            .border({ width: 2, color: '#FFFFFF' }).position({ x: marker.x - 22, y: marker.y - 22 })
+          Button({ type: ButtonType.Circle }) {
+            if (this.backendName !== 'OpenGL' || !this.gpuAnnotations || this.annotationDepth === 0) {
+              Text(`${marker.index + 1}`).fontSize(12).fontWeight(FontWeight.Bold).fontColor(this.hoveredAnnotation === marker.index ? '#FF6600' : '#CCCCCC')
+                .width(25).height(25).textAlign(TextAlign.Center).backgroundColor('#000000').borderRadius(13)
+                .border({ width: 1.2, color: this.hoveredAnnotation === marker.index ? '#FF6600' : '#CCCCCC' })
+            }
+          }.width(44).height(44).backgroundColor('#00000000').stateEffect(false).position({ x: marker.x - 22, y: marker.y - 22 })
             .accessibilityText(`标注 ${marker.index + 1} ${marker.title}`).id(`annotation-${marker.index}`)
+            .onTouch((event: TouchEvent) => { event.stopPropagation(); })
+            .onHover((hover: boolean) => { this.hoveredAnnotation = hover ? marker.index : this.hoveredAnnotation === marker.index ? -1 : this.hoveredAnnotation; this.syncAnnotationStyle(); })
             .onClick(() => { this.activateAnnotation(marker.index); })
         }, (marker: ViewerMarker) => marker.index.toString())
       }
@@ -711,7 +772,7 @@ struct Index {
         Column({ space: 8 }) {
           if (this.hint) { Text(this.hint).fontSize(12).fontColor('#EEF4FF').padding(6).backgroundColor('#DD1C283B').borderRadius(6) }
           if (this.settingsVisible || this.modelsVisible || this.helpVisible || this.diagnosticsVisible) {
-            Scroll() {
+            Scroll(this.menuScroller) {
               Column({ space: 12 }) {
                 if (this.modelsVisible) {
                   Text('模型库').fontColor('#EEF4FF').fontSize(16).width('100%')
@@ -754,6 +815,7 @@ struct Index {
                   Text('设置').fontSize(16).fontColor('#FFFFFF').width('100%')
                   Button(this.gaming ? '游戏控制：开' : '游戏控制：关').fontSize(12).onClick(() => { this.gaming = !this.gaming; this.viewer.gaming = this.gaming; this.resetJoystick(); })
                   Button(this.showAnnotations ? '标注：显示' : '标注：隐藏').fontSize(12).onClick(() => { this.showAnnotations = !this.showAnnotations; })
+                  Button(this.gpuAnnotations ? '深度标注：开（实验）' : '深度标注：关').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.gpuAnnotations = !this.gpuAnnotations; })
                   Row({ space: 12 }) {
                     Button('完整取景').fontSize(12).onClick(() => { this.frame(); this.settingsVisible = false; })
                     Button('复位').fontSize(12).onClick(() => { this.reset(); this.settingsVisible = false; })
@@ -786,6 +848,8 @@ struct Index {
                     .fontSize(12).fontColor('#B7C9DE').width('100%').lineHeight(22)
                 }
                 if (this.diagnosticsVisible) {
+                  Button('标注遮挡夹具').fontSize(12).enabled(!this.busy).onClick(() => { this.annotationFixture().catch((e: Error) => { this.localError = e.message; }); })
+                  Text(this.backendName === 'OpenGL' ? `标注深度：${this.annotationDepth > 0 ? this.annotationDepth + ' bit' : '二维回退 / 尚未就绪'}` : '标注深度：华为二维回退（未验证等价遮挡）').fontSize(11).fontColor('#99B1C4')
                   Button(this.gpuOptimized ? 'GPU 裁剪：开' : 'GPU 裁剪：关').fontSize(12).onClick(() => { this.gpuOptimized = !this.gpuOptimized; nativeRender.optimize(this.gpuOptimized); })
                   Button('连续转向 20 秒').fontSize(12).enabled(this.paged && !this.streamMeasuring).onClick(() => { this.measureContinuous(); })
                   Button('流式测量 20 次').fontSize(12).enabled(this.paged && !this.streamMeasuring).onClick(() => { this.measureStream(); })
@@ -800,13 +864,6 @@ struct Index {
           }
           if (this.profileReady && !this.modelsVisible && !this.settingsVisible && !this.helpVisible && !this.diagnosticsVisible) {
             if (this.showAnnotations && this.annotationCount > 0 && !(this.flyMode && this.gaming && !this.animationMode)) {
-              if (this.annotationIndex >= 0 && this.markers.some((m: ViewerMarker) => m.index === this.annotationIndex)) {
-                Column({ space: 6 }) {
-                  Row() { Text(this.annotationTitle).fontSize(16).fontWeight(FontWeight.Medium).fontColor('#FFFFFF').layoutWeight(1)
-                    Button('×').width(40).height(40).backgroundColor('#00000000').accessibilityText('关闭标注').onClick(() => { this.viewer.selected = -1; this.refreshAnnotations(); }) }
-                  Scroll() { Text(this.annotationText).fontSize(13).lineHeight(21).fontColor('#DDDDDD').width('100%') }.constraintSize({ maxHeight: 150 })
-                }.width('100%').padding(12).backgroundColor('#E6222222').borderRadius(12)
-              }
               Row({ space: 8 }) {
                 ViewerTool({ icon: $r('app.media.viewer_prev'), label: '上一个标注', action: () => { this.activateAnnotation(this.annotationIndex < 0 ? this.annotationCount - 1 : this.annotationIndex - 1); } })
                 Text(this.annotationIndex < 0 ? `标注 · ${this.annotationCount}` : `${this.annotationIndex + 1} / ${this.annotationCount} · ${this.annotationTitle}`)
@@ -856,6 +913,22 @@ struct Index {
           }
         }
       }
-    }.width('100%').height('100%').backgroundColor('#091322')
+      if (this.toolsVisible && this.showAnnotations && this.popupVisible && !(this.flyMode && this.gaming && !this.animationMode) && !this.modelsVisible && !this.settingsVisible && !this.helpVisible && !this.diagnosticsVisible) {
+        Stack({ alignContent: Alignment.TopStart }) {
+          Column({ space: 4 }) {
+            Row() {
+              Text(this.annotationTitle).fontSize(14).fontWeight(FontWeight.Bold).fontColor('#FFFFFF').layoutWeight(1).maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
+              Button('×').width(32).height(44).fontSize(20).fontColor('#FFFFFF').backgroundColor('#00000000').accessibilityText('关闭标注').id('关闭标注').onClick(() => { this.closeAnnotation(); })
+            }.width('100%')
+            Scroll() { Text(this.annotationText).fontSize(14).lineHeight(20).fontColor('#FFFFFF').width('100%') }
+              .constraintSize({ maxHeight: Math.max(40, Math.min(240, this.controls.height - 100)) })
+          }.padding(8).width(this.popup.width).backgroundColor('#CC000000').borderRadius(4)
+            .onAreaChange((_old: Area, area: Area) => { if (Math.abs(this.popupHeight - Number(area.height)) > .5) { this.popupHeight = Number(area.height); this.positionPopup(); } })
+          Polygon().points(this.popup.flipped ? [[0, 0], [8, 8], [0, 16]] : [[8, 0], [0, 8], [8, 16]])
+            .width(8).height(16).fill('#CC000000').position({ x: this.popup.flipped ? this.popup.width : -8, y: this.popup.arrow - 8 })
+        }.width(this.popup.width).position({ x: this.popup.x, y: this.popup.y }).id('annotation-popup')
+          .onTouch((event: TouchEvent) => { event.stopPropagation(); }).onClick(() => {})
+      }
+    }.width('100%').height('100%').backgroundColor('#091322').clip(true)
   }
 }

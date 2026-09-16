@@ -10,9 +10,13 @@ export interface ViewerBackend {
   camera(pose: ViewerPose, bounds: number[]): void;
   pick(x: number, y: number, bounds: number[]): Promise<number[]>;
   active(value: boolean): void;
+  annotations(positions: ArrayBuffer, glyphs: ArrayBuffer): void;
+  annotationStyle(visible: boolean, hover: number, pixels: number): void;
   dispose(): void;
 }
 export class OpenGLBackend implements ViewerBackend {
+  annotations(positions: ArrayBuffer, glyphs: ArrayBuffer): void { nativeRender.annotations(positions, glyphs); }
+  annotationStyle(visible: boolean, hover: number, pixels: number): void { nativeRender.annotationStyle(visible, hover, pixels); }
   readonly capabilities: ViewerCapabilities = { streaming: true, picking: true, postEffects: false, note: 'SH0 · 原生 OpenGL ES' };
   async load(asset: ViewerAsset): Promise<void> { nativeRender.load(asset.path); }
   camera(pose: ViewerPose, bounds: number[]): void {
@@ -26,8 +30,12 @@ export class OpenGLBackend implements ViewerBackend {
   dispose(): void { this.active(false); }
 }
 export class HuaweiBackend implements ViewerBackend {
+  // ArkGraphics3D exposes material sort hints, but no verified GSPlugin base /
+  // transparent-world / overlay ordering. Keep common UI markers as fallback.
+  annotations(_positions: ArrayBuffer, _glyphs: ArrayBuffer): void {}
+  annotationStyle(_visible: boolean, _hover: number, _pixels: number): void {}
   readonly capabilities: ViewerCapabilities = { streaming: false, picking: true, postEffects: false,
-    note: '单体 PLY / SOG · 原生瓦片与效果等价性尚未通过；Remy 编辑/导出仍受阻' };
+    note: '单体 PLY / SOG · 标注使用二维叠层；深度遮挡、原生瓦片与效果等价性尚未通过' };
   private scene: Scene | undefined = undefined;
   private view: Camera | undefined = undefined;
   private model: spatialRender.GSNode | undefined = undefined;

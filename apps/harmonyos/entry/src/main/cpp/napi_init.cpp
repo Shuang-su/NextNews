@@ -113,12 +113,26 @@ napi_value Active(napi_env env,napi_callback_info info) {
     if(argc!=1||napi_get_value_bool(env,arg,&active)!=napi_ok){napi_throw_type_error(env,nullptr,"Expected boolean");return Undefined(env);}
     splat::Renderer::Get().SetActive(active);return Undefined(env);
 }
+napi_value Annotations(napi_env env,napi_callback_info info){
+    napi_value a[2];size_t argc=2;napi_get_cb_info(env,info,&argc,a,nullptr,nullptr);
+    std::vector<float> positions;std::vector<uint8_t> glyphs;
+    if(argc!=2||!ReadBuffer(env,a[0],positions,3000)||positions.size()%3||!ReadBuffer(env,a[1],glyphs,10240)||(!positions.empty()&&glyphs.size()!=10240)){
+        napi_throw_range_error(env,nullptr,"Invalid hotspot positions or 320x32 glyph atlas");return Undefined(env);}
+    for(float v:positions)if(!std::isfinite(v)||std::abs(v)>=1e8){napi_throw_range_error(env,nullptr,"Invalid hotspot world position");return Undefined(env);}
+    auto data=std::make_shared<splat::HotspotData>();data->positions=std::move(positions);data->glyphs=std::move(glyphs);splat::Renderer::Get().SetAnnotations(data);return Undefined(env);
+}
+napi_value AnnotationStyle(napi_env env,napi_callback_info info){
+    napi_value a[3];size_t argc=3;bool visible=false;double hover=0,pixels=0;napi_get_cb_info(env,info,&argc,a,nullptr,nullptr);
+    if(argc!=3||napi_get_value_bool(env,a[0],&visible)!=napi_ok||napi_get_value_double(env,a[1],&hover)!=napi_ok||napi_get_value_double(env,a[2],&pixels)!=napi_ok||!std::isfinite(hover)||hover!=std::floor(hover)||hover<-1||hover>=1000||!std::isfinite(pixels)||pixels<1||pixels>512){napi_throw_range_error(env,nullptr,"Invalid hotspot style");return Undefined(env);}
+    splat::Renderer::Get().SetAnnotationStyle({visible,int(hover),float(pixels)});return Undefined(env);
+}
 void String(napi_env env,napi_value object,const char *key,const std::string &value){napi_value v;napi_create_string_utf8(env,value.c_str(),value.size(),&v);napi_set_named_property(env,object,key,v);}
 void Number(napi_env env,napi_value object,const char *key,double value){napi_value v;napi_create_double(env,value,&v);napi_set_named_property(env,object,key,v);}
 napi_value Status(napi_env env,napi_callback_info) {
     const auto s=splat::Renderer::Get().GetStatus();napi_value result;napi_create_object(env,&result);
     napi_value bounds; napi_create_array_with_length(env,4,&bounds); for(uint32_t i=0;i<4;i++){napi_value v;napi_create_double(env,s.bounds[i],&v);napi_set_element(env,bounds,i,v);} napi_set_named_property(env,result,"bounds",bounds);
     String(env,result,"state",s.state);String(env,result,"message",s.message);String(env,result,"graphics",s.graphics);
+    Number(env,result,"annotationDepth",s.annotationDepth);
     Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"uploadMs",s.uploadMs);Number(env,result,"uploadedRows",s.uploadedRows);Number(env,result,"reusedRows",s.reusedRows);Number(env,result,"decodedFiles",s.decodedFiles);Number(env,result,"subsetHits",s.subsetHits);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);Number(env,result,"requestRevision",s.requestRevision);Number(env,result,"displayRevision",s.displayRevision);Number(env,result,"prepareMs",s.prepareMs);Number(env,result,"refineMs",s.refineMs);Number(env,result,"uploadedBytes",s.uploadedBytes);Number(env,result,"pageHits",s.pageHits);return result;
 }
 struct PickWork { napi_async_work work; napi_deferred deferred; float x,y;std::vector<float> point;std::string error; };
@@ -155,6 +169,8 @@ napi_value Pick(napi_env env,napi_callback_info info) {
 napi_value Init(napi_env env,napi_value exports) {
     RegisterCollision(env,exports);
     napi_property_descriptor methods[]={
+        {"annotations",nullptr,Annotations,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"annotationStyle",nullptr,AnnotationStyle,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"inspectModel",nullptr,InspectModel,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"registerLods",nullptr,RegisterLods,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"selectLods",nullptr,SelectLods,nullptr,nullptr,nullptr,napi_default,nullptr},

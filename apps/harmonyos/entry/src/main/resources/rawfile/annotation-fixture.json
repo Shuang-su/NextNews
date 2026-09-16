@@ -1,0 +1,152 @@
+{
+  "version": 2,
+  "cameras": [
+    {
+      "initial": {
+        "position": [
+          0,
+          0,
+          6
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "fov": 60
+      }
+    }
+  ],
+  "animTracks": [],
+  "startMode": "default",
+  "tonemapping": "none",
+  "background": {
+    "color": [
+      0.035,
+      0.045,
+      0.065
+    ]
+  },
+  "annotations": [
+    {
+      "position": [
+        -0.8,
+        0,
+        1
+      ],
+      "title": "前景标注",
+      "text": "编号 1。<b>保持纯文本</b>。遮挡后仍可点击。",
+      "camera": {
+        "initial": {
+          "position": [
+            0,
+            0,
+            6
+          ],
+          "target": [
+            0,
+            0,
+            0
+          ],
+          "fov": 60
+        }
+      }
+    },
+    {
+      "position": [
+        0.8,
+        0,
+        -1
+      ],
+      "title": "后景标注",
+      "text": "编号 2。<b>保持纯文本</b>。遮挡后仍可点击。",
+      "camera": {
+        "initial": {
+          "position": [
+            0,
+            0,
+            6
+          ],
+          "target": [
+            0,
+            0,
+            0
+          ],
+          "fov": 60
+        }
+      }
+    },
+    {
+      "position": [
+        0,
+        1,
+        -1
+      ],
+      "title": "半透明遮挡",
+      "text": "编号 3。<b>保持纯文本</b>。遮挡后仍可点击。",
+      "camera": {
+        "initial": {
+          "position": [
+            0,
+            0,
+            6
+          ],
+          "target": [
+            0,
+            0,
+            0
+          ],
+          "fov": 60
+        }
+      }
+    },
+    {
+      "position": [
+        0,
+        0,
+        7
+      ],
+      "title": "镜头后方",
+      "text": "编号 4。<b>保持纯文本</b>。遮挡后仍可点击。",
+      "camera": {
+        "initial": {
+          "position": [
+            0,
+            0,
+            6
+          ],
+          "target": [
+            0,
+            0,
+            0
+          ],
+          "fov": 60
+        }
+      }
+    },
+    {
+      "position": [
+        100,
+        20,
+        0
+      ],
+      "title": "屏幕外浮窗",
+      "text": "编号 5。<b>保持纯文本</b>。遮挡后仍可点击。",
+      "camera": {
+        "initial": {
+          "position": [
+            0,
+            0,
+            6
+          ],
+          "target": [
+            0,
+            0,
+            0
+          ],
+          "fov": 60
+        }
+      }
+    }
+  ]
+}

@@ -168,6 +168,8 @@ void Renderer::SetCamera(Camera camera) {
     {std::lock_guard<std::mutex> lock(mutex_);camera_=camera;dirty_=true;}changed_.notify_one();
 }
 void Renderer::SetActive(bool active) { {std::lock_guard<std::mutex> lock(mutex_);active_=active;dirty_=true;}changed_.notify_one();loadChanged_.notify_one(); }
+void Renderer::SetAnnotations(std::shared_ptr<const HotspotData> data){{std::lock_guard<std::mutex> lock(mutex_);annotationData_=std::move(data);dirty_=true;}changed_.notify_one();}
+void Renderer::SetAnnotationStyle(HotspotStyle style){{std::lock_guard<std::mutex> lock(mutex_);if(style.visible==annotationStyle_.visible&&style.hover==annotationStyle_.hover&&style.pixels==annotationStyle_.pixels)return;annotationStyle_=style;dirty_=true;}changed_.notify_one();}
 std::vector<float> Renderer::Pick(float x,float y) {
     std::shared_ptr<Scene> scene;Camera camera;int width,height;
     {std::lock_guard<std::mutex> lock(mutex_);scene=scene_;camera=camera_;width=width_;height=height_;}
@@ -179,14 +181,16 @@ void Renderer::InitGL(void *window) {
     dataCapacity_=0;uploadDirty_=true; window_ = window; bufferWidth_ = bufferHeight_ = 0;
     display_=eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if(display_==EGL_NO_DISPLAY || !eglInitialize(display_,nullptr,nullptr)) throw std::runtime_error("EGL display initialization failed");
-    const EGLint configAttrs[]={EGL_SURFACE_TYPE,EGL_WINDOW_BIT,EGL_RENDERABLE_TYPE,EGL_OPENGL_ES3_BIT,EGL_RED_SIZE,8,EGL_GREEN_SIZE,8,EGL_BLUE_SIZE,8,EGL_ALPHA_SIZE,8,EGL_NONE};
-    EGLConfig config; EGLint count;
-    if(!eglChooseConfig(display_,configAttrs,&config,1,&count)||!count) throw std::runtime_error("OpenGL ES 3 window configuration unavailable");
+    EGLint configAttrs[]={EGL_SURFACE_TYPE,EGL_WINDOW_BIT,EGL_RENDERABLE_TYPE,EGL_OPENGL_ES3_BIT,EGL_RED_SIZE,8,EGL_GREEN_SIZE,8,EGL_BLUE_SIZE,8,EGL_ALPHA_SIZE,8,EGL_DEPTH_SIZE,24,EGL_NONE};
+    EGLConfig config; EGLint count=0;
+    for(int depth:{24,16,0}){configAttrs[13]=depth;if(eglChooseConfig(display_,configAttrs,&config,1,&count)&&count)break;}
+    if(!count) throw std::runtime_error("OpenGL ES 3 window configuration unavailable");
     const EGLint attrs[]={EGL_CONTEXT_CLIENT_VERSION,3,EGL_NONE};
     context_=eglCreateContext(display_,config,EGL_NO_CONTEXT,attrs);
     surface_=eglCreateWindowSurface(display_,config,reinterpret_cast<EGLNativeWindowType>(window),nullptr);
     if(context_==EGL_NO_CONTEXT||surface_==EGL_NO_SURFACE||!eglMakeCurrent(display_,surface_,surface_,context_)) throw std::runtime_error("EGL surface/context creation failed");
     eglSwapInterval(display_,1);
+    glGetIntegerv(GL_DEPTH_BITS,&depthBits_);
     const auto *version=glGetString(GL_VERSION), *renderer=glGetString(GL_RENDERER);
     {std::lock_guard<std::mutex> lock(mutex_);status_.graphics=std::string(version?reinterpret_cast<const char*>(version):"unknown")+" / "+(renderer?reinterpret_cast<const char*>(renderer):"unknown");}
     // Optional, asynchronous hardware timing. Never wait for query completion.
@@ -220,13 +224,14 @@ void Renderer::DestroyGL() {
     if(display_==EGL_NO_DISPLAY)return;
     if(context_!=EGL_NO_CONTEXT && surface_!=EGL_NO_SURFACE){
         eglMakeCurrent(display_,surface_,surface_,context_);
+        hotspots_.Destroy();depthBits_=0;
         if(timerQueries_[0])glDeleteQueries(4,timerQueries_);
         if(dataTexture_)glDeleteTextures(1,&dataTexture_);
         if(buffer_)glDeleteBuffers(1,&buffer_);if(vao_)glDeleteVertexArrays(1,&vao_);if(program_)glDeleteProgram(program_);
     }
     timerResult_=nullptr;timerSlot_=0;
     std::fill_n(timerQueries_,4,0);std::fill_n(timerPending_,4,false);std::fill_n(timerInvalid_,4,false);
-    {std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=-1;}
+    {std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=-1;status_.annotationDepth=0;}
     dataTexture_=buffer_=vao_=program_=0;eglMakeCurrent(display_,EGL_NO_SURFACE,EGL_NO_SURFACE,EGL_NO_CONTEXT);
     if(surface_!=EGL_NO_SURFACE)eglDestroySurface(display_,surface_);
     if(context_!=EGL_NO_CONTEXT)eglDestroyContext(display_,context_);
@@ -322,7 +327,14 @@ void Renderer::Draw(const View &view,int width,int height) {
         }
     }
     const auto drawStart=Clock::now();
-    glViewport(0,0,width,height);glClearColor(.035f,.045f,.065f,1);glClear(GL_COLOR_BUFFER_BIT);glUseProgram(program_);
+    std::shared_ptr<const HotspotData> annotations;HotspotStyle style;
+    {std::lock_guard<std::mutex> lock(mutex_);annotations=annotationData_;style=annotationStyle_;}
+    const bool annotationReady=depthBits_>0&&hotspots_.Prepare(annotations);
+    {std::lock_guard<std::mutex> lock(mutex_);status_.annotationDepth=annotationReady?depthBits_:0;}
+    glViewport(0,0,width,height);glClearColor(.035f,.045f,.065f,1);glClear(GL_COLOR_BUFFER_BIT);
+    if(annotationReady&&style.visible){glDepthMask(GL_TRUE);glClearDepthf(1);glClear(GL_DEPTH_BUFFER_BIT);hotspots_.Draw(view,width,height,style,false);}
+    if(annotationReady&&style.visible){glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);}else glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);glUseProgram(program_);
     glUniform1i(optimizedLocation_,optimized_.load());
     glUniformMatrix4fv(viewLocation_,1,GL_FALSE,view.matrix.data());
     glUniform2f(viewportLocation_,float(width),float(height));
@@ -356,6 +368,7 @@ void Renderer::Draw(const View &view,int width,int height) {
     }
     glDrawArraysInstanced(GL_TRIANGLE_STRIP,0,4,GLsizei(scene_->paged && !atlasDrawable_ ? 0 : scene_->Count()));
     if(timed){glEndQuery(0x88BF);timerPending_[timerSlot_]=true;timerSlot_=(timerSlot_+1)%4;}
+    if(annotationReady&&style.visible)hotspots_.Draw(view,width,height,style,true);
     const GLenum error=glGetError();if(error!=GL_NO_ERROR)throw std::runtime_error("OpenGL error: "+std::to_string(error));
     if(!eglSwapBuffers(display_,surface_))throw std::runtime_error("EGL swap failed");
     std::lock_guard<std::mutex> lock(mutex_);

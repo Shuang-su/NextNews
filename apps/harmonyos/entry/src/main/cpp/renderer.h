@@ -3,6 +3,7 @@
 #include "upload_rows.h"
 #include "scene_cache.h"
 #include "page_atlas.h"
+#include "hotspots.h"
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <condition_variable>
@@ -16,6 +17,7 @@ struct Status {
     std::string state = "waiting", message = "Waiting for render surface", graphics;
     size_t count = 0, bytes = 0, frames = 0;
     int width = 1, height = 1;
+    int annotationDepth = 0;
     std::array<float,4> bounds{0,0,0,1};
     double gpuMs = -1, uploadMs = 0;
     size_t uploadedRows = 0, reusedRows = 0, decodedFiles = 0, subsetHits = 0;
@@ -33,6 +35,8 @@ public:
     void SetCamera(Camera camera);
     void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {},bool paged=false,uint64_t revision=0,bool encoded=false);
     void SetActive(bool active);
+    void SetAnnotations(std::shared_ptr<const HotspotData> data);
+    void SetAnnotationStyle(HotspotStyle style);
     void DropCaches();
     void TraceFrames(bool enabled);
     void SetOptimized(bool enabled);
@@ -128,6 +132,10 @@ private:
     Status status_;
     std::shared_ptr<Scene> scene_ = std::make_shared<Scene>();
     bool uploadDirty_ = true;
+    Hotspots hotspots_;
+    std::shared_ptr<const HotspotData> annotationData_;
+    HotspotStyle annotationStyle_;
+    int depthBits_=0;
     std::array<float,3> sortDirection_{};
     EGLDisplay display_ = EGL_NO_DISPLAY;
     EGLContext context_ = EGL_NO_CONTEXT;

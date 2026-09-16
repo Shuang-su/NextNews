@@ -3,6 +3,7 @@ export interface RenderStatus {
   bounds: number[];
   message: string;
   graphics: string;
+  annotationDepth: number;
   count: number;
   frames: number;
   width: number;
@@ -30,6 +31,8 @@ export const inspectModel: (path: string) => Promise<number[]>;
 export const camera: (yaw: number, pitch: number, zoom: number, panX: number, panY: number, panZ: number, fly: number, fov?: number) => void;
 export const setActive: (active: boolean) => void;
 export const status: () => RenderStatus;
+export const annotations: (positions: ArrayBuffer, glyphAlpha: ArrayBuffer) => void;
+export const annotationStyle: (visible: boolean, hover: number, sizePixels: number) => void;
 
 export const chunks: (paths: string[], bounds: number[], ranges?: number[]) => void;
 

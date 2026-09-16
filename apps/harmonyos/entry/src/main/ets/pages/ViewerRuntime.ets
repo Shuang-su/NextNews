@@ -68,21 +68,29 @@ export class ViewerRuntime {
     if (t === 1) { this.interrupt(); }
     return true;
   }
+  anchor(index: number): ViewerMarker | undefined {
+    return this.project(index, this.pose().position, this.projectionBasis());
+  }
+  private projectionBasis(): number[] {
+    const c = this.controls.current;
+    return [Math.sin(c[0]), Math.cos(c[0]), Math.sin(c[1]), Math.cos(c[1]), this.controls.height / (2 * Math.tan(this.controls.fov * Math.PI / 360))];
+  }
+  private project(index: number, eye: number[], basis: number[]): ViewerMarker | undefined {
+    const a = this.profile?.settings.annotations[index]; if (!a) { return undefined; }
+    const sy = basis[0], cy = basis[1], sp = basis[2], cp = basis[3], focal = basis[4];
+    const dx = a.position[0] - eye[0], dy = a.position[1] - eye[1], dz = a.position[2] - eye[2];
+    const depth = -(dx * sy * cp + dy * sp + dz * cy * cp);
+    if (depth <= .000001) { return undefined; }
+    const x = this.controls.width / 2 + focal * (dx * cy - dz * sy) / depth;
+    const y = this.controls.height / 2 - focal * (-dx * sy * sp + dy * cp - dz * cy * sp) / depth;
+    return { index, x, y, depth, title: a.title, text: a.text };
+  }
   markers(): ViewerMarker[] {
-    if (!this.profile) { return []; }
-    const c = this.controls.current, eye = this.pose().position, w = this.controls.width, h = this.controls.height;
-    const sy = Math.sin(c[0]), cy = Math.cos(c[0]), sp = Math.sin(c[1]), cp = Math.cos(c[1]);
-    const focal = h / (2 * Math.tan(this.controls.fov * Math.PI / 360));
-    const result: ViewerMarker[] = [];
-    this.profile.settings.annotations.forEach((a, index: number) => {
-      const dx = a.position[0] - eye[0], dy = a.position[1] - eye[1], dz = a.position[2] - eye[2];
-      const depth = -(dx * sy * cp + dy * sp + dz * cy * cp);
-      if (depth <= this.bounds[3] * .001) { return; }
-      const x = w / 2 + focal * (dx * cy - dz * sy) / depth;
-      const y = h / 2 - focal * (-dx * sy * sp + dy * cp - dz * cy * sp) / depth;
-      if (x < -24 || y < -24 || x > w + 24 || y > h + 24) { return; }
-      result.push({ index, x, y, depth, title: a.title, text: a.text });
-    });
+    const result: ViewerMarker[] = [], count = this.profile?.settings.annotations.length ?? 0;
+    const eye = this.pose().position, basis = this.projectionBasis();
+    for (let i = 0; i < count; i++) {
+      const m = this.project(i, eye, basis); if (m && m.x >= -22 && m.y >= -22 && m.x <= this.controls.width + 22 && m.y <= this.controls.height + 22) { result.push(m); }
+    }
     return result;
   }
   snapshot(playing: boolean): ViewerSnapshot { return { pose: this.pose(), fly: this.controls.fly, selected: this.selected, time: this.profile?.time ?? 0, playing }; }
