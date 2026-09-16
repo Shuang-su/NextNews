@@ -2,12 +2,17 @@ import { Scene, Camera, EnvironmentBackgroundType } from '@kit.ArkGraphics3D';
 import { spatialRender } from '@kit.SpatialReconKit';
 import nativeRender from 'libsplat.so';
 import { ViewerPose } from './ViewerSettings';
+export function backgroundRGB(color: number[]): number[] {
+  if (color.length !== 3 || !color.every((v: number) => Number.isFinite(v))) { throw new Error('背景颜色必须是三个有限数值'); }
+  return color.map((v: number) => Math.max(0, Math.min(1, v)));
+}
 export interface ViewerAsset { path: string; bounds: number[]; }
 export interface ViewerCapabilities { streaming: boolean; picking: boolean; postEffects: boolean; note: string; }
 export interface ViewerBackend {
   readonly capabilities: ViewerCapabilities;
   load(asset: ViewerAsset): Promise<void>;
   camera(pose: ViewerPose, bounds: number[]): void;
+  background(color: number[]): void;
   pick(x: number, y: number, bounds: number[]): Promise<number[]>;
   active(value: boolean): void;
   annotations(positions: ArrayBuffer, glyphs: ArrayBuffer): void;
@@ -15,6 +20,7 @@ export interface ViewerBackend {
   dispose(): void;
 }
 export class OpenGLBackend implements ViewerBackend {
+  background(color: number[]): void { const rgb = backgroundRGB(color); nativeRender.background(rgb[0], rgb[1], rgb[2]); }
   annotations(positions: ArrayBuffer, glyphs: ArrayBuffer): void { nativeRender.annotations(positions, glyphs); }
   annotationStyle(visible: boolean, hover: number, pixels: number): void { nativeRender.annotationStyle(visible, hover, pixels); }
   readonly capabilities: ViewerCapabilities = { streaming: true, picking: true, postEffects: false, note: 'SH0 · 原生 OpenGL ES' };
@@ -30,6 +36,13 @@ export class OpenGLBackend implements ViewerBackend {
   dispose(): void { this.active(false); }
 }
 export class HuaweiBackend implements ViewerBackend {
+  private clear: number[] = [0, 0, 0];
+  background(input: number[]): void {
+    const color = backgroundRGB(input);
+    if (this.clear.every((v: number, i: number) => v === color[i])) { return; }
+    this.clear = color.slice();
+    if (this.view) { this.view.clearColor = { r: color[0], g: color[1], b: color[2], a: 1 }; }
+  }
   // ArkGraphics3D exposes material sort hints, but no verified GSPlugin base /
   // transparent-world / overlay ordering. Keep common UI markers as fallback.
   annotations(_positions: ArrayBuffer, _glyphs: ArrayBuffer): void {}
@@ -56,7 +69,7 @@ export class HuaweiBackend implements ViewerBackend {
       model.rotation = { x: 0, y: 0, z: 1, w: 0 };
       const camera = await pending.getResourceFactory().createCamera({ name: 'nextnewsViewerCamera' });
       camera.fov = 85 * Math.PI / 180; camera.nearPlane = asset.bounds[3] * .001; camera.farPlane = asset.bounds[3] * 100;
-      camera.clearColor = { r: .035, g: .045, b: .065, a: 1 }; camera.postProcess = null;
+      camera.clearColor = { r: this.clear[0], g: this.clear[1], b: this.clear[2], a: 1 }; camera.postProcess = null;
       pending.environment.backgroundType = EnvironmentBackgroundType.BACKGROUND_NONE;
       if (request !== this.generation) { return; }
       this.scene = pending; this.model = model; this.view = camera; camera.enabled = this.enabled;

@@ -33,6 +33,7 @@ public:
     void Resize(int width, int height);
     void Load(std::string path);
     void SetCamera(Camera camera);
+    void SetBackground(std::array<float,3> color);
     void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {},bool paged=false,uint64_t revision=0,bool encoded=false);
     void SetActive(bool active);
     void SetAnnotations(std::shared_ptr<const HotspotData> data);
@@ -129,6 +130,7 @@ private:
     SceneCache<std::pair<std::string,std::vector<uint32_t>>> selected_{256*1024*1024};
     bool chunksDirty_ = false;
     Camera camera_;
+    std::array<float,3> background_{0,0,0};
     Status status_;
     std::shared_ptr<Scene> scene_ = std::make_shared<Scene>();
     bool uploadDirty_ = true;

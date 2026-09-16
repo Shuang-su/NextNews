@@ -2,7 +2,7 @@
 
 Latest installed Viewer: [world-speed flight and held elevation](flight-input-20260916.md).
 [OpenGL depth annotations](depth-enabled-20260916.md) are now enabled and phone-verified for the recorded cases; Huawei remains a 2D fallback.
-Latest uninstalled candidate: [world-space wheel/pinch displacement](displacement-input-20260916.md).
+Latest uninstalled candidate: [configured background color](background-20260916.md), including [world-space wheel/pinch displacement](displacement-input-20260916.md).
 The [v1.31.2 parity matrix](viewer-parity-v1312.md) distinguishes preview checks from unfinished acceptance.
 
 ## Architecture

@@ -168,6 +168,10 @@ void Renderer::SetCamera(Camera camera) {
     {std::lock_guard<std::mutex> lock(mutex_);camera_=camera;dirty_=true;}changed_.notify_one();
 }
 void Renderer::SetActive(bool active) { {std::lock_guard<std::mutex> lock(mutex_);active_=active;dirty_=true;}changed_.notify_one();loadChanged_.notify_one(); }
+void Renderer::SetBackground(std::array<float,3> color) {
+    { std::lock_guard<std::mutex> lock(mutex_); if(background_==color)return; background_=color;dirty_=true; }
+    changed_.notify_one();
+}
 void Renderer::SetAnnotations(std::shared_ptr<const HotspotData> data){{std::lock_guard<std::mutex> lock(mutex_);annotationData_=std::move(data);dirty_=true;}changed_.notify_one();}
 void Renderer::SetAnnotationStyle(HotspotStyle style){{std::lock_guard<std::mutex> lock(mutex_);if(style.visible==annotationStyle_.visible&&style.hover==annotationStyle_.hover&&style.pixels==annotationStyle_.pixels)return;annotationStyle_=style;dirty_=true;}changed_.notify_one();}
 std::vector<float> Renderer::Pick(float x,float y) {
@@ -327,11 +331,11 @@ void Renderer::Draw(const View &view,int width,int height) {
         }
     }
     const auto drawStart=Clock::now();
-    std::shared_ptr<const HotspotData> annotations;HotspotStyle style;
-    {std::lock_guard<std::mutex> lock(mutex_);annotations=annotationData_;style=annotationStyle_;}
+    std::shared_ptr<const HotspotData> annotations;HotspotStyle style;std::array<float,3> background;
+    {std::lock_guard<std::mutex> lock(mutex_);annotations=annotationData_;style=annotationStyle_;background=background_;}
     const bool annotationReady=depthBits_>0&&hotspots_.Prepare(annotations);
     {std::lock_guard<std::mutex> lock(mutex_);status_.annotationDepth=annotationReady?depthBits_:0;}
-    glViewport(0,0,width,height);glClearColor(.035f,.045f,.065f,1);glClear(GL_COLOR_BUFFER_BIT);
+    glViewport(0,0,width,height);glClearColor(background[0],background[1],background[2],1);glClear(GL_COLOR_BUFFER_BIT);
     if(annotationReady&&style.visible){glDepthMask(GL_TRUE);glClearDepthf(1);glClear(GL_DEPTH_BUFFER_BIT);hotspots_.Draw(view,width,height,style,false);}
     if(annotationReady&&style.visible){glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);}else glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);glUseProgram(program_);

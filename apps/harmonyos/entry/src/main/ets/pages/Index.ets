@@ -527,6 +527,7 @@ struct Index {
   onPageShow(): void { this.collision?.pause(false); this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); this.backend.active(true); }
   onPageHide(): void { this.clearNav(); this.scrubResume = false; this.clearDebug(); this.collision?.pause(true); this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); this.backend.active(false); }
   private updateCamera(): void {
+    this.backend.background(this.viewer.profile?.settings.background.color ?? [0, 0, 0]);
     this.backend.camera(this.viewer.pose(), this.viewer.bounds); this.refreshAnnotations(); this.drawDebug(); this.drawNav();
   }
 
@@ -614,7 +615,7 @@ struct Index {
     else { this.controls.reset(); this.controls.fov = 85; this.viewer.apply(framePose(this.viewer.bounds), false); }
     this.flyMode = this.controls.fly; this.timeline = 0; this.updateCamera();
   }
-  private clearProfile(): void { this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.syncAnnotations(); }
+  private clearProfile(): void { this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.syncAnnotations(); }
   private touch(event: TouchEvent): void {
     if (event.source === SourceType.Mouse) { return; }
     if (event.type === TouchType.Down) { this.clearNav(); this.pickGeneration++; }

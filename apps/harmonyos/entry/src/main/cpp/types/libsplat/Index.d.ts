@@ -26,6 +26,7 @@ export interface RenderStatus {
   frameMs: number;
   fps: number;
 }
+export const background: (r: number, g: number, b: number) => void;
 export const load: (path: string) => void;
 export const inspectModel: (path: string) => Promise<number[]>;
 export const camera: (yaw: number, pitch: number, zoom: number, panX: number, panY: number, panZ: number, fly: number, fov?: number) => void;
