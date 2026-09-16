@@ -1,6 +1,7 @@
 # HarmonyOS native 3DGS development
 
-Latest implementation batch: [MetaFlow loading events, posters and reveal profiles](metaflow-loading-events-20260916.md).
+Latest implementation batches: [scene/audio/environment](metaflow-scene-20260916.md), [native post effects](metaflow-postfx-20260916.md), [panorama skybox](metaflow-skybox-20260916.md), and [gamepad/cache isolation](gamepad-20260916.md).
+The current [parity matrix](viewer-parity-v1312.md) supersedes historical implementation/status descriptions below; full Viewer and performance acceptance remains incomplete.
 
 Previous installed Viewer: [first-open-only loading and reveal handoff](firstframe-20260916.md), including the background and displacement candidates below.
 [OpenGL depth annotations](depth-enabled-20260916.md) are now enabled and phone-verified for the recorded cases; Huawei remains a 2D fallback.
