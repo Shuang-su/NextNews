@@ -1,3 +1,5 @@
+import { HotspotPosition, ViewerHotspot } from './ViewerHotspot';
+import { ViewerNavCursor } from './ViewerNavCursor';
 import { ViewerCatalog, CatalogProject, CatalogAsset } from './ViewerCatalog';
 import { ViewerCollision } from './ViewerCollision';
 import { ViewerProjection } from './ViewerProjection';
@@ -7,7 +9,7 @@ import { Scene } from '@kit.ArkGraphics3D';
 import { util } from '@kit.ArkTS';
 import { ViewerRuntime, ViewerMarker } from './ViewerRuntime';
 import { ViewerBackend, OpenGLBackend, HuaweiBackend } from './ViewerBackend';
-import { PointerInput } from './PointerInput';
+import { PointerInput, tapPosition } from './PointerInput';
 import { comparisonSog } from './ComparisonSog';
 import { KeyCode } from '@kit.InputKit';
 import { common } from '@kit.AbilityKit';
@@ -192,7 +194,7 @@ struct Index {
     if (this.walkDestination) {
       const eye = this.viewer.pose().position, dx = this.walkDestination[0] - eye[0], dz = this.walkDestination[2] - eye[2], distance = Math.hypot(dx, dz);
       this.walkBlockedTime = this.walkProgress - distance < .6 * dt ? this.walkBlockedTime + dt : 0; this.walkProgress = distance;
-      if (distance < .5 || this.walkBlockedTime >= .2) { this.walkDestination = undefined; }
+      if (distance < .5 || this.walkBlockedTime >= .2) { this.walkDestination = undefined; this.clearNav(); }
       else {
         const yaw = Math.atan2(-dx, -dz), diff = Math.atan2(Math.sin(yaw - this.controls.current[0]), Math.cos(yaw - this.controls.current[0]));
         this.controls.target[0] = this.controls.current[0] + Math.max(-192 * Math.PI / 180 * dt, Math.min(192 * Math.PI / 180 * dt, diff * 5 * dt));
@@ -212,6 +214,28 @@ struct Index {
       if (before.some((value: number, i: number) => Math.abs(value - this.controls.current[i]) > 1e-7)) { this.updateCamera(); }
     } catch (error) { this.localError = ((error as BusinessError).message || String(error)); this.leaveWalk(); }
   }
+  private navCursor: ViewerNavCursor = new ViewerNavCursor();
+  private navCanvas: CanvasRenderingContext2D = new CanvasRenderingContext2D(new RenderingContextSettings(true));
+  private navReady: boolean = false;
+  private clearNav(): void { this.navCursor.clear(); this.drawNav(); }
+  private drawNav(): void {
+    if (!this.navReady) { return; }
+    const canvas = this.navCanvas; canvas.clearRect(0, 0, this.controls.width, this.controls.height);
+    if (!this.active || (this.flyMode && this.gaming)) { return; }
+    const rings = this.navCursor.rings(this.viewer.pose(), this.controls.width, this.controls.height);
+    if (!rings.length) { return; }
+    canvas.beginPath();
+    for (const ring of rings) {
+      canvas.moveTo(ring[0], ring[1]);
+      for (let i = 0; i < 12; i++) {
+        const a = ((i + 11) % 12) * 2, b = i * 2, c = ((i + 1) % 12) * 2, d = ((i + 2) % 12) * 2;
+        canvas.bezierCurveTo(ring[b] + (ring[c] - ring[a]) / 6, ring[b + 1] + (ring[c + 1] - ring[a + 1]) / 6,
+          ring[c] - (ring[d] - ring[b]) / 6, ring[c + 1] - (ring[d + 1] - ring[b + 1]) / 6, ring[c], ring[c + 1]);
+      }
+      canvas.closePath();
+    }
+    canvas.fillStyle = 'rgba(255,255,255,0.6)'; canvas.fill('evenodd');
+  }
   private comparisonBounds: number[] | undefined = undefined;
   private viewer: ViewerRuntime = new ViewerRuntime();
   private gl: OpenGLBackend = new OpenGLBackend();
@@ -221,7 +245,7 @@ struct Index {
   private awaitingModelCamera: boolean = false;
   @State spatialScene: Scene | undefined = undefined;
   @State backendName: string = 'OpenGL';
-  @State markers: ViewerMarker[] = [];
+  @State markers: HotspotPosition[] = [];
   @State annotationIndex: number = -1;
   @State annotationTitle: string = '';
   @State annotationText: string = '';
@@ -287,17 +311,21 @@ struct Index {
   }
   private refreshAnnotations(): void {
     this.profileReady = this.viewer.profile !== undefined;
-    this.markers = this.viewer.markers(); this.annotationIndex = this.viewer.selected;
+    const previous = this.markers;
+    this.markers = this.viewer.markers().map((marker: ViewerMarker): HotspotPosition => {
+      const anchor = previous.find((item: HotspotPosition) => item.index === marker.index);
+      if (anchor) { anchor.update(marker); return anchor; } return new HotspotPosition(marker);
+    }); this.annotationIndex = this.viewer.selected;
     this.annotationCount = this.viewer.profile?.settings.annotations.length ?? 0;
     const annotation = this.viewer.profile?.settings.annotations[this.annotationIndex];
     this.annotationTitle = annotation?.title ?? ''; this.annotationText = annotation?.text ?? '';
     this.positionPopup(); this.syncAnnotations();
   }
-  private activateAnnotation(index: number): void { this.leaveWalk();
+  private activateAnnotation(index: number): void { this.clearNav(); this.leaveWalk();
     this.stopAnimation(); this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++;
     this.controls.setFly(false); this.flyMode = false; this.viewer.annotation(index); this.refreshAnnotations();
   }
-  private play(): void { this.leaveWalk();
+  private play(): void { this.clearNav(); this.leaveWalk();
     if (!this.viewer.profile) { this.viewer.configure(createSettings(this.viewer.pose())); }
     this.duration = this.viewer.profile!.animation.duration;
     if (this.viewer.profile!.ended) { this.viewer.profile!.time = 0; }
@@ -367,6 +395,7 @@ struct Index {
   @State flyMode: boolean = false;
   private pickGeneration: number = 0;
   private mouseButton: MouseButton = MouseButton.None;
+  private mouseDistance: number = 0;
   private mouseX: number = 0;
   private mouseY: number = 0;
   @State streamUrl: string = 'http://127.0.0.1:8768/scene.json';
@@ -485,9 +514,9 @@ struct Index {
     this.backend.dispose();
   }
   onPageShow(): void { this.collision?.pause(false); this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); this.backend.active(true); }
-  onPageHide(): void { this.scrubResume = false; this.clearDebug(); this.collision?.pause(true); this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); this.backend.active(false); }
+  onPageHide(): void { this.clearNav(); this.scrubResume = false; this.clearDebug(); this.collision?.pause(true); this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); this.backend.active(false); }
   private updateCamera(): void {
-    this.backend.camera(this.viewer.pose(), this.viewer.bounds); this.refreshAnnotations(); this.drawDebug();
+    this.backend.camera(this.viewer.pose(), this.viewer.bounds); this.refreshAnnotations(); this.drawDebug(); this.drawNav();
   }
 
   private benchmark(): void {
@@ -550,13 +579,14 @@ struct Index {
       this.benchmarkResult = '连续转向完成 · 逐帧记录已写入日志';
     } finally { nativeRender.traceFrames(false); this.streamMeasuring = false; }
   }
-  private setMode(fly: boolean): void { this.leaveWalk(); this.viewer.interrupt(); this.stopAnimation(); this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.flyMode = fly; this.controls.setFly(fly); this.updateCamera(); }
+  private setMode(fly: boolean): void { this.clearNav(); this.leaveWalk(); this.viewer.interrupt(); this.stopAnimation(); this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.flyMode = fly; this.controls.setFly(fly); this.updateCamera(); }
   private toggleMode(): void { this.setMode(!this.flyMode); }
   private async focusAt(x: number, y: number, doubleTap: boolean = false): Promise<void> {
     if (this.flyMode && this.gaming) { return; }
     const request = ++this.pickGeneration;
     try { const point = await this.backend.pick(x / this.controls.width, y / this.controls.height, this.viewer.bounds);
-      if (request === this.pickGeneration && this.active) { if (point.length !== 3) { return; }
+      if (request === this.pickGeneration && this.active) { if (point.length !== 3) { this.clearNav(); return; }
+        this.navCursor.set(point.map((v: number, i: number) => this.viewer.bounds[i] + v * this.viewer.bounds[3]), this.viewer.pose(), this.walkMode ? 'walk' : doubleTap || !this.flyMode ? 'orbit' : 'fly'); this.drawNav();
         if (this.walkMode) {
           this.walkDestination = point.map((v: number, i: number) => this.viewer.bounds[i] + v * this.viewer.bounds[3]); this.walkRun = doubleTap ? 2 : 1;
           const eye = this.viewer.pose().position; this.walkProgress = Math.hypot(this.walkDestination[0] - eye[0], this.walkDestination[2] - eye[2]); this.walkBlockedTime = 0; return;
@@ -564,8 +594,8 @@ struct Index {
         this.viewer.navigate(point, doubleTap); this.flyMode = this.controls.fly; this.updateCamera(); }
     } catch (error) { console.warn(`Focus: ${((error as BusinessError).message || String(error))}`); }
   }
-  private frame(): void { this.leaveWalk(); this.viewer.interrupt(); this.stopAnimation(); this.controls.setFly(false); this.flyMode = false; this.viewer.transition(framePose(this.viewer.bounds, this.controls.fov)); }
-  private reset(): void {
+  private frame(): void { this.clearNav(); this.leaveWalk(); this.viewer.interrupt(); this.stopAnimation(); this.controls.setFly(false); this.flyMode = false; this.viewer.transition(framePose(this.viewer.bounds, this.controls.fov)); }
+  private reset(): void { this.clearNav();
     if (this.walkMode) { const eye = nativeRender.collisionReset(); for (let i = 0; i < 3; i++) { this.controls.current[i + 3] = (eye[i] - this.viewer.bounds[i]) / this.viewer.bounds[3]; this.controls.target[i + 3] = this.controls.current[i + 3]; } this.walkDestination = undefined; this.updateCamera(); return; }
     this.stopAnimation(); this.autoOrbit = false; this.resetJoystick(); this.pickGeneration++; this.viewer.interrupt();
     this.benchmarkStart = 0; this.benchmarkResult = ''; this.controls.cancel();
@@ -573,15 +603,23 @@ struct Index {
     else { this.controls.reset(); this.controls.fov = 85; this.viewer.apply(framePose(this.viewer.bounds), false); }
     this.flyMode = this.controls.fly; this.timeline = 0; this.updateCamera();
   }
-  private clearProfile(): void { this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.syncAnnotations(); }
+  private clearProfile(): void { this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.syncAnnotations(); }
   private touch(event: TouchEvent): void {
     if (event.source === SourceType.Mouse) { return; }
+    if (event.type === TouchType.Down) { this.clearNav(); this.pickGeneration++; }
     if (event.type === TouchType.Down && this.viewer.selected >= 0) { this.closeAnnotation(); }
     this.viewer.interrupt();
     this.stopAnimation();
     this.autoOrbit = false;
     const points = this.pointers.viewport(this.touchPhase(event.type), this.touchPoints(event.touches), this.touchPoints(event.changedTouches));
     this.controls.touch(points, this.panMode);
+  }
+  private gestureTap(event: GestureEvent, doubleTap: boolean): void {
+    if (this.pointers.blockTap || this.pointers.stickId >= 0) { return; }
+    // HarmonyOS can deliver a sparse fingerList after multi-touch release.
+    const point = tapPosition(event.fingerList);
+    if (point.length !== 2 || point[0] < 0 || point[1] < 0 || point[0] > this.controls.width || point[1] > this.controls.height) { return; }
+    this.focusAt(point[0], point[1], doubleTap);
   }
   private touchPhase(type: TouchType): string {
     return type === TouchType.Down ? 'down' : type === TouchType.Up ? 'up' : type === TouchType.Cancel ? 'cancel' : 'move';
@@ -594,15 +632,17 @@ struct Index {
   private mouse(event: MouseEvent): void {
     if (event.action === MouseAction.Press || this.mouseButton !== MouseButton.None) { this.viewer.interrupt(); this.stopAnimation(); }
     if (event.action === MouseAction.Press) {
+      this.clearNav(); this.pickGeneration++;
       if (this.viewer.selected >= 0) { this.closeAnnotation(); }
       this.autoOrbit = false; if (this.pointers.stickId < 0) { this.pointers.blockTap = false; }
       this.getUIContext().getFocusController().requestFocus('viewer-surface');
-      this.mouseButton = event.button; this.mouseX = event.x; this.mouseY = event.y;
+      this.mouseDistance = 0; this.mouseButton = event.button; this.mouseX = event.x; this.mouseY = event.y;
     } else if (event.action === MouseAction.Release) {
       console.info(`ViewerMouse release yaw=${this.controls.target[0]} pitch=${this.controls.target[1]}`);
       this.mouseButton = MouseButton.None;
     } else if (event.action === MouseAction.Move && this.mouseButton !== MouseButton.None) {
       const dx = event.x - this.mouseX; const dy = event.y - this.mouseY;
+      this.mouseDistance += Math.abs(dx) + Math.abs(dy); if (this.mouseDistance >= 15) { this.pointers.blockTap = true; }
       this.mouseX = event.x; this.mouseY = event.y;
       if (this.mouseButton === MouseButton.Right || this.mouseButton === MouseButton.Middle || this.panMode) {
         this.controls.pan(dx, dy);
@@ -781,10 +821,8 @@ struct Index {
         .onHover((hover: boolean) => { if (!hover) { this.mouseButton = MouseButton.None; } })
         .onBlur(() => { this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.controls.cancel(); this.pointers.cancel(); this.resetJoystick(); this.mouseButton = MouseButton.None; })
         .parallelGesture(GestureGroup(GestureMode.Exclusive,
-          TapGesture({ count: 2 }).onAction((event: GestureEvent) => { if (!this.pointers.blockTap && this.pointers.stickId < 0 && event.fingerList.length) { this.focusAt(event.fingerList[0].localX, event.fingerList[0].localY, true); } }),
-          TapGesture({ count: 1 }).onAction((event: GestureEvent) => {
-            if (!this.pointers.blockTap && this.pointers.stickId < 0 && event.fingerList.length > 0) { this.focusAt(event.fingerList[0].localX, event.fingerList[0].localY); }
-          })
+          TapGesture({ count: 2 }).onAction((event: GestureEvent) => { this.gestureTap(event, true); }),
+          TapGesture({ count: 1 }).onAction((event: GestureEvent) => { this.gestureTap(event, false); })
         ))
         .onKeyEvent((event: KeyEvent) => this.handleKey(event))
         .onAxisEvent((event: AxisEvent) => { this.stopAnimation(); this.controls.zoom(Math.exp(Math.max(-1, Math.min(1, event.getVerticalAxisValue() * 0.002)))); });
@@ -794,20 +832,15 @@ struct Index {
           .onReady(() => { this.debugReady = true; this.drawDebug(); })
           .onDisAppear(() => { this.debugReady = false; })
       }
+      Canvas(this.navCanvas).width('100%').height('100%').hitTestBehavior(HitTestMode.None).id('navigation-target')
+        .onReady(() => { this.navReady = true; this.drawNav(); }).onDisAppear(() => { this.navReady = false; })
       if (this.toolsVisible && this.showAnnotations && !(this.flyMode && this.gaming && !this.animationMode)) {
-        ForEach(this.markers, (marker: ViewerMarker) => {
-          Button({ type: ButtonType.Circle }) {
-            if (this.backendName !== 'OpenGL' || !this.gpuAnnotations || this.annotationDepth === 0) {
-              Text(`${marker.index + 1}`).fontSize(12).fontWeight(FontWeight.Bold).fontColor(this.hoveredAnnotation === marker.index ? '#FF6600' : '#CCCCCC')
-                .width(25).height(25).textAlign(TextAlign.Center).backgroundColor('#000000').borderRadius(13)
-                .border({ width: 1.2, color: this.hoveredAnnotation === marker.index ? '#FF6600' : '#CCCCCC' })
-            }
-          }.width(44).height(44).backgroundColor('#00000000').stateEffect(false).position({ x: marker.x - 22, y: marker.y - 22 })
-            .accessibilityText(`标注 ${marker.index + 1} ${marker.title}`).id(`annotation-${marker.index}`)
-            .onTouch((event: TouchEvent) => { event.stopPropagation(); })
-            .onHover((hover: boolean) => { this.hoveredAnnotation = hover ? marker.index : this.hoveredAnnotation === marker.index ? -1 : this.hoveredAnnotation; this.syncAnnotationStyle(); })
-            .onClick(() => { this.activateAnnotation(marker.index); })
-        }, (marker: ViewerMarker) => marker.index.toString())
+        ForEach(this.markers, (marker: HotspotPosition) => {
+          ViewerHotspot({ marker, hovered: this.hoveredAnnotation === marker.index,
+            draw: this.backendName !== 'OpenGL' || !this.gpuAnnotations || this.annotationDepth === 0,
+            activate: () => { this.activateAnnotation(marker.index); },
+            hover: (value: boolean) => { this.hoveredAnnotation = value ? marker.index : this.hoveredAnnotation === marker.index ? -1 : this.hoveredAnnotation; this.syncAnnotationStyle(); } })
+        }, (marker: HotspotPosition) => marker.index.toString())
       }
       Column({ space: 6 }) {
         Row() {
@@ -815,6 +848,7 @@ struct Index {
             Text('NEXTNEWS').fontSize(10).fontColor('#8CA7CB').letterSpacing(2).width('100%')
             Text(this.toolsVisible ? this.title : '').fontSize(14).fontWeight(FontWeight.Medium).fontColor('#EEF4FF').width('100%')
           }.layoutWeight(1)
+          Button('模型列表').fontSize(13).height(40).backgroundColor('#CC243247').fontColor('#FFFFFF').id('模型列表').onClick(() => { this.toolsVisible = true; this.modelsVisible = true; this.settingsVisible = this.helpVisible = this.diagnosticsVisible = false; this.catalogList(); })
           ViewerTool({ icon: this.toolsVisible ? $r('app.media.viewer_expand') : $r('app.media.viewer_collapse'), label: this.toolsVisible ? '隐藏工具' : '显示工具', selected: !this.toolsVisible, action: () => { this.toolsVisible = !this.toolsVisible; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
         }.width('100%')
         if (this.loading || this.busy || this.localError) {
@@ -837,10 +871,11 @@ struct Index {
             Scroll(this.menuScroller) {
               Column({ space: 12 }) {
                 if (this.modelsVisible) {
-                  Text('模型库').fontColor('#EEF4FF').fontSize(16).width('100%')
+                  Text(this.catalogVisible ? '线上项目' : '模型库').fontColor('#EEF4FF').fontSize(16).width('100%')
+                  if (this.catalogVisible) { Button('返回本地工具').fontSize(12).onClick(() => { this.catalogVisible = false; }) }
                   Button('线上项目 · 数科 3DGS').width('100%').fontSize(14).enabled(!this.busy).onClick(() => { this.catalogList(); })
                   if (this.catalogVisible) {
-                    TextInput({ text: this.catalogSearch, placeholder: '搜索项目名称' }).fontSize(13).onChange((value: string) => { this.catalogSearch = value; }).onSubmit(() => { this.catalogList(); })
+                    TextInput({ text: this.catalogSearch, placeholder: '搜索项目名称' }).fontSize(13).fontColor('#EEF4FF').placeholderColor('#BBD0E4').backgroundColor('#28354A').onChange((value: string) => { this.catalogSearch = value; }).onSubmit(() => { this.catalogList(); })
                     Row({ space: 8 }) {
                       Button('搜索').fontSize(12).enabled(!this.catalogBusy && !this.busy).onClick(() => { this.catalogList(); })
                       Button('取消加载').fontSize(12).onClick(() => { this.cancelCatalog(); })
@@ -946,7 +981,7 @@ struct Index {
                   Text(this.graphics).fontSize(10).fontColor('#6F899F').width('100%')
                 }
               }.padding(16).width('100%')
-            }.constraintSize({ maxHeight: 330 }).width('100%').backgroundColor('#EB222222').borderRadius(12)
+            }.constraintSize({ maxHeight: this.modelsVisible && this.catalogVisible ? Math.max(200, this.controls.height - 160) : 330 }).width('100%').backgroundColor('#EB222222').borderRadius(12)
           }
           if (this.profileReady && !this.modelsVisible && !this.settingsVisible && !this.helpVisible && !this.diagnosticsVisible) {
             if (this.showAnnotations && this.annotationCount > 0 && !(this.flyMode && this.gaming && !this.animationMode)) {

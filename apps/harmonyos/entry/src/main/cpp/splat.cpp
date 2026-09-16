@@ -156,10 +156,14 @@ std::vector<float> Pick(const Scene &scene,const View &view,float x,float y,int 
         if(power<=9&&alpha>=1.f/255)hits.push_back({z,alpha,i});
     }
     std::stable_sort(hits.begin(),hits.end(),[](const Hit &a,const Hit &b){return a.depth<b.depth;});
-    float transmittance=1;size_t chosen=0;bool found=false;
-    for(const auto &h:hits){transmittance*=1-h.alpha;chosen=h.index;if(transmittance<=.5f){found=true;break;}}
+    float transmittance=1,depth=0;bool found=false;
+    for(const auto &h:hits){transmittance*=1-h.alpha;depth=h.depth;if(transmittance<=.5f){found=true;break;}}
     if(!found)return {};
-    std::vector<float> result(3);for(int k=0;k<3;++k)result[k]=(scene.Position(chosen)[k]-scene.center[k])/scene.radius;
+    // Return the clicked ray at the composited pick depth, not the Gaussian
+    // center. Large splats must not pull every click to the same screen point.
+    const float cameraPoint[]={px*depth/f-m[12],py*depth/f-m[13],-depth-m[14]};
+    std::vector<float> result(3);
+    for(int k=0;k<3;++k)result[k]=(m[k*4]*cameraPoint[0]+m[k*4+1]*cameraPoint[1]+m[k*4+2]*cameraPoint[2]-scene.center[k])/scene.radius;
     return result;
 }
 std::vector<uint32_t> SortIndices(const Scene &scene, const View &view) {

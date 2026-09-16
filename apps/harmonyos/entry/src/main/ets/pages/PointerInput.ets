@@ -1,4 +1,13 @@
 import { OrbitTouch } from './OrbitControls';
+export interface GestureFinger { localX: number; localY: number; }
+export function tapPosition(fingers: GestureFinger[]): number[] {
+  if (!Array.isArray(fingers)) { return []; }
+  for (let i = 0; i < fingers.length; i++) {
+    const p = fingers[i];
+    if (p && Number.isFinite(p.localX) && Number.isFinite(p.localY)) { return [p.localX, p.localY]; }
+  }
+  return [];
+}
 // Pointer ownership lasts from down to up/cancel. An existing finger elsewhere
 // can never become the joystick owner when the touches array is reordered.
 export class PointerInput {
@@ -7,16 +16,23 @@ export class PointerInput {
   y: number = 0;
   blockTap: boolean = false;
   private lookIds: Set<number> = new Set();
+  private last: Map<number, OrbitTouch> = new Map();
+  private distance: number = 0;
   cancelStick(): void { this.stickId = -1; this.x = 0; this.y = 0; }
-  cancel(): void { this.cancelStick(); this.lookIds.clear(); this.blockTap = true; }
+  cancel(): void { this.cancelStick(); this.lookIds.clear(); this.last.clear(); this.blockTap = true; }
   viewport(phase: string, touches: OrbitTouch[], changed: OrbitTouch[]): OrbitTouch[] {
-    if (phase === 'cancel') { this.lookIds.clear(); this.blockTap = true; return []; }
+    if (phase === 'cancel') { this.lookIds.clear(); this.last.clear(); this.blockTap = true; return []; }
     if (phase === 'down') {
-      if (this.lookIds.size === 0 && this.stickId < 0) { this.blockTap = false; }
-      for (const p of changed) { if (p.id !== this.stickId) { this.lookIds.add(p.id); } }
+      if (this.lookIds.size === 0 && this.stickId < 0) { this.blockTap = false; this.distance = 0; this.last.clear(); }
+      for (const p of changed) { if (p.id !== this.stickId) { this.lookIds.add(p.id); this.last.set(p.id, { id: p.id, x: p.x, y: p.y }); } }
     }
     if (touches.length > 1 || this.stickId >= 0) { this.blockTap = true; }
-    if (phase === 'up') { for (const p of changed) { this.lookIds.delete(p.id); } }
+    for (const p of phase === 'up' ? changed : touches) {
+      const previous = this.last.get(p.id);
+      if (previous) { this.distance += Math.abs(p.x - previous.x) + Math.abs(p.y - previous.y); this.last.set(p.id, { id: p.id, x: p.x, y: p.y }); }
+    }
+    if (this.distance >= 15) { this.blockTap = true; }
+    if (phase === 'up') { for (const p of changed) { this.lookIds.delete(p.id); this.last.delete(p.id); } }
     return touches.filter((p: OrbitTouch) => this.lookIds.has(p.id) && p.id !== this.stickId);
   }
   joystick(phase: string, touches: OrbitTouch[], changed: OrbitTouch[]): void {

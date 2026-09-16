@@ -22,3 +22,7 @@ input.joystick('down',[right],[right]);assert.equal(input.stickId,-1,'outside to
 input.joystick('down',[left],[left]);input.viewport('down',[left,right],[right]);
 input.joystick('cancel',[],[left]);assert.deepEqual(Array.from(input.viewport('move',[right],[right]),p=>p.id),[2]);
 console.log('PASS right-first/left-first, pointer reorder, independent release, cancel, no capture transfer, tap suppression');
+const drag=new Input();drag.viewport('down',[{id:1,x:0,y:0}],[{id:1,x:0,y:0}]);drag.viewport('move',[{id:1,x:9,y:0}],[]);drag.viewport('move',[{id:1,x:0,y:0}],[]);assert.equal(drag.blockTap,true,'returning to down point does not convert drag to tap');
+drag.viewport('up',[],[{id:1,x:0,y:0}]);drag.viewport('down',[{id:5,x:10,y:10}],[{id:5,x:10,y:10}]);assert.equal(drag.blockTap,false,'fresh pointer resets drag suppression');
+const tap=box.exports.tapPosition;assert.equal(tap([]).length,0);assert.equal(tap([undefined]).length,0);assert.equal(tap([{localX:NaN,localY:2}]).length,0);assert.deepEqual(Array.from(tap([undefined,{localX:30,localY:40}])),[30,40]);const mutable={localX:20,localY:10},point=tap([mutable]);mutable.localX=100;assert.equal(point[0],20);
+console.log('PASS sparse gesture fingers, invalid coordinates, copied event data and drag suppression');
