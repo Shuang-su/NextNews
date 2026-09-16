@@ -98,3 +98,12 @@ upstream SuperSplat Viewer v1.31.2 feature or a full MetaFlow parity claim.
 ## MetaFlow post-processing
 
 `post_shaders.h` adapts CAS, grading, fringing, vignette, tone mapping, 13-tap bloom downsampling and 9-tap upsampling from PlayCanvas Engine **2.21.3**, the exact version declared by MetaFlow commit `a871786dffdb195399f3e7427987d8db70296491`. MIT copyright and license above apply. Native framebuffer ownership and the effect bridge are NextNews code. MetaFlow's gamma-space GSplat output and final `GAMMA_NONE` override are preserved; this is distinct from a stock PlayCanvas linear pipeline. Shader execution alone does not establish visual parity.
+
+## stb_image skybox decoder
+
+`apps/harmonyos/entry/src/main/cpp/third_party/stb/stb_image.h` is vendored from
+nothings/stb commit `013ac3beddff3dbffafd5177e7972067cd2b5083`:
+https://github.com/nothings/stb/blob/013ac3beddff3dbffafd5177e7972067cd2b5083/stb_image.h
+The complete MIT/public-domain dual license is retained in the header. This
+build enables only HDR, PNG and JPEG. Skybox RGBP decoding and spherical mapping
+follow the existing PlayCanvas 2.21.3 / MetaFlow source attribution above.

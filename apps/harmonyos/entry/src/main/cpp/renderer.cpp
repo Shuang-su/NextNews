@@ -159,6 +159,9 @@ GLuint Compile(GLenum type,const char *source) {
     return shader;
 }
 }
+uint64_t Renderer::BeginSkybox(){std::lock_guard<std::mutex> lock(mutex_);skyImage_.reset();skyFailed_=false;status_.skyError.clear();status_.skyReady=false;dirty_=true;changed_.notify_one();return ++skyRequest_;}
+bool Renderer::SkyboxCurrent(uint64_t request){std::lock_guard<std::mutex> lock(mutex_);return request==skyRequest_;}
+bool Renderer::SetSkybox(uint64_t request,std::shared_ptr<const SkyImage> image){std::lock_guard<std::mutex> lock(mutex_);if(request!=skyRequest_)return false;skyImage_=std::move(image);skyFailed_=false;dirty_=true;changed_.notify_one();return true;}
 void Renderer::SetEffects(Effects settings){std::lock_guard<std::mutex> lock(mutex_);if(effects_!=settings){effects_=settings;effectsFailed_=false;status_.postError.clear();dirty_=true;changed_.notify_one();}}
 Renderer &Renderer::Get() { static Renderer renderer; return renderer; }
 Renderer::~Renderer() { Stop(); }
@@ -304,14 +307,14 @@ void Renderer::DestroyGL() {
     if(display_==EGL_NO_DISPLAY)return;
     if(context_!=EGL_NO_CONTEXT && surface_!=EGL_NO_SURFACE){
         eglMakeCurrent(display_,surface_,surface_,context_);
-        post_.Destroy();hotspots_.Destroy();depthBits_=0;
+        sky_.Destroy();post_.Destroy();hotspots_.Destroy();depthBits_=0;
         if(timerQueries_[0])glDeleteQueries(4,timerQueries_);
         if(dataTexture_)glDeleteTextures(1,&dataTexture_);
         if(buffer_)glDeleteBuffers(1,&buffer_);if(vao_)glDeleteVertexArrays(1,&vao_);if(program_)glDeleteProgram(program_);
     }
     timerResult_=nullptr;timerSlot_=0;
     std::fill_n(timerQueries_,4,0);std::fill_n(timerPending_,4,false);std::fill_n(timerInvalid_,4,false);
-    {std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=-1;status_.annotationDepth=0;status_.postBytes=0;status_.postActive=0;effectsFailed_=false;}
+    {std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=-1;status_.annotationDepth=0;status_.postBytes=0;status_.postActive=0;effectsFailed_=false;status_.skyBytes=0;status_.skyReady=false;skyFailed_=false;}
     dataTexture_=buffer_=vao_=program_=0;eglMakeCurrent(display_,EGL_NO_SURFACE,EGL_NO_SURFACE,EGL_NO_CONTEXT);
     if(surface_!=EGL_NO_SURFACE)eglDestroySurface(display_,surface_);
     if(context_!=EGL_NO_CONTEXT)eglDestroyContext(display_,context_);
@@ -422,6 +425,10 @@ void Renderer::Draw(const View &view,int width,int height) {
         OH_LOG_Print(LOG_APP,LOG_ERROR,0xD003,"NextNewsPost","%{public}s",error.what());
     }
     glViewport(0,0,width,height);glClearColor(background[0],background[1],background[2],1);glClear(GL_COLOR_BUFFER_BIT);
+    std::shared_ptr<const SkyImage> skyImage;bool skyFailed;{std::lock_guard<std::mutex> lock(mutex_);skyImage=skyImage_;skyFailed=skyFailed_;}
+    try {sky_.Prepare(skyFailed?nullptr:skyImage);sky_.Draw(view,width,height,post?0:int(effects[0]));}
+    catch(const std::exception& error){sky_.Destroy();glActiveTexture(GL_TEXTURE0);while(glGetError()!=GL_NO_ERROR){}std::lock_guard<std::mutex> lock(mutex_);skyFailed_=true;status_.skyError=error.what();}
+    {std::lock_guard<std::mutex> lock(mutex_);status_.skyBytes=sky_.Bytes();status_.skyReady=skyImage_&&skyImage_==skyImage&&!skyFailed_&&!sky_.Pending();if(sky_.Pending())dirty_=true;}
     if(annotationReady&&style.visible){glDepthMask(GL_TRUE);glClearDepthf(1);glClear(GL_DEPTH_BUFFER_BIT);hotspots_.Draw(view,width,height,style,false);}
     if(annotationReady&&style.visible){glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);}else glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);glUseProgram(program_);

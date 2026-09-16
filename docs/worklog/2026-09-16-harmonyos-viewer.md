@@ -107,3 +107,10 @@ complete. Signed HAP and device images remain local ignored artifacts.
 ## 独立后处理和显式体素坐标
 
 见 [后处理阶段记录](../harmonyos/metaflow-postfx-20260916.md)。原生 GLES 五效果、高精度/色调映射及关闭释放已有手机证据；体素 world/Rz180 优先级已有主机差分验证。完整视觉、物理真机及性能对照未完成。
+
+## 全景天空盒
+
+新增 HDR/RGBP 全景解码、分帧 GPU 上传、相机方向投影、请求隔离和重试。
+发现并修正普通图片 RGBP 解码及后处理重复色调映射差异。
+手机外网下载失败，使用调试缓存完成真实全景显示和转向检查；不计作网络验收。
+[实现、来源与证据](../harmonyos/metaflow-skybox-20260916.md)。

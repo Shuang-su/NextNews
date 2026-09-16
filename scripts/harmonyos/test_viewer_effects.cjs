@@ -11,5 +11,5 @@ for(const key of ['sharpness','bloom','grading','vignette','fringing']){
 }
 s.highPrecisionRendering=true;gl.effects(s);assert.equal(parameters[1],1);assert.equal(parameters[21],1);
 for(const [i,mode]of ['none','linear','filmic','hejl','aces','aces2','neutral'].entries()){s.tonemapping=mode;gl.effects(s);assert.equal(parameters[0],i);}
-assert.deepEqual(Array.from(gl.capabilities.effects),['sharpness','bloom','grading','vignette','fringing','tonemapping','rgba16f']);assert.equal(new backend.HuaweiBackend(()=>{}).capabilities.effects.length,0);
+assert.deepEqual(Array.from(gl.capabilities.effects),['sharpness','bloom','grading','vignette','fringing','tonemapping','rgba16f','skybox-equirect']);assert.equal(new backend.HuaweiBackend(()=>{}).capabilities.effects.length,0);
 console.log('PASS per-effect packing, tone map IDs, baseline bypass, high precision and backend capability separation');

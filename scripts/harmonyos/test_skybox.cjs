@@ -1,0 +1,21 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const ts=require('/Applications/DevEco-Studio.app/Contents/tools/ohpm/node_modules/typescript');
+const source=fs.readFileSync('apps/harmonyos/entry/src/main/ets/pages/Index.ets','utf8');
+const method=source.slice(source.indexOf('  private async updateSkybox('),source.indexOf('  @State effectError'));
+let uploads=[],requests=[],removed=[];
+const nativeRender={skybox:async(path)=>{uploads.push(path)}};
+const catalog={image:(address)=>new Promise((resolve,reject)=>requests.push({address,resolve,reject}))};
+const box={exports:{},nativeRender,fs:{unlink:async p=>removed.push(p)}};
+vm.runInNewContext(ts.transpileModule('export class Test { '+method+' }',{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,box);
+const tick=()=>new Promise(r=>setImmediate(r));
+const make=()=>Object.assign(new box.exports.Test(),{backendName:'OpenGL',skyAddress:'',skyRevision:0,visible:true,catalog,getUIContext:()=>({getHostContext:()=>({cacheDir:'/cache'})})});
+(async()=>{
+ const v=make();const a=v.updateSkybox('a');await tick();const b=v.updateSkybox('b');await tick();
+ requests[0].resolve('/a');await a;assert(!uploads.includes('/a'));
+ requests[1].resolve('/b');await b;assert.deepEqual(uploads,['','','/b']);
+ assert.match(v.skyMessage,/提交 GPU/);await v.updateSkybox('b');assert.equal(requests.length,2);
+ const c=v.updateSkybox('c');await tick();v.visible=false;requests[2].resolve('/c');await c;assert(!uploads.includes('/c'));
+ v.visible=true;const d=v.updateSkybox('d');await tick();requests[3].reject({message:'network failed',code:42});await d;assert.match(v.skyMessage,/network failed.*42/);
+ v.backendName='Huawei';await v.updateSkybox('e');assert.match(v.skyMessage,/尚未验证/);assert.equal(requests.length,4);
+ console.log('PASS skybox superseded download, hidden page, same URL reuse, readable error, backend isolation');
+})().catch(e=>{console.error(e);process.exitCode=1});

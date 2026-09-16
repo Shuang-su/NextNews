@@ -150,6 +150,14 @@ export class ViewerCatalog {
     finally { await fs.close(file); }
     if (this.stopped) { throw new Error('项目加载已取消'); } await fs.rename(`${path}.part`, path); return path;
   }
+  async image(address: string, directory: string): Promise<string> {
+    address = catalogUrl(address);
+    const digest = cryptoFramework.createMd('SHA256'); await digest.update({ data: new util.TextEncoder().encodeInto(address) });
+    const key = Array.from((await digest.digest()).data).map((v: number) => v.toString(16).padStart(2, '0')).join('');
+    const path = `${directory}/sky-${key}.image`;
+    try { const size = (await fs.stat(path)).size; if (size > 0 && size <= 67108864) { return path; } } catch (_) {}
+    await this.writeResource(path, await this.fetch(address, 67108864)); return path;
+  }
   private async writeResource(path: string, data: ArrayBuffer): Promise<void> {
     if (this.stopped) { throw new Error('项目加载已取消'); }
     const file = await fs.open(`${path}.part`, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);

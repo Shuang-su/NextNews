@@ -6,6 +6,7 @@
 #include "hotspots.h"
 #include "intro.h"
 #include "post_process.h"
+#include "skybox.h"
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <condition_variable>
@@ -20,6 +21,7 @@ struct Status {
     std::string state = "waiting", message = "Waiting for render surface", graphics;
     size_t count = 0, bytes = 0, frames = 0;
     int width = 1, height = 1;
+    std::string skyError;size_t skyBytes=0;bool skyReady=false;
     std::string postError;
     size_t postBytes = 0;
     int postActive = 0;
@@ -44,6 +46,9 @@ public:
     bool IsPresented(uint64_t request,uint64_t surface);
     void OnPresented(std::function<void(uint64_t,uint64_t)> callback);
     bool BeginIntro(uint64_t request, std::array<float,3> focus, const std::vector<float>& box={}, int profile=0);
+    uint64_t BeginSkybox();
+    bool SkyboxCurrent(uint64_t request);
+    bool SetSkybox(uint64_t request,std::shared_ptr<const SkyImage> image);
     void SetEffects(Effects settings);
     void SetBackground(std::array<float,3> color);
     void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {},bool paged=false,uint64_t revision=0,bool encoded=false);
@@ -149,6 +154,10 @@ private:
     Effects effects_{};
     bool effectsFailed_ = false;
     PostProcess post_;
+    Skybox sky_;
+    std::shared_ptr<const SkyImage> skyImage_;
+    uint64_t skyRequest_=0;
+    bool skyFailed_=false;
     bool openingCommitted_ = false;
     uint64_t surfaceGeneration_ = 0, presentedSurface_ = 0;
     uint64_t openingMinGeneration_ = 0;

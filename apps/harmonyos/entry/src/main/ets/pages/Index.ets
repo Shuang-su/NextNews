@@ -359,6 +359,30 @@ struct Index {
   @State profilePlaying: boolean = false;
   @State @Watch('syncAnnotationStyle') animationMode: boolean = false;
   private scrubResume: boolean = false;
+  @State skyMessage: string = '';
+  private skyAddress: string = '';
+  private skyRevision: number = 0;
+  private async updateSkybox(address: string): Promise<void> {
+    if (this.backendName !== 'OpenGL') {
+      if (this.skyAddress) { this.skyAddress = ''; this.skyRevision++; nativeRender.skybox('').catch(() => {}); }
+      this.skyMessage = address ? '华为天空盒等价性尚未验证' : ''; return;
+    }
+    if (address === this.skyAddress) { return; }
+    this.skyAddress = address; const revision = ++this.skyRevision;
+    await nativeRender.skybox('').catch(() => {});
+    if (revision !== this.skyRevision || !this.visible) { return; }
+    this.skyMessage = address ? '天空盒加载中' : '';
+    if (!address) { return; }
+    let path = '';
+    try {
+      path = await this.catalog.image(address, (this.getUIContext().getHostContext() as common.UIAbilityContext).cacheDir);
+      if (revision !== this.skyRevision || !this.visible || this.backendName !== 'OpenGL') { return; }
+      await nativeRender.skybox(path);
+      if (revision === this.skyRevision && this.visible) { this.skyMessage = '天空盒已解码，正在提交 GPU'; }
+    } catch (error) {
+      if (revision === this.skyRevision && this.visible) { this.skyMessage = `天空盒：${(error as BusinessError).message || String(error)} (${(error as BusinessError).code ?? 0})`; if (path) { try { await fs.unlink(path); } catch (_) {} } }
+    }
+  }
   @State effectError: string = '';
   @State effectsEnabled: boolean = true;
   @State effectsRevision: number = 0;
@@ -597,6 +621,8 @@ struct Index {
         return;
       }
       const state = nativeRender.status();
+      if (state.skyError) { this.skyMessage = state.skyError; }
+      else if (state.skyReady && this.skyAddress) { this.skyMessage = `天空盒已就绪 · ${(state.skyBytes / 1048576).toFixed(1)} MiB`; }
       this.effectError = state.postError;
       this.annotationDepth = state.annotationDepth;
       this.drawableCount = state.count;
@@ -616,6 +642,7 @@ struct Index {
     }, 500);
   }
   aboutToDisappear(): void {
+    this.skyRevision++; this.skyAddress = ''; nativeRender.skybox('').catch(() => {});
     this.sound.clear();
     nativeRender.onPresented(null);
     this.visible = false; this.catalog.cancel(); this.catalogRevision++; this.stopStream(); this.stopCollision();
@@ -632,6 +659,7 @@ struct Index {
     this.sound.shown(!this.opening);
     this.backend.background(this.viewer.profile?.settings.background.color ?? [0, 0, 0]);
     this.backend.effects(this.effectsEnabled ? this.viewer.profile?.settings : undefined);
+    this.updateSkybox(this.viewer.profile?.settings.background.skyboxUrl ?? '');
     this.backend.camera(this.viewer.pose(), this.viewer.bounds); this.refreshAnnotations(); this.drawDebug(); this.drawNav();
   }
 
@@ -739,7 +767,7 @@ struct Index {
     const profile = !this.stream && settings?.experienceType === 'character' ? 1 : settings?.voxelManifestUrl ? 2 : 0;
     if (nativeRender.beginIntro(this.openingRequest, focus[0], focus[1], focus[2], this.stream?.manifest?.aabb ?? [], profile)) { this.introAwaitingVisible = false; }
   }
-  private clearProfile(): void { this.collisionSpace = 'auto'; this.effectsRevision++; this.firstAnimationExitOrbit = false; this.sourceEnvironment = ''; this.sourceCount = 0; this.environmentMessage = ''; this.sound.clear(); this.loadingPoster = ''; this.loadProgress = -1; nativeRender.intro(this.introEnabled && this.backendName === 'OpenGL', true); this.openingRequest = nativeRender.status().openingRequest; this.introAwaitingVisible = true; this.opening = true; this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.backend.effects(); this.syncAnnotations(); }
+  private clearProfile(): void { this.skyAddress = ''; this.skyRevision++; nativeRender.skybox('').catch(() => {}); this.skyMessage = '';  this.collisionSpace = 'auto'; this.effectsRevision++; this.firstAnimationExitOrbit = false; this.sourceEnvironment = ''; this.sourceCount = 0; this.environmentMessage = ''; this.sound.clear(); this.loadingPoster = ''; this.loadProgress = -1; nativeRender.intro(this.introEnabled && this.backendName === 'OpenGL', true); this.openingRequest = nativeRender.status().openingRequest; this.introAwaitingVisible = true; this.opening = true; this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.backend.effects(); this.syncAnnotations(); }
   private touch(event: TouchEvent): void {
     if (event.type === TouchType.Down) { this.sound.gesture(); }
     if (event.source === SourceType.Mouse) { return; }
@@ -1082,6 +1110,10 @@ struct Index {
                 if (this.settingsVisible) {
                   Text('设置').fontSize(16).fontColor('#FFFFFF').width('100%')
                   Button(this.effectsEnabled ? '画质效果：开' : '画质效果：关').id('画质效果').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.effectsEnabled = !this.effectsEnabled; this.updateCamera(); })
+                  if (this.skyMessage) {
+                    Text(this.skyMessage).fontSize(12).fontColor('#AFC6D8')
+                    Button('重试天空盒').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { const address = this.skyAddress; this.skyAddress = ''; this.updateSkybox(address); })
+                  }
                   if (this.effectError) { Text('效果未启用：' + this.effectError).fontSize(12).fontColor('#FF9090') }
                   if (this.backendName === 'OpenGL') {
                     ForEach([0, 1, 2, 3, 4, 5, 6], (index: number) => {

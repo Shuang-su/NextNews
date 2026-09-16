@@ -3,6 +3,8 @@ export interface RenderStatus {
   bounds: number[];
   message: string;
   graphics: string;
+  skyError: string;
+  skyBytes: number; skyReady: number;
   postError: string;
   postBytes: number;
   postActive: number;
@@ -74,3 +76,5 @@ export const beginIntro: (request: number, x: number, y: number, z: number, boun
 export const onPresented: (callback: ((request: number) => void) | null) => void;
 
 export const effects: (settings: number[]) => void;
+
+export const skybox: (path: string) => Promise<void>;

@@ -103,6 +103,21 @@ napi_value BeginIntro(napi_env env,napi_callback_info info) {
     }
     const bool accepted=splat::Renderer::Get().BeginIntro(static_cast<uint64_t>(v[0]),{float(v[1]),float(v[2]),float(v[3])},box,int(profile));napi_value result;napi_get_boolean(env,accepted,&result);return result;
 }
+std::mutex skyDecodeMutex;
+struct SkyWork {napi_async_work work; napi_deferred deferred;std::string path,error;uint64_t request;};
+napi_value Skybox(napi_env env,napi_callback_info info){
+    napi_value arg{};size_t argc=1,length=0;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
+    if(argc!=1||napi_get_value_string_utf8(env,arg,nullptr,0,&length)!=napi_ok||length>4096){napi_throw_type_error(env,nullptr,"Invalid skybox path");return Undefined(env);}
+    std::vector<char> path(length+1);napi_get_value_string_utf8(env,arg,path.data(),path.size(),&length);
+    if(std::string(path.data()).size()!=length){napi_throw_type_error(env,nullptr,"Invalid skybox path");return Undefined(env);}
+    auto* job=new SkyWork{};job->path.assign(path.data(),length);job->request=splat::Renderer::Get().BeginSkybox();
+    napi_value promise,label;napi_create_promise(env,&job->deferred,&promise);
+    if(length==0){napi_resolve_deferred(env,job->deferred,Undefined(env));delete job;return promise;}
+    napi_create_string_utf8(env,"SkyboxDecode",NAPI_AUTO_LENGTH,&label);
+    napi_create_async_work(env,nullptr,label,[](napi_env,void* data){auto* j=static_cast<SkyWork*>(data);try{std::lock_guard<std::mutex> serial(skyDecodeMutex);if(!splat::Renderer::Get().SkyboxCurrent(j->request)){j->error="Skybox load superseded";return;}auto image=splat::ReadSkyImage(j->path);if(!splat::Renderer::Get().SetSkybox(j->request,image))j->error="Skybox load superseded";}catch(const std::exception& error){j->error=error.what();}},
+      [](napi_env e,napi_status status,void* data){auto* j=static_cast<SkyWork*>(data);if(status==napi_ok&&j->error.empty())napi_resolve_deferred(e,j->deferred,Undefined(e));else{napi_value text,error;napi_create_string_utf8(e,j->error.empty()?"Skybox cancelled":j->error.c_str(),NAPI_AUTO_LENGTH,&text);napi_create_error(e,nullptr,text,&error);napi_reject_deferred(e,j->deferred,error);}napi_delete_async_work(e,j->work);delete j;},job,&job->work);
+    napi_queue_async_work(env,job->work);return promise;
+}
 napi_value Effects(napi_env env,napi_callback_info info) {
     napi_value arg{};size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);bool array=false;uint32_t length=0;
     if(argc!=1||napi_is_array(env,arg,&array)!=napi_ok||!array||napi_get_array_length(env,arg,&length)!=napi_ok||length!=22){napi_throw_type_error(env,nullptr,"Expected 22 effect parameters");return Undefined(env);}
@@ -217,6 +232,7 @@ napi_value Status(napi_env env,napi_callback_info) {
     const auto s=splat::Renderer::Get().GetStatus();napi_value result;napi_create_object(env,&result);
     napi_value bounds; napi_create_array_with_length(env,4,&bounds); for(uint32_t i=0;i<4;i++){napi_value v;napi_create_double(env,s.bounds[i],&v);napi_set_element(env,bounds,i,v);} napi_set_named_property(env,result,"bounds",bounds);
     String(env,result,"state",s.state);String(env,result,"message",s.message);String(env,result,"graphics",s.graphics);
+    String(env,result,"skyError",s.skyError);Number(env,result,"skyBytes",s.skyBytes);Number(env,result,"skyReady",s.skyReady?1:0);
     String(env,result,"postError",s.postError);
     Number(env,result,"postBytes",s.postBytes);Number(env,result,"postActive",s.postActive);
     Number(env,result,"annotationDepth",s.annotationDepth);Number(env,result,"openingRequest",s.openingRequest);Number(env,result,"openingPresented",s.openingPresented);
@@ -282,6 +298,7 @@ napi_value Init(napi_env env,napi_value exports) {
         {"optimize",nullptr,Optimize,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"beginIntro",nullptr,BeginIntro,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"intro",nullptr,Intro,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"skybox",nullptr,Skybox,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"effects",nullptr,Effects,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"background",nullptr,Background,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"camera",nullptr,Camera,nullptr,nullptr,nullptr,napi_default,nullptr},
