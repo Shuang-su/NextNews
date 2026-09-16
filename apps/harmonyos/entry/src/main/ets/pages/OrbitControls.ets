@@ -7,6 +7,7 @@ export class OrbitControls {
   height: number = 1;
   fly: boolean = false;
   speed: number = 1;
+  sceneRadius: number = 1;
   fov: number = 45;
   keys: string[] = [];
   private previous: OrbitTouch[] = [];
@@ -34,7 +35,7 @@ export class OrbitControls {
     const eye = [this.current[3] + Math.sin(y) * Math.cos(p) * d,
       this.current[4] + Math.sin(p) * d, this.current[5] + Math.cos(y) * Math.cos(p) * d];
     const dx = eye[0] - point[0]; const dy = eye[1] - point[1]; const dz = eye[2] - point[2];
-    const distance = Math.hypot(dx, dy, dz); if (distance < 0.15 || distance > 60) { return; }
+    const distance = Math.hypot(dx, dy, dz); if (distance * this.sceneRadius < 0.01) { return; }
     const yaw = Math.atan2(dx, dz);
     this.target = [y + Math.atan2(Math.sin(yaw - y), Math.cos(yaw - y)),
       Math.max(-1.5, Math.min(1.5, Math.asin(dy / distance))), distance / 3,
@@ -53,9 +54,12 @@ export class OrbitControls {
     if (down) { this.keys.push(key); }
   }
   zoom(factor: number): void {
+    if (!Number.isFinite(factor) || factor <= 0) { return; }
     if (this.fly) { this.move(0, 0, -Math.log(Math.max(0.01, factor))); return; }
 
-    this.target[2] = Math.max(0.05, Math.min(20, this.target[2] * factor));
+    const next = this.target[2] * factor;
+    // Official zoomRange is 0.01 world units to Infinity, not a scene fraction.
+    if (Number.isFinite(next)) { this.target[2] = Math.max(0.01 / (3 * this.sceneRadius), next); }
   }
   pan(dx: number, dy: number): void {
     // Radius-normalized world target. 45-degree vertical FOV, distance = radius * 3 * zoom.

@@ -125,13 +125,16 @@ View MakeView(const Scene &scene, const Camera &camera) {
     const float right[] = {std::cos(y), 0, -std::sin(y)};
     const float up[] = {-std::sin(y)*std::sin(p), std::cos(p), -std::cos(y)*std::sin(p)};
     const float back[] = {std::sin(y)*std::cos(p), std::sin(p), std::cos(y)*std::cos(p)};
-    const float distance = camera.fly > .5f ? 0.f : scene.radius * 3.f * std::clamp(camera.zoom, .05f, 20.f);
+    const float distance = camera.fly > .5f ? 0.f : std::max(.01f, scene.radius * 3.f * camera.zoom);
     const float target[] = {camera.panX, camera.panY, camera.panZ};
     float eye[3]; for (int k=0;k<3;++k) eye[k]=scene.center[k]+back[k]*distance+target[k]*scene.radius;
     View v{}; auto &m = v.matrix;
     for(int k=0;k<3;++k) { m[k*4]=right[k]; m[k*4+1]=up[k]; m[k*4+2]=back[k]; }
     for(int k=0;k<3;++k) { m[12]-=right[k]*eye[k]; m[13]-=up[k]*eye[k]; m[14]-=back[k]*eye[k]; }
-    m[15]=1; v.tanHalfFov=std::tan(std::clamp(camera.fov, 1.01f, 178.99f)*.00872664626f); v.nearPlane=scene.radius*.001f; v.farPlane=scene.radius*100.f; return v;
+    m[15]=1; v.tanHalfFov=std::tan(std::clamp(camera.fov, 1.01f, 178.99f)*.00872664626f); const float centerDepth=-(m[2]*scene.center[0]+m[6]*scene.center[1]+m[10]*scene.center[2]+m[14]);
+    // Keep boundary centers inside despite float rounding at the fitted far plane.
+    v.farPlane=std::nextafter(std::max(centerDepth+scene.radius, .01f), INFINITY);
+    v.nearPlane=std::min(1.f,std::max(centerDepth-scene.radius,v.farPlane/16384.f)); return v;
 }
 std::vector<float> Pick(const Scene &scene,const View &view,float x,float y,int width,int height) {
     struct Hit { float depth,alpha; size_t index; }; std::vector<Hit> hits;

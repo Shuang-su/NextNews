@@ -22,6 +22,13 @@ int main(){
    }
  }
 
+ for(float radius:{.001f,1.f,1000.f}) {
+   splat::Scene bounds; bounds.radius=radius; splat::Camera close;close.zoom=.01f/(3*radius);
+   auto v=splat::MakeView(bounds,close);assert(std::abs(v.matrix[14]+.01f)<1e-6f);
+   assert(v.nearPlane>0&&v.nearPlane<v.farPlane);
+   close.zoom=30;v=splat::MakeView(bounds,close);assert(std::abs(v.matrix[14]+90*radius)<.01f);
+   assert(v.farPlane>90*radius);
+ }
  splat::Camera wide;wide.fov=75;auto wideView=splat::MakeView(scene,wide);
  assert(std::abs(wideView.tanHalfFov-std::tan(75.f*.00872664626f))<1e-6f);
  assert(std::abs(splat::MakeView(scene,{}).tanHalfFov-std::tan(45.f*.00872664626f))<1e-6f);

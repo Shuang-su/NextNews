@@ -24,3 +24,12 @@ const real=settings.parseViewerSettings(fs.readFileSync('apps/harmonyos/entry/sr
 console.log('PASS: legacy migration, empty-camera fit, metadata retention, step boundaries, one-key track, malformed settings, world-space round trips, projection/behind-camera clipping, annotation transition, official click navigation and gaming suppression');
 
 r.apply({position:[10,20,40],target:[10,20,30],fov:75},true);r.transition({position:[10,20,20],target:[10,20,30],fov:75});for(let i=0;i<40;i++){r.tick(16);const q=r.pose();assert.ok(Math.hypot(...q.position.map((v,k)=>v-q.target[k]))>9.9);assert.ok(q.position.every(Number.isFinite));}close(r.pose().position[2],20);
+
+for (const radius of [.001, 1, 1000]) {
+ const z=new runtime.ViewerRuntime(); z.bounds=[0,0,0,radius];
+ z.controls.zoom(1e-10); z.controls.tick(64);
+ close(z.controls.target[2]*3*radius,.01);
+ z.controls.zoom(1e9); assert.ok(z.controls.target[2]>20);
+ const before=z.controls.target[2]; for(const bad of [NaN,Infinity,0,-1])z.controls.zoom(bad);close(z.controls.target[2],before);
+}
+console.log('PASS world-unit orbit minimum across scene scales, unlimited outward zoom, invalid zoom rejection');

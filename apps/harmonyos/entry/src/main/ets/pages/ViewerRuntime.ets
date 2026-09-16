@@ -6,7 +6,9 @@ export interface ViewerSnapshot { pose: ViewerPose; fly: boolean; selected: numb
 // The world-space camera, navigation and annotation state are independent of the renderer.
 export class ViewerRuntime {
   controls: OrbitControls = new OrbitControls();
-  bounds: number[] = [0, 0, 0, 1];
+  private sceneBounds: number[] = [0, 0, 0, 1];
+  get bounds(): number[] { return this.sceneBounds; }
+  set bounds(value: number[]) { this.sceneBounds = value; this.controls.sceneRadius = value[3]; }
   profile: ViewerProfile | undefined = undefined;
   selected: number = -1;
   gaming: boolean = false;
