@@ -107,6 +107,7 @@ export function parseViewerSettings(text: string): ViewerSettings {
     !vector(fx.grading.tint, 3)) { throw new Error('Viewer 效果配置无效'); }
   finite([fx.sharpness.amount, fx.bloom.intensity, fx.bloom.blurLevel, fx.grading.brightness, fx.grading.contrast,
     fx.grading.saturation, fx.vignette.intensity, fx.vignette.inner, fx.vignette.outer, fx.vignette.curvature, fx.fringing.intensity]);
+  if (fx.vignette.curvature <= 0 || fx.vignette.outer <= fx.vignette.inner) { throw new Error('暗角曲率必须为正，外缘必须大于内缘'); }
   if ((settings.soundUrl !== undefined && typeof settings.soundUrl !== 'string') ||
     (settings.background.skyboxUrl !== undefined && typeof settings.background.skyboxUrl !== 'string')) { throw new Error('Viewer 资源地址无效'); }
   for (const address of [settings.collisionUrl, settings.voxelUrl, settings.voxelManifestUrl]) { if (address !== undefined && (typeof address !== 'string' || address.length > 4096)) { throw new Error('Viewer 碰撞地址无效'); } }

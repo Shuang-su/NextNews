@@ -94,3 +94,7 @@ and gsplat-reveal-radial.ts. Original source remains unchanged. The PlayCanvas
 RMS scale helper was translated to the covariance-trace identity; the PlayCanvas
 MIT notice above applies to that helper. This native integration is not an
 upstream SuperSplat Viewer v1.31.2 feature or a full MetaFlow parity claim.
+
+## MetaFlow post-processing
+
+`post_shaders.h` adapts CAS, grading, fringing, vignette, tone mapping, 13-tap bloom downsampling and 9-tap upsampling from PlayCanvas Engine **2.21.3**, the exact version declared by MetaFlow commit `a871786dffdb195399f3e7427987d8db70296491`. MIT copyright and license above apply. Native framebuffer ownership and the effect bridge are NextNews code. MetaFlow's gamma-space GSplat output and final `GAMMA_NONE` override are preserved; this is distinct from a stock PlayCanvas linear pipeline. Shader execution alone does not establish visual parity.

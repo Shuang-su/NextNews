@@ -20,10 +20,15 @@ export function validateCollisionManifest(m: CollisionManifest): void {
     ids.add(tile.id);
   }
 }
+export function collisionWorldBox(box: CollisionBox, space: string): CollisionBox {
+  if (!boxValid(box)) { throw new Error('无效的碰撞边界'); }
+  return space === 'metaflow-rz180' ? { min: [-box.max[0], -box.max[1], box.min[2]], max: [-box.min[0], -box.min[1], box.max[2]] } : { min: box.min.slice(), max: box.max.slice() };
+}
 export class ViewerCollision {
   readonly generation: number = nativeRender.collisionClear();
   private tiles: CollisionTile[] = [];
   private base: string = '';
+  private coordinateSpace: string = 'auto';
   private directory: string = '';
   private stopped: boolean = false;
   private suspended: boolean = false;
@@ -107,7 +112,9 @@ export class ViewerCollision {
       return path;
     } finally { request.destroy(); this.requests.delete(request); viewerRequests.release(); }
   }
-  async open(address: string, cacheDir: string, eye: number[]): Promise<void> {
+  async open(address: string, cacheDir: string, eye: number[], coordinateSpace: string = 'auto'): Promise<void> {
+    if (!['auto', 'world', 'metaflow-rz180'].includes(coordinateSpace)) { throw new Error('无效的体素坐标'); }
+    this.coordinateSpace = coordinateSpace;
     const revision = this.workRevision; this.cacheDir = cacheDir; this.eye = eye.slice();
     this.base = address; this.base = this.address(address); this.directory = `${cacheDir}/viewer-collision-v1`; this.disk = [];
     if (!fs.accessSync(this.directory)) { await fs.mkdir(this.directory); }
@@ -122,10 +129,13 @@ export class ViewerCollision {
     } else {
       try {
         const text = await fs.readText(metadata); this.ensure(revision); const manifest = JSON.parse(text) as CollisionManifest;
-        validateCollisionManifest(manifest); this.tiles = manifest.tiles;
+        validateCollisionManifest(manifest); this.tiles = manifest.tiles.map((tile: CollisionTile): CollisionTile => {
+          return { id: tile.id, ix: coordinateSpace === 'metaflow-rz180' ? -tile.ix : tile.ix, iz: tile.iz,
+            url: tile.url, coreBounds: collisionWorldBox(tile.coreBounds, coordinateSpace) };
+        });
       } catch (error) { if (this.current(revision)) { await this.discard(metadata); } throw new Error(String(error)); }
-      // Metadata version 1.1 is already in Viewer world space. Manifest rotation
-      // strings describe provenance, not an instruction to rotate again.
+      // Only the explicit player coordinateSpace applies a transform; free-form
+      // manifest rotation strings remain provenance and are never applied twice.
     }
     this.report(`碰撞清单：${this.tiles.length} 块 · 正在准备附近区域`); this.tick(eye, true);
   }
@@ -161,7 +171,7 @@ export class ViewerCollision {
       metadata = await this.cached(address, mesh ? 64 * 1024 * 1024 : 1048576, revision); bin = mesh ? '' : await this.cached(binary, 64 * 1024 * 1024, revision);
       this.ensure(revision); nativeStarted = true;
       if (mesh) { await nativeRender.collisionLoadMesh(this.generation, tile.id, metadata); }
-      else { await nativeRender.collisionLoadVoxel(this.generation, tile.id, metadata, bin); }
+      else { await nativeRender.collisionLoadVoxel(this.generation, tile.id, metadata, bin, this.coordinateSpace === 'auto' ? -1 : this.coordinateSpace === 'metaflow-rz180' ? 1 : 0); }
       if (this.current(revision)) { const s = nativeRender.collisionStatus(); this.report(`碰撞已缓存 ${s.ids.length} / ${this.tiles.length} 块 · ${(s.bytes / 1048576).toFixed(1)} MiB`); }
     } catch (error) {
       if (this.current(revision)) {
@@ -182,7 +192,7 @@ export class ViewerCollision {
     this.failed.clear();
     if (!this.tiles.length && this.base && this.cacheDir && !this.reopening) {
       this.reopening = true;
-      this.open(this.base, this.cacheDir, this.eye).catch((error: Error) => { if (!this.stopped && !this.suspended) { this.report(String(error)); } }).finally(() => { this.reopening = false; });
+      this.open(this.base, this.cacheDir, this.eye, this.coordinateSpace).catch((error: Error) => { if (!this.stopped && !this.suspended) { this.report(String(error)); } }).finally(() => { this.reopening = false; });
     } else { this.tick(this.eye, true); }
   }
   pause(value: boolean): void { this.suspended = value; nativeRender.collisionPause(); if (value) { this.workRevision++; for (const request of this.requests) { request.destroy(); } } else { this.retry(); } }

@@ -103,3 +103,7 @@ complete. Signed HAP and device images remain local ignored artifacts.
 ## MetaFlow 场景入口与声音/环境接续
 
 见 [阶段记录](../harmonyos/metaflow-scene-20260916.md)。配套构建与手机首开/六次转向回归通过；主机验证配置、声音生命周期、动画、环境选择和揭示连续性。双资源视觉、声音真机、后处理及整体性能仍待验收。
+
+## 独立后处理和显式体素坐标
+
+见 [后处理阶段记录](../harmonyos/metaflow-postfx-20260916.md)。原生 GLES 五效果、高精度/色调映射及关闭释放已有手机证据；体素 world/Rz180 优先级已有主机差分验证。完整视觉、物理真机及性能对照未完成。

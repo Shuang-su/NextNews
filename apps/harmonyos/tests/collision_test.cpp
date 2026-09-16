@@ -15,9 +15,9 @@ int main(int argc,char **argv){
         auto empty=std::make_shared<Voxel>(Box{{0,0,0},{.4,.4,.4}},.1,0,false,std::vector<uint32_t>{},std::vector<uint32_t>{});Atlas unknown;unknown.tiles={empty};assert(!unknown.Known({{.1,.1,.1},{.3,.3,.3}}));
         std::cout<<"PASS atlas union, missing gap, empty data, pinning and byte LRU\n";return 0;
     }
-    if(argc!=3)return 2;
+    if(argc!=3&&argc!=4)return 2;
     try {
-        auto c=Voxel::Load(argv[1],argv[2]);J request;std::cin>>request;J result=J::array();
+        auto c=Voxel::Load(argv[1],argv[2],argc>3?std::stoi(argv[3]):-1);J request;std::cin>>request;J result=J::array();
         for(const auto &q:request){
             std::string op=q["op"];
             if(op=="ray"){auto hit=c->Ray(V(q["p"]),V(q["d"]),q["distance"]);result.push_back(hit?A(*hit):J(nullptr));}

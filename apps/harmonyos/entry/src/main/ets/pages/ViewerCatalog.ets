@@ -99,6 +99,7 @@ export class ViewerCatalog {
     if (config.collision) { settings.collisionUrl = config.collision; }
     if (config.highPrecision !== undefined) { settings.highPrecisionRendering = config.highPrecision; }
     if (config.nofx) {
+      settings.highPrecisionRendering = false;
       settings.postEffectSettings.sharpness.enabled = false; settings.postEffectSettings.bloom.enabled = false;
       settings.postEffectSettings.grading.enabled = false; settings.postEffectSettings.vignette.enabled = false; settings.postEffectSettings.fringing.enabled = false;
     }

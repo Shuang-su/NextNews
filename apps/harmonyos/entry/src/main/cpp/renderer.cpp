@@ -1,6 +1,7 @@
 #include <qos/qos.h>
 #include <hilog/log.h>
 #include "renderer.h"
+#include "post_shaders.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -14,6 +15,8 @@ using Clock = std::chrono::steady_clock;
 double Ms(Clock::time_point t) { return std::chrono::duration<double, std::milli>(Clock::now()-t).count(); }
 const char *Vertex = R"GLSL(#version 300 es
 precision highp float;
+/*TONE_FUNCTIONS*/
+uniform int directTone;
 layout(location=0) in uint splatIndex;
 uniform highp sampler2D splatData;
 uniform highp usampler2D encodedCodes;
@@ -89,6 +92,12 @@ void main() {
             size=min(size,originalSize);covariance=mat3(size*size);
         }
     }
+    if(directTone>1){
+        vec3 linear=pow(max(color.rgb,vec3(0)),vec3(2.2));
+        if(directTone==2)linear=toneMap2(linear);else if(directTone==3)linear=toneMap3(linear);
+        else if(directTone==4)linear=toneMap4(linear);else if(directTone==5)linear=toneMap5(linear);else if(directTone==6)linear=toneMap6(linear);
+        color.rgb=pow(max(linear,vec3(0))+0.0000001,vec3(1.0/2.2));
+    }
     tint=color;
     vec3 center=(view*vec4(position,1.0)).xyz;
     float z=-center.z;
@@ -150,6 +159,7 @@ GLuint Compile(GLenum type,const char *source) {
     return shader;
 }
 }
+void Renderer::SetEffects(Effects settings){std::lock_guard<std::mutex> lock(mutex_);if(effects_!=settings){effects_=settings;effectsFailed_=false;status_.postError.clear();dirty_=true;changed_.notify_one();}}
 Renderer &Renderer::Get() { static Renderer renderer; return renderer; }
 Renderer::~Renderer() { Stop(); }
 void Renderer::Start(void *window,int width,int height) {
@@ -268,7 +278,8 @@ void Renderer::InitGL(void *window) {
         timerResult_=reinterpret_cast<TimerResult>(eglGetProcAddress("glGetQueryObjectui64vEXT"));
         if(timerResult_)glGenQueries(4,timerQueries_);
     }
-    GLuint vertex=Compile(GL_VERTEX_SHADER,Vertex), fragment=0;
+    std::string vertexSource=Vertex;const std::string marker="/*TONE_FUNCTIONS*/";vertexSource.replace(vertexSource.find(marker),marker.size(),PostTone);
+    GLuint vertex=Compile(GL_VERTEX_SHADER,vertexSource.c_str()), fragment=0;
     try {fragment=Compile(GL_FRAGMENT_SHADER,Fragment);} catch(...) {glDeleteShader(vertex);throw;}
     program_=glCreateProgram();glAttachShader(program_,vertex);glAttachShader(program_,fragment);glLinkProgram(program_);glDeleteShader(vertex);glDeleteShader(fragment);
     GLint ok;glGetProgramiv(program_,GL_LINK_STATUS,&ok);if(!ok) throw std::runtime_error("Gaussian shader link failed");
@@ -293,14 +304,14 @@ void Renderer::DestroyGL() {
     if(display_==EGL_NO_DISPLAY)return;
     if(context_!=EGL_NO_CONTEXT && surface_!=EGL_NO_SURFACE){
         eglMakeCurrent(display_,surface_,surface_,context_);
-        hotspots_.Destroy();depthBits_=0;
+        post_.Destroy();hotspots_.Destroy();depthBits_=0;
         if(timerQueries_[0])glDeleteQueries(4,timerQueries_);
         if(dataTexture_)glDeleteTextures(1,&dataTexture_);
         if(buffer_)glDeleteBuffers(1,&buffer_);if(vao_)glDeleteVertexArrays(1,&vao_);if(program_)glDeleteProgram(program_);
     }
     timerResult_=nullptr;timerSlot_=0;
     std::fill_n(timerQueries_,4,0);std::fill_n(timerPending_,4,false);std::fill_n(timerInvalid_,4,false);
-    {std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=-1;status_.annotationDepth=0;}
+    {std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=-1;status_.annotationDepth=0;status_.postBytes=0;status_.postActive=0;effectsFailed_=false;}
     dataTexture_=buffer_=vao_=program_=0;eglMakeCurrent(display_,EGL_NO_SURFACE,EGL_NO_SURFACE,EGL_NO_CONTEXT);
     if(surface_!=EGL_NO_SURFACE)eglDestroySurface(display_,surface_);
     if(context_!=EGL_NO_CONTEXT)eglDestroyContext(display_,context_);
@@ -401,10 +412,20 @@ void Renderer::Draw(const View &view,int width,int height) {
     if(introProgress<1)style.visible=false;
     const bool annotationReady=depthBits_>0&&hotspots_.Prepare(annotations);
     {std::lock_guard<std::mutex> lock(mutex_);status_.annotationDepth=annotationReady?depthBits_:0;}
+    Effects effects;{std::lock_guard<std::mutex> lock(mutex_);effects=effects_;}
+    bool failed;{std::lock_guard<std::mutex> lock(mutex_);failed=effectsFailed_;}
+    bool post=false;
+    try {post=post_.Begin(width,height,failed?Effects{}:effects);}
+    catch(const std::exception& error){
+        post_.Destroy();glBindFramebuffer(GL_FRAMEBUFFER,0);while(glGetError()!=GL_NO_ERROR){}
+        std::lock_guard<std::mutex> lock(mutex_);effectsFailed_=true;status_.postError=error.what();
+        OH_LOG_Print(LOG_APP,LOG_ERROR,0xD003,"NextNewsPost","%{public}s",error.what());
+    }
     glViewport(0,0,width,height);glClearColor(background[0],background[1],background[2],1);glClear(GL_COLOR_BUFFER_BIT);
     if(annotationReady&&style.visible){glDepthMask(GL_TRUE);glClearDepthf(1);glClear(GL_DEPTH_BUFFER_BIT);hotspots_.Draw(view,width,height,style,false);}
     if(annotationReady&&style.visible){glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);}else glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);glUseProgram(program_);
+    glUniform1i(glGetUniformLocation(program_,"directTone"),post?0:int(effects[0]));
     glUniform1i(optimizedLocation_,optimized_.load());
     glUniform1f(glGetUniformLocation(program_,"introProgress"),introProgress);
     glUniform1f(glGetUniformLocation(program_,"introTime"),introTime);
@@ -437,13 +458,15 @@ void Renderer::Draw(const View &view,int width,int height) {
         for(int i=0;i<4;++i)if(timerPending_[i]) {
             GLuint available=0;glGetQueryObjectuiv(timerQueries_[i],GL_QUERY_RESULT_AVAILABLE,&available);
             if(available){GLuint64 ns=0;timerResult_(timerQueries_[i],GL_QUERY_RESULT,&ns);timerPending_[i]=false;
-                std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=timerInvalid_[i]?-1:double(ns)/1e6;}
+                std::lock_guard<std::mutex> lock(mutex_);status_.gpuMs=timerInvalid_[i]||ns==0?-1:double(ns)/1e6;}
         }
         if(!timerPending_[timerSlot_]){timerInvalid_[timerSlot_]=false;glBeginQuery(0x88BF,timerQueries_[timerSlot_]);timed=true;}
     }
     glDrawArraysInstanced(GL_TRIANGLE_STRIP,0,4,GLsizei(scene_->paged && !atlasDrawable_ ? 0 : scene_->Count()));
-    if(timed){glEndQuery(0x88BF);timerPending_[timerSlot_]=true;timerSlot_=(timerSlot_+1)%4;}
     if(annotationReady&&style.visible)hotspots_.Draw(view,width,height,style,true);
+    if(post)post_.Finish();
+    if(timed){glEndQuery(0x88BF);timerPending_[timerSlot_]=true;timerSlot_=(timerSlot_+1)%4;}
+    {std::lock_guard<std::mutex> lock(mutex_);status_.postBytes=post_.Bytes();status_.postActive=post?1:0;}
     const GLenum error=glGetError();if(error!=GL_NO_ERROR)throw std::runtime_error("OpenGL error: "+std::to_string(error));
     if(!eglSwapBuffers(display_,surface_))throw std::runtime_error("EGL swap failed");
     std::lock_guard<std::mutex> lock(mutex_);

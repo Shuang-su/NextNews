@@ -5,6 +5,7 @@
 #include "page_atlas.h"
 #include "hotspots.h"
 #include "intro.h"
+#include "post_process.h"
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <condition_variable>
@@ -19,6 +20,9 @@ struct Status {
     std::string state = "waiting", message = "Waiting for render surface", graphics;
     size_t count = 0, bytes = 0, frames = 0;
     int width = 1, height = 1;
+    std::string postError;
+    size_t postBytes = 0;
+    int postActive = 0;
     int annotationDepth = 0;
     uint64_t openingRequest = 0, openingPresented = 0;
     std::array<float,4> bounds{0,0,0,1};
@@ -40,6 +44,7 @@ public:
     bool IsPresented(uint64_t request,uint64_t surface);
     void OnPresented(std::function<void(uint64_t,uint64_t)> callback);
     bool BeginIntro(uint64_t request, std::array<float,3> focus, const std::vector<float>& box={}, int profile=0);
+    void SetEffects(Effects settings);
     void SetBackground(std::array<float,3> color);
     void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {},bool paged=false,uint64_t revision=0,bool encoded=false);
     void SetActive(bool active);
@@ -141,6 +146,9 @@ private:
     std::array<float,3> background_{0,0,0};
     std::function<void(uint64_t,uint64_t)> presentedCallback_;
     Intro intro_;
+    Effects effects_{};
+    bool effectsFailed_ = false;
+    PostProcess post_;
     bool openingCommitted_ = false;
     uint64_t surfaceGeneration_ = 0, presentedSurface_ = 0;
     uint64_t openingMinGeneration_ = 0;

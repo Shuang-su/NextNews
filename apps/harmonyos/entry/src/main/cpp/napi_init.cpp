@@ -103,6 +103,14 @@ napi_value BeginIntro(napi_env env,napi_callback_info info) {
     }
     const bool accepted=splat::Renderer::Get().BeginIntro(static_cast<uint64_t>(v[0]),{float(v[1]),float(v[2]),float(v[3])},box,int(profile));napi_value result;napi_get_boolean(env,accepted,&result);return result;
 }
+napi_value Effects(napi_env env,napi_callback_info info) {
+    napi_value arg{};size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);bool array=false;uint32_t length=0;
+    if(argc!=1||napi_is_array(env,arg,&array)!=napi_ok||!array||napi_get_array_length(env,arg,&length)!=napi_ok||length!=22){napi_throw_type_error(env,nullptr,"Expected 22 effect parameters");return Undefined(env);}
+    splat::Effects values{};
+    for(uint32_t i=0;i<22;i++){napi_value item;double value;napi_get_element(env,arg,i,&item);if(napi_get_value_double(env,item,&value)!=napi_ok||!std::isfinite(value)||std::abs(value)>10000){napi_throw_range_error(env,nullptr,"Invalid effect parameter");return Undefined(env);}values[i]=float(value);}
+    if(values[0]<0||values[0]>6||values[6]<1||values[6]>16||values[17]<=0||values[16]<=values[15]){napi_throw_range_error(env,nullptr,"Invalid effect range");return Undefined(env);}
+    splat::Renderer::Get().SetEffects(values);return Undefined(env);
+}
 napi_value Background(napi_env env,napi_callback_info info) {
     napi_value args[3];size_t argc=3;double values[3];napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
     if(argc!=3){napi_throw_type_error(env,nullptr,"Expected three background color values");return Undefined(env);}
@@ -209,6 +217,8 @@ napi_value Status(napi_env env,napi_callback_info) {
     const auto s=splat::Renderer::Get().GetStatus();napi_value result;napi_create_object(env,&result);
     napi_value bounds; napi_create_array_with_length(env,4,&bounds); for(uint32_t i=0;i<4;i++){napi_value v;napi_create_double(env,s.bounds[i],&v);napi_set_element(env,bounds,i,v);} napi_set_named_property(env,result,"bounds",bounds);
     String(env,result,"state",s.state);String(env,result,"message",s.message);String(env,result,"graphics",s.graphics);
+    String(env,result,"postError",s.postError);
+    Number(env,result,"postBytes",s.postBytes);Number(env,result,"postActive",s.postActive);
     Number(env,result,"annotationDepth",s.annotationDepth);Number(env,result,"openingRequest",s.openingRequest);Number(env,result,"openingPresented",s.openingPresented);
     Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"uploadMs",s.uploadMs);Number(env,result,"uploadedRows",s.uploadedRows);Number(env,result,"reusedRows",s.reusedRows);Number(env,result,"decodedFiles",s.decodedFiles);Number(env,result,"subsetHits",s.subsetHits);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);Number(env,result,"requestRevision",s.requestRevision);Number(env,result,"displayRevision",s.displayRevision);Number(env,result,"prepareMs",s.prepareMs);Number(env,result,"refineMs",s.refineMs);Number(env,result,"uploadedBytes",s.uploadedBytes);Number(env,result,"pageHits",s.pageHits);return result;
 }
@@ -272,6 +282,7 @@ napi_value Init(napi_env env,napi_value exports) {
         {"optimize",nullptr,Optimize,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"beginIntro",nullptr,BeginIntro,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"intro",nullptr,Intro,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"effects",nullptr,Effects,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"background",nullptr,Background,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"camera",nullptr,Camera,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"setActive",nullptr,Active,nullptr,nullptr,nullptr,napi_default,nullptr},

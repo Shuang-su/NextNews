@@ -155,6 +155,7 @@ struct Index {
     }
   }
   private applyCatalogSettings(asset: CatalogAsset): void {
+    this.effectsRevision++; this.collisionSpace = asset.player?.voxelCoordinateSpace ?? 'auto';
     this.firstAnimationExitOrbit = asset.player?.animationFirstExitMode === 'orbit';
     this.viewer.configure(asset.settings, asset.player); this.viewer.initial(); this.flyMode = this.controls.fly;
     this.duration = this.viewer.profile!.animation.duration; this.timeline = 0;
@@ -226,12 +227,13 @@ struct Index {
   private walkRun: number = 1;
   private walkProgress: number = 0;
   private walkBlockedTime: number = 0;
+  private collisionSpace: string = 'auto';
   private async loadCollision(): Promise<void> {
     if (this.stream && !this.stream.manifest) { this.localError = '请先完成流式场景加载，再接入对应碰撞数据'; return; }
     this.stopCollision();
     const session = new ViewerCollision((message: string) => { if (this.collision === session) { this.collisionMessage = message; } });
     this.collision = session; this.collisionMessage = '正在读取碰撞数据';
-    try { await session.open(this.collisionUrl, (this.getUIContext().getHostContext() as common.UIAbilityContext).cacheDir, this.viewer.pose().position); }
+    try { await session.open(this.collisionUrl, (this.getUIContext().getHostContext() as common.UIAbilityContext).cacheDir, this.viewer.pose().position, this.collisionSpace); }
     catch (error) { if (this.collision === session) { this.collisionMessage = ((error as BusinessError).message || String(error)); } }
   }
   private leaveWalk(): void { this.walkMode = false; this.walkPending = false; this.walkDestination = undefined; this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; nativeRender.collisionPause(); }
@@ -357,6 +359,28 @@ struct Index {
   @State profilePlaying: boolean = false;
   @State @Watch('syncAnnotationStyle') animationMode: boolean = false;
   private scrubResume: boolean = false;
+  @State effectError: string = '';
+  @State effectsEnabled: boolean = true;
+  @State effectsRevision: number = 0;
+  private toggleEffect(index: number): void {
+    if (!this.viewer.profile) { this.viewer.configure(createSettings(this.viewer.pose())); }
+    const settings = this.viewer.profile!.settings, fx = settings.postEffectSettings;
+    if (index === 0) { fx.sharpness.enabled = !fx.sharpness.enabled; if (!fx.sharpness.amount) { fx.sharpness.amount = .5; } }
+    else if (index === 1) { fx.bloom.enabled = !fx.bloom.enabled; if (fx.bloom.enabled) { settings.highPrecisionRendering = true; } }
+    else if (index === 2) { fx.grading.enabled = !fx.grading.enabled; }
+    else if (index === 3) { fx.vignette.enabled = !fx.vignette.enabled; }
+    else if (index === 4) { fx.fringing.enabled = !fx.fringing.enabled; }
+    else if (index === 5) { settings.highPrecisionRendering = !settings.highPrecisionRendering; }
+    else { const modes = ['none', 'linear', 'filmic', 'hejl', 'aces', 'aces2', 'neutral']; settings.tonemapping = modes[(modes.indexOf(settings.tonemapping) + 1) % modes.length]; }
+    this.effectsRevision++; this.updateCamera();
+  }
+  private effectLabel(index: number, _revision: number): string {
+    const settings = this.viewer.profile?.settings, fx = settings?.postEffectSettings;
+    const names = ['锐化', '泛光', '调色', '暗角', '色散', '高精度'];
+    if (index === 6) { return '色调映射：' + (settings?.tonemapping ?? 'none'); }
+    const values = [fx?.sharpness.enabled, fx?.bloom.enabled, fx?.grading.enabled, fx?.vignette.enabled, fx?.fringing.enabled, settings?.highPrecisionRendering];
+    return names[index] + (values[index] ? '：开' : '：关');
+  }
   private firstAnimationExitOrbit: boolean = false;
   private stopAnimation(): void {
     if (this.profilePlaying && this.firstAnimationExitOrbit) {
@@ -573,6 +597,7 @@ struct Index {
         return;
       }
       const state = nativeRender.status();
+      this.effectError = state.postError;
       this.annotationDepth = state.annotationDepth;
       this.drawableCount = state.count;
       this.streamWorking = this.stream?.loadingVisible ?? false;
@@ -587,7 +612,7 @@ struct Index {
         this.message = state.state === 'ready' ? '官方导航 · 环绕聚焦 / 飞行前往 · 双击聚焦' : state.message;
       }
       this.graphics = state.graphics;
-      this.details = `${state.count.toLocaleString()} 个高斯 · SH0\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\n单帧 ${state.frameMs.toFixed(1)} ms · 渲染耗时折算 ${state.fps.toFixed(1)} fps\n最近上传批次 ${state.uploadMs.toFixed(1)} ms · 上传/复用 ${state.uploadedRows}/${state.reusedRows} 行\n高斯 GPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
+      this.details = `${state.count.toLocaleString()} 个高斯 · SH0\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\nCPU 提交 ${state.frameMs.toFixed(1)} ms（非屏幕帧率）\n最近上传批次 ${state.uploadMs.toFixed(1)} ms · 上传/复用 ${state.uploadedRows}/${state.reusedRows} 行\n渲染 GPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n后处理 ${state.postActive ? '开启' : '关闭'} · 缓冲 ${(state.postBytes / 1048576).toFixed(1)} MiB\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
     }, 500);
   }
   aboutToDisappear(): void {
@@ -606,6 +631,7 @@ struct Index {
     this.sound.configure(this.viewer.profile?.settings.soundUrl ?? '');
     this.sound.shown(!this.opening);
     this.backend.background(this.viewer.profile?.settings.background.color ?? [0, 0, 0]);
+    this.backend.effects(this.effectsEnabled ? this.viewer.profile?.settings : undefined);
     this.backend.camera(this.viewer.pose(), this.viewer.bounds); this.refreshAnnotations(); this.drawDebug(); this.drawNav();
   }
 
@@ -713,7 +739,7 @@ struct Index {
     const profile = !this.stream && settings?.experienceType === 'character' ? 1 : settings?.voxelManifestUrl ? 2 : 0;
     if (nativeRender.beginIntro(this.openingRequest, focus[0], focus[1], focus[2], this.stream?.manifest?.aabb ?? [], profile)) { this.introAwaitingVisible = false; }
   }
-  private clearProfile(): void { this.firstAnimationExitOrbit = false; this.sourceEnvironment = ''; this.sourceCount = 0; this.environmentMessage = ''; this.sound.clear(); this.loadingPoster = ''; this.loadProgress = -1; nativeRender.intro(this.introEnabled && this.backendName === 'OpenGL', true); this.openingRequest = nativeRender.status().openingRequest; this.introAwaitingVisible = true; this.opening = true; this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.syncAnnotations(); }
+  private clearProfile(): void { this.collisionSpace = 'auto'; this.effectsRevision++; this.firstAnimationExitOrbit = false; this.sourceEnvironment = ''; this.sourceCount = 0; this.environmentMessage = ''; this.sound.clear(); this.loadingPoster = ''; this.loadProgress = -1; nativeRender.intro(this.introEnabled && this.backendName === 'OpenGL', true); this.openingRequest = nativeRender.status().openingRequest; this.introAwaitingVisible = true; this.opening = true; this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.backend.effects(); this.syncAnnotations(); }
   private touch(event: TouchEvent): void {
     if (event.type === TouchType.Down) { this.sound.gesture(); }
     if (event.source === SourceType.Mouse) { return; }
@@ -1055,6 +1081,14 @@ struct Index {
                 }
                 if (this.settingsVisible) {
                   Text('设置').fontSize(16).fontColor('#FFFFFF').width('100%')
+                  Button(this.effectsEnabled ? '画质效果：开' : '画质效果：关').id('画质效果').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.effectsEnabled = !this.effectsEnabled; this.updateCamera(); })
+                  if (this.effectError) { Text('效果未启用：' + this.effectError).fontSize(12).fontColor('#FF9090') }
+                  if (this.backendName === 'OpenGL') {
+                    ForEach([0, 1, 2, 3, 4, 5, 6], (index: number) => {
+                      Button(this.effectLabel(index, this.effectsRevision)).id('画质效果' + index).fontSize(12).onClick(() => { this.toggleEffect(index); })
+                    })
+                  } else { Text('华为后处理等价性尚未通过').fontSize(12).fontColor('#AFC6D8') }
+
                   Button(this.introEnabled ? '粒子开场：开' : '粒子开场：关').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.introEnabled = !this.introEnabled; nativeRender.intro(this.introEnabled, false); if(this.introEnabled){this.beginVisibleIntro(true);} })
                   Button('重播粒子开场').fontSize(12).enabled(this.backendName === 'OpenGL' && this.introEnabled && !this.loading).onClick(() => { nativeRender.intro(true, false); this.beginVisibleIntro(true); this.settingsVisible = false; })
                   if (this.viewer.profile?.settings.soundUrl) {

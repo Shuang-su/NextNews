@@ -1,19 +1,20 @@
 import { Scene, Camera, EnvironmentBackgroundType } from '@kit.ArkGraphics3D';
 import { spatialRender } from '@kit.SpatialReconKit';
 import nativeRender from 'libsplat.so';
-import { ViewerPose } from './ViewerSettings';
+import { ViewerPose, ViewerSettings } from './ViewerSettings';
 export function backgroundRGB(color: number[]): number[] {
   if (color.length !== 3 || !color.every((v: number) => Number.isFinite(v))) { throw new Error('背景颜色必须是三个有限数值'); }
   return color.map((v: number) => Math.max(0, Math.min(1, v)));
 }
 export interface ViewerAsset { path: string; bounds: number[]; environment?: string; }
-export interface ViewerCapabilities { streaming: boolean; picking: boolean; postEffects: boolean; note: string; }
+export interface ViewerCapabilities { streaming: boolean; picking: boolean; effects: string[]; note: string; }
 export interface ViewerBackend {
   readonly capabilities: ViewerCapabilities;
   load(asset: ViewerAsset): Promise<void>;
   environment(path: string, subject: string, bounds: number[]): Promise<void>;
   camera(pose: ViewerPose, bounds: number[]): void;
   background(color: number[]): void;
+  effects(settings?: ViewerSettings): void;
   pick(x: number, y: number, bounds: number[]): Promise<number[]>;
   active(value: boolean): void;
   annotations(positions: ArrayBuffer, glyphs: ArrayBuffer): void;
@@ -21,10 +22,23 @@ export interface ViewerBackend {
   dispose(): void;
 }
 export class OpenGLBackend implements ViewerBackend {
+  effects(settings?: ViewerSettings): void {
+    const fx = settings?.postEffectSettings;
+    const sharp = fx?.sharpness.enabled ? Math.max(0, Math.min(1, fx.sharpness.amount)) : 0;
+    const fringe = fx?.fringing.enabled ? Math.max(0, fx.fringing.intensity) : 0;
+    const bloom = fx?.bloom.enabled ?? false, grade = fx?.grading.enabled ?? false, vignette = fx?.vignette.enabled ?? false;
+    const mode = Math.max(0, ['none', 'linear', 'filmic', 'hejl', 'aces', 'aces2', 'neutral'].indexOf(settings?.tonemapping ?? 'none'));
+    nativeRender.effects([mode, settings?.highPrecisionRendering ? 1 : 0, sharp, fringe, bloom ? 1 : 0,
+      fx?.bloom.intensity ?? .1, Math.max(1, Math.min(16, fx?.bloom.blurLevel ?? 2)), grade ? 1 : 0,
+      fx?.grading.brightness ?? 1, fx?.grading.contrast ?? 1, fx?.grading.saturation ?? 1,
+      fx?.grading.tint[0] ?? 1, fx?.grading.tint[1] ?? 1, fx?.grading.tint[2] ?? 1,
+      vignette ? 1 : 0, fx?.vignette.inner ?? .3, fx?.vignette.outer ?? .75, fx?.vignette.curvature ?? 1, fx?.vignette.intensity ?? .5,
+      0, 0, sharp > 0 || fringe > 0 || bloom || grade || vignette || settings?.highPrecisionRendering ? 1 : 0]);
+  }
   background(color: number[]): void { const rgb = backgroundRGB(color); nativeRender.background(rgb[0], rgb[1], rgb[2]); }
   annotations(positions: ArrayBuffer, glyphs: ArrayBuffer): void { nativeRender.annotations(positions, glyphs); }
   annotationStyle(visible: boolean, hover: number, pixels: number): void { nativeRender.annotationStyle(visible, hover, pixels); }
-  readonly capabilities: ViewerCapabilities = { streaming: true, picking: true, postEffects: false, note: 'SH0 · 原生 OpenGL ES' };
+  readonly capabilities: ViewerCapabilities = { streaming: true, picking: true, effects: ['sharpness', 'bloom', 'grading', 'vignette', 'fringing', 'tonemapping', 'rgba16f'], note: 'SH0 · 原生 OpenGL ES' };
   async load(asset: ViewerAsset): Promise<void> {
     if (asset.environment) { nativeRender.chunks([asset.path, asset.environment], asset.bounds); }
     else { nativeRender.load(asset.path); }
@@ -41,6 +55,7 @@ export class OpenGLBackend implements ViewerBackend {
   dispose(): void { this.active(false); }
 }
 export class HuaweiBackend implements ViewerBackend {
+  effects(_settings?: ViewerSettings): void {}
   private clear: number[] = [0, 0, 0];
   background(input: number[]): void {
     const color = backgroundRGB(input);
@@ -52,7 +67,7 @@ export class HuaweiBackend implements ViewerBackend {
   // transparent-world / overlay ordering. Keep common UI markers as fallback.
   annotations(_positions: ArrayBuffer, _glyphs: ArrayBuffer): void {}
   annotationStyle(_visible: boolean, _hover: number, _pixels: number): void {}
-  readonly capabilities: ViewerCapabilities = { streaming: false, picking: true, postEffects: false,
+  readonly capabilities: ViewerCapabilities = { streaming: false, picking: true, effects: [],
     note: '单体 PLY / SOG · 标注使用二维叠层；深度遮挡、原生瓦片与效果等价性尚未通过' };
   private scene: Scene | undefined = undefined;
   private view: Camera | undefined = undefined;
