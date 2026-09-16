@@ -28,7 +28,7 @@ float book(uint code,uint row,int component){return texelFetch(codebooks,ivec2(i
 void readEncoded(out vec3 position,out vec4 color,out mat3 covariance){
     ivec2 address=ivec2(int(splatIndex%4096u),int(splatIndex/4096u));
     position=texelFetch(splatData,address,0).xyz;
-    uvec4 data=texelFetch(encodedCodes,address,0);uint row=data.w;
+    uvec4 data=texelFetch(encodedCodes,address,0);uint row=data.w&2047u;
     color=vec4(vec3(book(data.z,row,1),book(data.z>>8u,row,1),book(data.z>>16u,row,1)),float(data.z>>24u)/255.0);
     vec3 abc=(bytes(data.x).xyz/255.0-.5)*1.41421356237;
     float d=sqrt(max(0.0,1.0-dot(abc,abc)));vec4 q;
@@ -66,7 +66,7 @@ void main() {
         vec3 covA=vec3(t1.w,t2.xy),covB=vec3(t2.zw,t3.x);
         covariance=mat3(covA.x,covA.y,covA.z,covA.y,covB.x,covB.y,covA.z,covB.y,covB.z);
     }
-    if(shBands>0)color.rgb=directionalColor(position,view);
+    if(shBands>0)color.rgb=directionalColor(position,view,color.rgb);
     // MetaFlow dot wave followed by the delayed lift wave. Covariance trace
     // gives the same RMS size as gsplatGetSizeFromScale without eigenvectors.
     if (introProgress < 1.0) {
@@ -294,7 +294,7 @@ void Renderer::InitGL(void *window) {
     viewLocation_=glGetUniformLocation(program_,"view");viewportLocation_=glGetUniformLocation(program_,"viewport");nearLocation_=glGetUniformLocation(program_,"nearPlane");farLocation_=glGetUniformLocation(program_,"farPlane");dataLocation_=glGetUniformLocation(program_,"splatData");optimizedLocation_=glGetUniformLocation(program_,"optimized");
     glGenVertexArrays(1,&vao_);glBindVertexArray(vao_);glGenBuffers(1,&buffer_);glBindBuffer(GL_ARRAY_BUFFER,buffer_);
     glEnableVertexAttribArray(0);glVertexAttribIPointer(0,1,GL_UNSIGNED_INT,sizeof(uint32_t),nullptr);glVertexAttribDivisor(0,1);
-    GLint maxTexture=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxTexture);atlasRows_=std::min(maxTexture,8192);atlas_.Reset(atlasRows_*4);encodedRows_=std::min(maxTexture,4096);encodedAtlas_.Reset(encodedRows_*16);encodedBookSlots_.assign(encodedRows_*16,UINT32_MAX);bookAtlas_.Reset(2048);
+    GLint maxTexture=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxTexture);atlasRows_=std::min(maxTexture,8192);atlas_.Reset(atlasRows_*4);encodedRows_=std::min(maxTexture,4096);encodedAtlas_.Reset(encodedRows_*16);encodedBookSlots_.assign(encodedRows_*16,UINT32_MAX);bookAtlas_.Reset(2048);shAtlas_.Reset(ShAtlasPages);
     if(maxTexture<4096)throw std::runtime_error("4096-wide data textures unavailable");
     glGenTextures(1,&dataTexture_);glActiveTexture(GL_TEXTURE0);glBindTexture(GL_TEXTURE_2D,dataTexture_);
     glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);
@@ -302,6 +302,8 @@ void Renderer::InitGL(void *window) {
     glEnable(GL_BLEND);glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA);glDisable(GL_DEPTH_TEST);glDepthMask(GL_FALSE);glDisable(GL_CULL_FACE);
 }
 void Renderer::DestroyGL() {
+    if(shCentroidAtlas_)glDeleteTextures(1,&shCentroidAtlas_);if(shMapping_)glDeleteTextures(1,&shMapping_);
+    shCentroidAtlas_=shMapping_=0;shAtlas_.Reset(0);activeShPages_.clear();shMappingRows_.clear();
     if(encodedCenters_)glDeleteTextures(1,&encodedCenters_);if(encodedCodes_)glDeleteTextures(1,&encodedCodes_);if(codebookTexture_)glDeleteTextures(1,&codebookTexture_);
     encodedCenters_=encodedCodes_=codebookTexture_=0;encodedDrawable_=false;encodedBookSlots_.clear();encodedAtlas_.Reset(0);bookAtlas_.Reset(0);activeEncodedPages_.clear();activeBooks_.clear();
     if(atlasTexture_)glDeleteTextures(1,&atlasTexture_);atlasTexture_=0;atlasDrawable_=false;atlas_.Reset(0);activePages_.clear();stagingPage_.reset();
@@ -372,7 +374,7 @@ void Renderer::AdvanceUpload() {
     if(stagingRow_==rows&&shReady){
         std::lock_guard<std::mutex> lock(mutex_);
         if(stagingGeneration_==loadGeneration_){
-            shTexture_.Swap(stagingShTexture_);stagingShTexture_.Destroy();activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);ExtendOpening();if(scene_->Count() && stagingGeneration_>=openingMinGeneration_){intro_.Commit(scene_->radius);openingCommitted_=status_.openingPresented<status_.openingRequest;}initialIndices_=std::move(stagingIndices_);
+            shTexture_.Swap(stagingShTexture_);stagingShTexture_.Destroy();activeShPages_.clear();activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);ExtendOpening();if(scene_->Count() && stagingGeneration_>=openingMinGeneration_){intro_.Commit(scene_->radius);openingCommitted_=status_.openingPresented<status_.openingRequest;}initialIndices_=std::move(stagingIndices_);
             spareTexture_=dataTexture_;spareCapacity_=dataCapacity_;
             spareRows_=std::move(dataRows_);dataRows_=std::move(stagingRows_);stagingPreviousRows_.clear();
             status_.uploadedRows=stagingUploadedRows_;status_.reusedRows=stagingReusedRows_;
@@ -441,7 +443,14 @@ void Renderer::Draw(const View &view,int width,int height) {
     if(annotationReady&&style.visible){glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);}else glDisable(GL_DEPTH_TEST);
     glDepthMask(GL_FALSE);glUseProgram(program_);
     int shDegree;{std::lock_guard<std::mutex> lock(mutex_);shDegree=shDegree_;}
-    shTexture_.Bind(program_,shDegree);
+    // A paged SH0 scene must not sample a previous single-model SH texture.
+    shTexture_.Bind(program_,scene_->paged?0:shDegree);
+    const bool pagedSh=scene_->paged&&encodedDrawable_&&scene_->shDegree>0;
+    glUniform1i(glGetUniformLocation(program_,"shPaged"),pagedSh);
+    if(pagedSh){
+        glUniform1i(glGetUniformLocation(program_,"shBands"),shDegree);glUniform1i(glGetUniformLocation(program_,"shFlip"),scene_->shTransform);
+        glActiveTexture(GL_TEXTURE6);glBindTexture(GL_TEXTURE_2D,shMapping_);glActiveTexture(GL_TEXTURE7);glBindTexture(GL_TEXTURE_2D,shCentroidAtlas_);glActiveTexture(GL_TEXTURE0);
+    }
     glUniform1i(glGetUniformLocation(program_,"directTone"),post?0:int(effects[0]));
     glUniform1i(optimizedLocation_,optimized_.load());
     glUniform1f(glGetUniformLocation(program_,"introProgress"),introProgress);
@@ -496,7 +505,7 @@ void Renderer::Draw(const View &view,int width,int height) {
     if(traceFrames_){const double now=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count();
         if(lastTraceFrame_>0)OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","StreamPresent intervalMs=%{public}.3f submitMs=%{public}.3f count=%{public}zu revision=%{public}.0f",now-lastTraceFrame_,Ms(drawStart),scene_->Count(),status_.displayRevision);
         lastTraceFrame_=now;}
-    status_.shSource=scene_->shDegree;status_.shActive=std::min(scene_->shDegree,shDegree);status_.shBytes=shTexture_.Bytes()+stagingShTexture_.Bytes()+scene_->harmonics.capacity()*sizeof(std::array<float,48>)+scene_->shLabels.capacity()*sizeof(std::array<uint32_t,2>)+(scene_->sogHarmonics?scene_->sogHarmonics->Bytes():0);
+    status_.shSource=scene_->shDegree;status_.shActive=std::min(scene_->shDegree,shDegree);status_.shBytes=(shCentroidAtlas_?size_t(4096)*4096*4+ShSourcePages*2048*4:0)+shTexture_.Bytes()+stagingShTexture_.Bytes()+scene_->harmonics.capacity()*sizeof(std::array<float,48>)+scene_->shLabels.capacity()*sizeof(std::array<uint32_t,2>)+(scene_->sogHarmonics?scene_->sogHarmonics->Bytes():0);
     status_.frames++;status_.sortMs=sortMs;status_.frameMs=Ms(drawStart);status_.fps=1000.0/std::max(Ms(start),.001);status_.bytes=status_.shBytes+(preparedPixels_.capacity()+stagingPixels_.capacity())*sizeof(float)+cacheBytes_.load()+scene_->points.capacity()*sizeof(Gaussian)+scene_->Count()*68+sorted.capacity()*sizeof(uint32_t);
 }
 void Renderer::LoadLoop() {

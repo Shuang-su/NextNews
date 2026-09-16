@@ -68,13 +68,30 @@ uniform highp sampler2D shData;
 uniform int shBands;
 uniform int shSourceBands;
 uniform bool shCompressed;
+uniform bool shPaged;
 uniform highp usampler2D shLabels;
 uniform highp usampler2D shCentroids;
 uniform highp sampler2D shBooks;
 uniform bool shFlip;
-vec3 directionalColor(vec3 position,mat4 cameraView){
+vec3 directionalColor(vec3 position,mat4 cameraView,vec3 baseColor){
  vec3 sh[15];vec3 dc;
- if(shCompressed){
+ if(shPaged){
+  uint code=texelFetch(encodedCodes,ivec2(int(splatIndex%4096u),int(splatIndex/4096u)),0).w;
+  uint row=code&2047u,label=(code>>11u)&65535u;int sourceBands=int((code>>27u)&3u);
+  if(sourceBands==0||shBands==0)return baseColor;
+  int n=sourceBands==1?3:sourceBands==2?8:15;
+  uint colors=texelFetch(encodedCodes,ivec2(int(splatIndex%4096u),int(splatIndex/4096u)),0).z;
+  for(int c=0;c<3;c++)dc[c]=texelFetch(codebooks,ivec2(int((colors>>uint(c*8))&255u),int(row)),0).w;
+  for(int i=0;i<15;i++){
+   sh[i]=vec3(0.0);
+   if(i<n&&!((shBands==1&&i>=3)||(shBands==2&&i>=8))){
+    uint logical=label*uint(n)+uint(i),page=texelFetch(shLabels,ivec2(int(logical/16384u),int(row)),0).r;
+    uint address=page*16384u+logical%16384u;
+    uvec3 values=texelFetch(shCentroids,ivec2(int(address%4096u),int(address/4096u)),0).rgb;
+    for(int c=0;c<3;c++)sh[i][c]=texelFetch(codebooks,ivec2(int(values[c]),int(row)),0).z;
+   }
+  }
+ }else if(shCompressed){
   uvec2 code=texelFetch(shLabels,ivec2(int(splatIndex%4096u),int(splatIndex/4096u)),0).rg;
   int n=shSourceBands==1?3:shSourceBands==2?8:15;
   int x=int(code.x%64u)*n,y=int(code.x/64u);

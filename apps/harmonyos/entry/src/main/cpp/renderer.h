@@ -8,6 +8,7 @@
 #include "post_process.h"
 #include "skybox.h"
 #include "sh_texture.h"
+#include "sh_pages.h"
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <condition_variable>
@@ -84,11 +85,18 @@ private:
         std::vector<PageKey> books;
         std::vector<uint32_t> bookSlots;
         std::vector<uint32_t> uploadOrder;
+        std::vector<PageKey> shKeys;
+        std::map<uint64_t,std::shared_ptr<const SogHarmonics>> shSources;
+        std::map<uint32_t,std::array<uint32_t,ShSourcePages>> shRows;
+        size_t shCursor=0;
     };
     void PreparePages(const std::vector<std::string>& paths,const std::array<float,4>& bounds,const std::vector<uint32_t>& ranges,uint64_t generation,uint64_t revision,double requestAt,bool encoded);
     void AdvancePages();
     std::shared_ptr<PageLoad> preparedPage_,stagingPage_;
-    PageAtlas atlas_,encodedAtlas_,bookAtlas_;
+    PageAtlas atlas_,encodedAtlas_,bookAtlas_,shAtlas_;
+    GLuint shCentroidAtlas_=0,shMapping_=0;
+    std::vector<PageKey> activeShPages_;
+    std::map<uint32_t,std::array<uint32_t,ShSourcePages>> shMappingRows_;
     GLuint encodedCenters_=0,encodedCodes_=0,codebookTexture_=0;
     std::vector<PageKey> activeEncodedPages_,activeBooks_;
     std::vector<uint32_t> encodedBookSlots_;
