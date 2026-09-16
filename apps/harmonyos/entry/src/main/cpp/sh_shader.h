@@ -66,16 +66,33 @@ inline const char* ShShader=R"SH(
 
 uniform highp sampler2D shData;
 uniform int shBands;
+uniform int shSourceBands;
+uniform bool shCompressed;
+uniform highp usampler2D shLabels;
+uniform highp usampler2D shCentroids;
+uniform highp sampler2D shBooks;
 uniform bool shFlip;
 vec3 directionalColor(vec3 position,mat4 cameraView){
+ vec3 sh[15];vec3 dc;
+ if(shCompressed){
+  uvec2 code=texelFetch(shLabels,ivec2(int(splatIndex%4096u),int(splatIndex/4096u)),0).rg;
+  int n=shSourceBands==1?3:shSourceBands==2?8:15;
+  int x=int(code.x%64u)*n,y=int(code.x/64u);
+  for(int c=0;c<3;c++)dc[c]=0.5+0.28209479177387814*texelFetch(shBooks,ivec2(int((code.y>>uint(c*8))&255u),0),0).r;
+  for(int i=0;i<15;i++){
+   sh[i]=vec3(0.0);
+   if(i<n&&!((shBands==1&&i>=3)||(shBands==2&&i>=8))){uvec3 v=texelFetch(shCentroids,ivec2(x+i,y),0).rgb;for(int c=0;c<3;c++)sh[i][c]=texelFetch(shBooks,ivec2(int(v[c]),0),0).g;}
+  }
+ }else{
  vec4 packedSH[12];
  for(int i=0;i<12;i++){uint a=splatIndex*12u+uint(i);packedSH[i]=texelFetch(shData,ivec2(int(a%4096u),int(a/4096u)),0);}
- vec3 sh[15];
  for(int i=0;i<15;i++)for(int c=0;c<3;c++){int p=3+i*3+c;sh[i][c]=((shBands==1&&i>=3)||(shBands==2&&i>=8))?0.0:packedSH[p/4][p%4];}
+ dc=packedSH[0].xyz;
+ }
  vec3 eye=-transpose(mat3(cameraView))*cameraView[3].xyz;
  vec3 delta=position-eye;vec3 dir=delta/max(length(delta),0.0000001);
  if(shFlip)dir.xy=-dir.xy;
- return max(vec3(0.0),packedSH[0].xyz+evalSH(sh,dir));
+ return max(vec3(0.0),dc+evalSH(sh,dir));
 }
 )SH";
 }

@@ -37,6 +37,12 @@ inline Gaussian DecodeSog(const float *position,const SogCodes &codes,const SogT
     const float packed[]={cov[0][0],cov[0][1],cov[0][2],cov[1][1],cov[1][2],cov[2][2]};std::copy_n(packed,6,g.covariance);
     if(tables.viewerTransform){g.covariance[2]=-g.covariance[2];g.covariance[4]=-g.covariance[4];}return g;
 }
+struct SogHarmonics {
+    int width=0,height=0,degree=0;
+    std::vector<uint8_t> centroids;
+    std::array<std::array<float,2>,256> books{}; // DC, higher-order coefficient
+    size_t Bytes()const{return sizeof(*this)+centroids.capacity();}
+};
 struct Scene;
 struct SceneRange { std::shared_ptr<const Scene> source; uint32_t offset,count,logical; };
 struct Scene {
@@ -44,6 +50,8 @@ struct Scene {
     // Optional coefficient-major RGB: DC color then 15 SH vectors. SH0 scenes allocate none.
     std::vector<std::array<float,48>> harmonics;
     int shDegree=0;
+    std::shared_ptr<const SogHarmonics> sogHarmonics;
+    std::vector<std::array<uint32_t,2>> shLabels; // centroid ID, packed DC codes
     bool shTransform=false;
     bool paged=false;
     std::shared_ptr<SogTables> tables;
@@ -75,10 +83,12 @@ struct Scene {
         clippingRadius=std::max(radius,float(std::sqrt(square)));
     }
 };
-Scene ReadSog(const std::string &path, const std::atomic<bool> *cancel = nullptr,bool encoded=false);
-Scene ReadModel(const std::string &path, const std::atomic<bool> *cancel = nullptr,bool encoded=false);
+Scene ReadSog(const std::string &path, const std::atomic<bool> *cancel = nullptr,bool encoded=false,bool preserveSH=true);
+Scene ReadModel(const std::string &path, const std::atomic<bool> *cancel = nullptr,bool encoded=false,bool preserveSH=true);
 std::array<float,4> InspectModel(const std::string &path);
 void ApplyViewerTransform(Scene &scene);
+std::array<float,48> HarmonicsAt(const Scene &scene,size_t index);
+void AppendRange(Scene &target,const Scene &source,size_t offset,size_t count,const std::atomic<bool> *cancel=nullptr);
 Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel = nullptr);
 struct Camera {
     float yaw = 0, pitch = 0, zoom = 1, panX = 0, panY = 0, panZ = 0, fly = 0, fov = 45;

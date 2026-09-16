@@ -134,6 +134,37 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
     return scene;
 }
 
+std::array<float,48> HarmonicsAt(const Scene &scene,size_t index){
+    if(!scene.harmonics.empty())return scene.harmonics.at(index);
+    std::array<float,48> result{};
+    if(scene.sogHarmonics){
+        const auto &h=*scene.sogHarmonics;const auto code=scene.shLabels.at(index);
+        const int n=h.degree==1?3:h.degree==2?8:15;
+        const size_t x=(code[0]%64)*n,y=code[0]/64;
+        for(int c=0;c<3;c++)result[c]=.5f+.28209479177387814f*h.books[(code[1]>>(c*8))&255][0];
+        for(int k=0;k<n;k++)for(int c=0;c<3;c++)result[3+k*3+c]=h.books[h.centroids.at((y*h.width+x+k)*4+c)][1];
+    }else{const auto g=scene.At(index);std::copy_n(g.color,3,result.begin());}
+    return result;
+}
+void AppendRange(Scene &target,const Scene &source,size_t offset,size_t count,const std::atomic<bool> *cancel){
+    if(target.paged||target.tables||offset>source.Count()||count>source.Count()-offset||target.Count()+count>MaxGaussians)throw std::runtime_error("Invalid merged scene range");
+    if(source.shDegree||target.shDegree){
+        // Legacy full-float fallback is deliberately bounded; never silently drops SH.
+        if(target.Count()+count>MaxFileBytes/sizeof(std::array<float,48>))throw std::runtime_error("Merged SH exceeds 128 MiB coefficient budget");
+        if(source.shDegree&&target.shDegree&&source.shTransform!=target.shTransform)throw std::runtime_error("Mixed SH coordinate frames");
+        if(!target.shDegree){
+            target.harmonics.reserve(target.Count()+count);
+            for(size_t i=0;i<target.Count();i++){std::array<float,48> sh{};std::copy_n(target.points[i].color,3,sh.begin());target.harmonics.push_back(sh);}
+        }
+        if(source.shDegree){target.shDegree=std::max(target.shDegree,source.shDegree);target.shTransform=source.shTransform;}
+    }
+    for(size_t i=0;i<count;i++){
+        if(cancel&&cancel->load())throw std::runtime_error("Load cancelled");
+        if(target.shDegree)target.harmonics.push_back(HarmonicsAt(source,offset+i));
+        target.points.push_back(source.At(offset+i));
+    }
+}
+
 void ApplyViewerTransform(Scene &scene) {
     scene.shTransform=!scene.shTransform;
     if(scene.tables){for(auto &p:scene.positions){p[0]=-p[0];p[1]=-p[1];}scene.tables->viewerTransform=!scene.tables->viewerTransform;}

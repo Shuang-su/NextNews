@@ -27,6 +27,12 @@ try {
  const canceled=single(),oldFetch=canceled.fetch;canceled.fetch=async address=>{const bytes=await oldFetch(address);if(address.endsWith('q.webp'))canceled.cancel();return bytes;};
  await assert.rejects(canceled.resource('https://cdn.example/canceled/meta.json',tmp));
  assert.equal(JSON.parse(await fsp.readFile(loose,'utf8')).means.files[0],'l.webp');
+ meta.shN={files:['centroids.webp','labels.webp']};requests=[];
+ const higher=await single().resource('https://cdn.example/sh/source.json',tmp);
+ assert.equal(requests.length,8);assert.ok(fs.existsSync(path.join(path.dirname(higher),'labels.webp')));
+ await fsp.unlink(path.join(path.dirname(higher),'centroids.webp'));requests=[];
+ await single().resource('https://cdn.example/sh/source.json',tmp);assert.equal(requests.length,8);
+ console.log('PASS seven-component SH SOG download and missing centroid repair');
  const concurrentPath=path.join(tmp,'concurrent.image');
  await Promise.all([single().writeResource(concurrentPath,new Uint8Array(8192).fill(17).buffer),single().writeResource(concurrentPath,new Uint8Array(4096).fill(33).buffer)]);
  const concurrent=await fsp.readFile(concurrentPath);assert.ok((concurrent.length===8192&&concurrent.every(v=>v===17))||(concurrent.length===4096&&concurrent.every(v=>v===33)));assert.equal((await fsp.readdir(tmp)).filter(n=>n.includes('.part-')).length,0);

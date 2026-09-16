@@ -496,7 +496,7 @@ void Renderer::Draw(const View &view,int width,int height) {
     if(traceFrames_){const double now=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count();
         if(lastTraceFrame_>0)OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","StreamPresent intervalMs=%{public}.3f submitMs=%{public}.3f count=%{public}zu revision=%{public}.0f",now-lastTraceFrame_,Ms(drawStart),scene_->Count(),status_.displayRevision);
         lastTraceFrame_=now;}
-    status_.shSource=scene_->shDegree;status_.shActive=std::min(scene_->shDegree,shDegree);status_.shBytes=shTexture_.Bytes()+stagingShTexture_.Bytes()+scene_->harmonics.capacity()*sizeof(std::array<float,48>);
+    status_.shSource=scene_->shDegree;status_.shActive=std::min(scene_->shDegree,shDegree);status_.shBytes=shTexture_.Bytes()+stagingShTexture_.Bytes()+scene_->harmonics.capacity()*sizeof(std::array<float,48>)+scene_->shLabels.capacity()*sizeof(std::array<uint32_t,2>)+(scene_->sogHarmonics?scene_->sogHarmonics->Bytes():0);
     status_.frames++;status_.sortMs=sortMs;status_.frameMs=Ms(drawStart);status_.fps=1000.0/std::max(Ms(start),.001);status_.bytes=status_.shBytes+(preparedPixels_.capacity()+stagingPixels_.capacity())*sizeof(float)+cacheBytes_.load()+scene_->points.capacity()*sizeof(Gaussian)+scene_->Count()*68+sorted.capacity()*sizeof(uint32_t);
 }
 void Renderer::LoadLoop() {
@@ -569,17 +569,17 @@ void Renderer::LoadLoop() {
                         if(subset)++subsetHits;
                         else {
                             auto part=decoded_.Get(chunks[file]);
-                            if(!part){part=std::make_shared<Scene>(ReadModel(chunks[file],&cancel_));if(part->shDegree)throw std::runtime_error("High-order SH streaming is not yet supported; use single-model import");decoded_.Put(chunks[file],part);++decodedFiles;}
+                            if(!part){part=std::make_shared<Scene>(ReadModel(chunks[file],&cancel_));decoded_.Put(chunks[file],part);++decodedFiles;}
                             subset=std::make_shared<Scene>();
                             for(size_t i=0;i<selection.size();i+=2){
                                 const size_t offset=selection[i],count=selection[i+1]?selection[i+1]:part->points.size();
                                 if(offset>part->points.size()||count>part->points.size()-offset||subset->points.size()+count>MaxGaussians)throw std::runtime_error("LOD selection exceeds model or resident budget");
-                                subset->points.insert(subset->points.end(),part->points.begin()+offset,part->points.begin()+offset+count);
+                                AppendRange(*subset,*part,offset,count,&cancel_);
                             }
                             selected_.Put(selectionKey,subset);
                         }
                         if(combined.points.size()+subset->points.size()>MaxGaussians)throw std::runtime_error("Resident budget exceeded");
-                        combined.points.insert(combined.points.end(),subset->points.begin(),subset->points.end());
+                        AppendRange(combined,*subset,0,subset->Count(),&cancel_);
                         size_t explicitCount=0,wholeCopies=0;
                         for(size_t i=1;i<selection.size();i+=2){if(selection[i])explicitCount+=selection[i];else ++wholeCopies;}
                         const uint32_t wholeCount=wholeCopies?uint32_t((subset->points.size()-explicitCount)/wholeCopies):0;

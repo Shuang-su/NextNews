@@ -38,7 +38,7 @@ export class OpenGLBackend implements ViewerBackend {
   background(color: number[]): void { const rgb = backgroundRGB(color); nativeRender.background(rgb[0], rgb[1], rgb[2]); }
   annotations(positions: ArrayBuffer, glyphs: ArrayBuffer): void { nativeRender.annotations(positions, glyphs); }
   annotationStyle(visible: boolean, hover: number, pixels: number): void { nativeRender.annotationStyle(visible, hover, pixels); }
-  readonly capabilities: ViewerCapabilities = { streaming: true, picking: true, effects: ['sharpness', 'bloom', 'grading', 'vignette', 'fringing', 'tonemapping', 'rgba16f', 'skybox-equirect'], note: 'PLY SH0–3 · SOG SH0 · 原生 OpenGL ES' };
+  readonly capabilities: ViewerCapabilities = { streaming: true, picking: true, effects: ['sharpness', 'bloom', 'grading', 'vignette', 'fringing', 'tonemapping', 'rgba16f', 'skybox-equirect'], note: '单体 PLY/SOG SH0–3 · 流式 SH0 · OpenGL ES' };
   async load(asset: ViewerAsset): Promise<void> {
     if (asset.environment) { nativeRender.chunks([asset.path, asset.environment], asset.bounds); }
     else { nativeRender.load(asset.path); }

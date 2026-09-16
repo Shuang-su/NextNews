@@ -44,12 +44,13 @@ export function parseLodManifest(text: string): StreamManifest {
   return { version: 2, aabb: src.tree.bound.min.concat(src.tree.bound.max), bounds, chunks, leaves, levels: src.lodLevels, environment: src.environment ? chunks.length - 1 : undefined };
 }
 interface Files { files: string[]; }
-export interface SogMetadata { version: number; count: number; means: Files; quats: Files; scales: Files; sh0: Files; }
+export interface SogMetadata { version: number; count: number; means: Files; quats: Files; scales: Files; sh0: Files; shN?: Files; }
 export function sogComponents(meta: SogMetadata, minimumCount: number): string[] {
   if (!meta || meta.version !== 2 || !Number.isInteger(meta.count) || meta.count < minimumCount || meta.count > 4000000) { throw new Error('SOG 数量或版本与 LOD 不符'); }
   const fields: Files[] = [meta.means, meta.quats, meta.scales, meta.sh0], names: string[] = [];
+  if (meta.shN !== undefined) { fields.push(meta.shN); }
   fields.forEach((f: Files, i: number) => {
-    if (!f || !Array.isArray(f.files) || f.files.length !== (i === 0 ? 2 : 1)) { throw new Error('SOG 纹理字段不完整'); }
+    if (!f || !Array.isArray(f.files) || f.files.length !== (i === 0 || i === 4 ? 2 : 1)) { throw new Error('SOG 纹理字段不完整'); }
     for (const name of f.files) {
       if (typeof name !== 'string' || !/^[A-Za-z0-9_-]+\.webp$/.test(name) || names.includes(name)) { throw new Error('SOG 纹理路径无效'); } names.push(name);
     }

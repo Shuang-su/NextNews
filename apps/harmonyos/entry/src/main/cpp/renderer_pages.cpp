@@ -38,7 +38,7 @@ void Renderer::PreparePages(const std::vector<std::string>& paths,const std::arr
     DecodeQueue<std::shared_ptr<Scene>> jobs(cancel_,std::move(decodeFiles),[&](uint32_t file){
             OH_QoS_SetThreadQoS(QOS_USER_INITIATED);const double decodeAt=Now();
             if(cancel_)throw std::runtime_error("Load cancelled");
-            auto result=std::make_shared<Scene>(ReadModel(paths[file],&cancel_,encoded));
+            auto result=std::make_shared<Scene>(ReadModel(paths[file],&cancel_,encoded,false));
             if(result->shDegree)throw std::runtime_error("High-order SH page streaming is not yet supported");
             OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","PageDecode revision=%{public}llu file=%{public}u count=%{public}zu decodeMs=%{public}.2f",(unsigned long long)revision,file,result->Count(),Now()-decodeAt);
             return result;

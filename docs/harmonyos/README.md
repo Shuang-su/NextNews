@@ -1,6 +1,6 @@
 # HarmonyOS native 3DGS development
 
-Latest implementation batch: [PLY SH1–3 direction-dependent color](sh-20260917.md).
+Latest implementation batch: [compressed SOG directional color and merge preservation](sog-sh-20260917.md), following [PLY SH1–3](sh-20260917.md).
 
 Previous implementation batches: [scene/audio/environment](metaflow-scene-20260916.md), [native post effects](metaflow-postfx-20260916.md), [panorama skybox](metaflow-skybox-20260916.md), and [gamepad/cache isolation](gamepad-20260916.md).
 The current [parity matrix](viewer-parity-v1312.md) supersedes historical implementation/status descriptions below; full Viewer and performance acceptance remains incomplete.
