@@ -22,7 +22,7 @@
 | GLB 碰撞 | 差异 | 差异 | 查询与手机合成夹具通过；真实 GLB 及特殊扩展受限 |
 | 后处理/色调映射/HPR，MetaFlow camera frame | 差异 | 阻塞 | GL 独立离屏、五效果、七 tone maps，手机开/关/转向/恢复；像素对照和全性能成本未完成；Huawei 禁用并说明 |
 | HDR/RGBP 全景天空盒，MetaFlow loadSkybox | 差异 | 阻塞 | 4K HDR 文件缓存手机显示/转向，192 MiB；网络失败、JPEG/RGBP 真机及全窗口重建未通过；Huawei 未接入 |
-| 背景声音/静音/音量，MetaFlow sound | 差异 | 差异 | AVPlayer 及生命周期状态机/回归完成；未完成可听真机与音频焦点验收 |
+| 背景声音/静音/音量，MetaFlow sound | 差异 | 差异 | AVPlayer、系统中断/静音/duck 与生命周期回归完成；未完成可听真机与实际音频焦点验收 |
 | 单体 JSON SOG / bundled SOG | 差异 | 差异 | 原始 JSON 不改名，下载独立 meta.json 缓存；原子发布/取消/缺纹理修复主机通过；新单体 JSON 真机及 Huawei 未通过 |
 | 稳定页/编码纹理/全量预载/缓存 | 差异 | 阻塞 | GL 已有实验路径，取消/重试和版本保护；磁盘总 LRU 与完整压力回归仍欠缺；Huawei 多块请求/相机驱动变化未证实 |
 | 高阶 SH | 阻塞 | 阻塞 | 当前本地解析/对照仍是 SH0，未实现保留高阶系数并按视角着色 |

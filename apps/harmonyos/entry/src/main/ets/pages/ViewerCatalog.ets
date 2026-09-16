@@ -1,3 +1,4 @@
+import { retainSkyImage, releaseSkyImage, pruneSkyImages } from './ViewerSkyCache';
 import { sogComponents, SogMetadata } from './ViewerLodManifest';
 import { metaFlowIndexUrl, resolveMetaFlow } from './MetaFlowScene';
 import { ViewerScene, describeScene } from './ViewerScene';
@@ -156,8 +157,18 @@ export class ViewerCatalog {
     const digest = cryptoFramework.createMd('SHA256'); await digest.update({ data: new util.TextEncoder().encodeInto(address) });
     const key = Array.from((await digest.digest()).data).map((v: number) => v.toString(16).padStart(2, '0')).join('');
     const path = `${directory}/sky-${key}.image`;
-    try { const size = (await fs.stat(path)).size; if (size > 0 && size <= 67108864) { return path; } } catch (_) {}
-    await this.writeResource(path, await this.fetch(address, 67108864)); return path;
+    retainSkyImage(path);
+    try {
+      let hit = false;
+      try { const size = (await fs.stat(path)).size; hit = size > 0 && size <= 67108864; } catch (_) {}
+      if (!hit) { await this.writeResource(path, await this.fetch(address, 67108864)); }
+      try { fs.utimes(path, Date.now()); } catch (_) {}
+      await pruneSkyImages(directory); return path;
+    } catch (error) { releaseSkyImage(path); throw new Error((error as Error).message || String(error)); }
+  }
+  releaseImage(path: string): void {
+    releaseSkyImage(path);
+    pruneSkyImages(path.slice(0, path.lastIndexOf('/'))).catch(() => {});
   }
   private async writeResource(path: string, data: ArrayBuffer): Promise<void> {
     if (this.stopped) { throw new Error('项目加载已取消'); }

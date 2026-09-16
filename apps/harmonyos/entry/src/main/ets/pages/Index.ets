@@ -401,7 +401,7 @@ struct Index {
       if (revision === this.skyRevision && this.visible) { this.skyMessage = '天空盒已解码，正在提交 GPU'; }
     } catch (error) {
       if (revision === this.skyRevision && this.visible) { this.skyMessage = `天空盒：${(error as BusinessError).message || String(error)} (${(error as BusinessError).code ?? 0})`; if (path) { try { await fs.unlink(path); } catch (_) {} } }
-    }
+    } finally { if (path) { this.catalog.releaseImage(path); } }
   }
   @State effectError: string = '';
   @State effectsEnabled: boolean = true;
@@ -905,6 +905,7 @@ struct Index {
   }
   private async sample(name: string, label: string): Promise<void> {
     if (this.busy) { return; }
+    this.modelsVisible = false; this.settingsVisible = false;
     this.stopStream();
     this.localError = '';
     const request = ++this.generation;
@@ -947,7 +948,8 @@ struct Index {
     this.viewer.initial(); this.flyMode = this.controls.fly; this.diagnosticsVisible = false; this.updateCamera();
   }
   private async loadComparison(): Promise<void> {
-    if (this.busy) { return; } this.busy = true; this.stopStream(); this.localError = '';
+    if (this.busy) { return; }
+    this.modelsVisible = false; this.settingsVisible = false; this.busy = true; this.stopStream(); this.localError = '';
     const request = ++this.generation;
     try {
       const asset = await comparisonSog(this.getUIContext().getHostContext() as common.UIAbilityContext);
@@ -978,6 +980,7 @@ struct Index {
       if (this.visible && request === this.generation) {
         const bounds = await nativeRender.inspectModel(destination);
         if (!this.visible || request !== this.generation) { return; }
+        this.modelsVisible = false; this.settingsVisible = false;
         this.title = '本地模型'; this.sourcePath = destination; this.viewer.bounds = bounds; this.clearProfile(); this.reset(); this.loading = true; this.awaitingModelCamera = this.backendName === 'OpenGL'; await this.backend.load({ path: destination, bounds }); this.updateCamera();
       }
     } catch (error) {

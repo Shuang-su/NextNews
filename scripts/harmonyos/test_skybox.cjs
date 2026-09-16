@@ -4,7 +4,7 @@ const source=fs.readFileSync('apps/harmonyos/entry/src/main/ets/pages/Index.ets'
 const method=source.slice(source.indexOf('  private async updateSkybox('),source.indexOf('  @State effectError'));
 let uploads=[],requests=[],removed=[];
 const nativeRender={skybox:async(path)=>{uploads.push(path)}};
-const catalog={image:(address)=>new Promise((resolve,reject)=>requests.push({address,resolve,reject}))};
+const catalog={releaseImage:()=>{},image:(address)=>new Promise((resolve,reject)=>requests.push({address,resolve,reject}))};
 const box={exports:{},nativeRender,fs:{unlink:async p=>removed.push(p)}};
 vm.runInNewContext(ts.transpileModule('export class Test { '+method+' }',{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,box);
 const tick=()=>new Promise(r=>setImmediate(r));
