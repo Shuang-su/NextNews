@@ -64,3 +64,16 @@ for(const radius of [.1,1000]) {
  r.controls.wheel(-120);r.controls.cancel();r.tick(16);gaming.forEach((v,i)=>close(r.pose().position[i],v));
 }
 console.log('PASS world-space wheel/button/pinch displacements, one-shot consumption, gaming two-finger isolation and cancellation');
+
+for (const inside of [false,true]) for (const explicit of [false,true]) for (const preferred of ['', 'orbit','fly','walk','anim']) for (const forced of ['', 'figure8']) {
+ const cfg=settings.createSettings({position:[0,0,inside?.5:5],target:[0,0,0],fov:75});
+ if(explicit){cfg.startMode='animTrack';cfg.animTracks=[settings.defaultTrack(cfg.cameras[0].initial,false)];}
+ const p=new profile.ViewerProfile(cfg,[0,0,0,1],{mode:preferred,syntheticAnimation:forced,noanim:false});
+ const animated=explicit||forced==='figure8'||inside;
+ const expected=preferred==='anim'||animated?'anim':preferred==='fly'||preferred==='walk'?'fly':'orbit';
+ assert.equal(p.initialMode,expected);
+ if(!explicit)assert.equal(p.animation.sample(0).fov,75);
+ const paused=new profile.ViewerProfile(cfg,[0,0,0,1],{mode:preferred,syntheticAnimation:forced,noanim:true});
+ assert.notEqual(paused.initialMode,'anim');
+}
+console.log('PASS MetaFlow explicit/synthetic animation startup, preferred navigation modes and noanim gate');

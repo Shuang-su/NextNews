@@ -6,11 +6,12 @@ export function backgroundRGB(color: number[]): number[] {
   if (color.length !== 3 || !color.every((v: number) => Number.isFinite(v))) { throw new Error('背景颜色必须是三个有限数值'); }
   return color.map((v: number) => Math.max(0, Math.min(1, v)));
 }
-export interface ViewerAsset { path: string; bounds: number[]; }
+export interface ViewerAsset { path: string; bounds: number[]; environment?: string; }
 export interface ViewerCapabilities { streaming: boolean; picking: boolean; postEffects: boolean; note: string; }
 export interface ViewerBackend {
   readonly capabilities: ViewerCapabilities;
   load(asset: ViewerAsset): Promise<void>;
+  environment(path: string, subject: string, bounds: number[]): Promise<void>;
   camera(pose: ViewerPose, bounds: number[]): void;
   background(color: number[]): void;
   pick(x: number, y: number, bounds: number[]): Promise<number[]>;
@@ -24,7 +25,11 @@ export class OpenGLBackend implements ViewerBackend {
   annotations(positions: ArrayBuffer, glyphs: ArrayBuffer): void { nativeRender.annotations(positions, glyphs); }
   annotationStyle(visible: boolean, hover: number, pixels: number): void { nativeRender.annotationStyle(visible, hover, pixels); }
   readonly capabilities: ViewerCapabilities = { streaming: true, picking: true, postEffects: false, note: 'SH0 · 原生 OpenGL ES' };
-  async load(asset: ViewerAsset): Promise<void> { nativeRender.load(asset.path); }
+  async load(asset: ViewerAsset): Promise<void> {
+    if (asset.environment) { nativeRender.chunks([asset.path, asset.environment], asset.bounds); }
+    else { nativeRender.load(asset.path); }
+  }
+  async environment(path: string, subject: string, bounds: number[]): Promise<void> { nativeRender.chunks([subject, path], bounds); }
   camera(pose: ViewerPose, bounds: number[]): void {
     const dx = pose.position[0] - pose.target[0], dy = pose.position[1] - pose.target[1], dz = pose.position[2] - pose.target[2];
     const distance = Math.hypot(dx, dy, dz);
@@ -67,6 +72,10 @@ export class HuaweiBackend implements ViewerBackend {
     try {
       const model = await spatialRender.GSPlugin.loadGSNode(pending, { uri: `file://${asset.path}` }, pending.root ?? undefined);
       model.rotation = { x: 0, y: 0, z: 1, w: 0 };
+      if (asset.environment) {
+        const companion = await spatialRender.GSPlugin.loadGSNode(pending, { uri: `file://${asset.environment}` }, pending.root ?? undefined);
+        companion.rotation = { x: 0, y: 0, z: 1, w: 0 };
+      }
       const camera = await pending.getResourceFactory().createCamera({ name: 'nextnewsViewerCamera' });
       camera.fov = 85 * Math.PI / 180; camera.nearPlane = asset.bounds[3] * .001; camera.farPlane = asset.bounds[3] * 100;
       camera.clearColor = { r: this.clear[0], g: this.clear[1], b: this.clear[2], a: 1 }; camera.postProcess = null;
@@ -75,6 +84,13 @@ export class HuaweiBackend implements ViewerBackend {
       this.scene = pending; this.model = model; this.view = camera; camera.enabled = this.enabled;
       this.changed(pending); pending = undefined;
     } finally { pending?.destroy(); }
+  }
+  async environment(path: string, _subject: string, _bounds: number[]): Promise<void> {
+    const scene = this.scene, request = this.generation;
+    if (!scene) { throw new Error('华为主体场景尚未就绪'); }
+    const companion = await spatialRender.GSPlugin.loadGSNode(scene, { uri: `file://${path}` }, scene.root ?? undefined);
+    if (request !== this.generation || scene !== this.scene) { return; }
+    companion.rotation = { x: 0, y: 0, z: 1, w: 0 };
   }
   camera(pose: ViewerPose, _bounds: number[]): void {
     if (!this.view) { return; }

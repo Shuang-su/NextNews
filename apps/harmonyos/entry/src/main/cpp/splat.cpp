@@ -135,8 +135,9 @@ View MakeView(const Scene &scene, const Camera &camera) {
     for(int k=0;k<3;++k) { m[12]-=right[k]*eye[k]; m[13]-=up[k]*eye[k]; m[14]-=back[k]*eye[k]; }
     m[15]=1; v.tanHalfFov=std::tan(std::clamp(camera.fov, 1.01f, 178.99f)*.00872664626f); const float centerDepth=-(m[2]*scene.center[0]+m[6]*scene.center[1]+m[10]*scene.center[2]+m[14]);
     // Keep boundary centers inside despite float rounding at the fitted far plane.
-    v.farPlane=std::nextafter(std::max(centerDepth+scene.radius, .01f), INFINITY);
-    v.nearPlane=std::min(1.f,std::max(centerDepth-scene.radius,v.farPlane/16384.f)); return v;
+    const float clippingRadius=std::max(scene.radius,scene.clippingRadius);
+    v.farPlane=std::nextafter(std::max(centerDepth+clippingRadius, .01f), INFINITY);
+    v.nearPlane=std::min(1.f,std::max(centerDepth-clippingRadius,v.farPlane/16384.f)); return v;
 }
 std::vector<float> Pick(const Scene &scene,const View &view,float x,float y,int width,int height) {
     struct Hit { float depth,alpha; size_t index; }; std::vector<Hit> hits;

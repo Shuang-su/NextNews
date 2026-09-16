@@ -213,11 +213,18 @@ bool Renderer::IsPresented(uint64_t request,uint64_t surface) {
 void Renderer::OnPresented(std::function<void(uint64_t,uint64_t)> callback) {
     std::lock_guard<std::mutex> lock(mutex_);presentedCallback_=std::move(callback);
 }
+void Renderer::ExtendOpening() {
+    if(!scene_->hasWorldBox)return;
+    const float radius=FarthestCorner({introBounds_[0],introBounds_[1],introBounds_[2]},scene_->worldBox);
+    if(radius>introBounds_[3]){introBounds_[3]=radius;intro_.Extend(radius);}
+}
 bool Renderer::BeginIntro(uint64_t request, std::array<float,3> focus, const std::vector<float>& box, int profile) {
     {std::lock_guard<std::mutex> lock(mutex_);
         if(stop_||presentedSurface_!=surfaceGeneration_||request!=status_.openingRequest||request!=status_.openingPresented)return false;
         std::array<float,6> bounds=scene_->worldBox;
-        if(box.size()==6)std::copy_n(box.begin(),6,bounds.begin());
+        if(box.size()==6){
+            for(int k=0;k<3;++k){bounds[k]=scene_->hasWorldBox?std::min(box[k],bounds[k]):box[k];bounds[k+3]=scene_->hasWorldBox?std::max(box[k+3],bounds[k+3]):box[k+3];}
+        }
         else if(!scene_->hasWorldBox)for(int k=0;k<3;++k){bounds[k]=scene_->center[k]-scene_->radius;bounds[k+3]=scene_->center[k]+scene_->radius;}
         introBounds_={focus[0],focus[1],focus[2],FarthestCorner(focus,bounds)};
         intro_.BeginVisible(introBounds_[3],profile);dirty_=true;
@@ -344,7 +351,7 @@ void Renderer::AdvanceUpload() {
     if(stagingRow_==rows){
         std::lock_guard<std::mutex> lock(mutex_);
         if(stagingGeneration_==loadGeneration_){
-            activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);if(scene_->Count() && stagingGeneration_>=openingMinGeneration_){intro_.Commit(scene_->radius);openingCommitted_=status_.openingPresented<status_.openingRequest;}initialIndices_=std::move(stagingIndices_);
+            activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);ExtendOpening();if(scene_->Count() && stagingGeneration_>=openingMinGeneration_){intro_.Commit(scene_->radius);openingCommitted_=status_.openingPresented<status_.openingRequest;}initialIndices_=std::move(stagingIndices_);
             spareTexture_=dataTexture_;spareCapacity_=dataCapacity_;
             spareRows_=std::move(dataRows_);dataRows_=std::move(stagingRows_);stagingPreviousRows_.clear();
             status_.uploadedRows=stagingUploadedRows_;status_.reusedRows=stagingReusedRows_;
@@ -479,9 +486,10 @@ void Renderer::LoadLoop() {
             std::vector<float> pixels(rows*4096*4,0);
             for(size_t i=0;i<loaded->points.size();++i){
                 if((i&4095)==0&&cancel_)return;
-                const auto &g=loaded->points[i];float *p=pixels.data()+i*16;
+                const auto &g=loaded->points[i];loaded->Include(g.position);float *p=pixels.data()+i*16;
                 std::copy_n(g.position,3,p);std::copy_n(g.color,4,p+3);std::copy_n(g.covariance,6,p+7);
             }
+            loaded->FitClipping();
             auto rowIdentities=MakeUploadRows(spans);
             std::lock_guard<std::mutex> lock(mutex_);
             if(cancel_||generation!=loadGeneration_)return;
@@ -495,7 +503,7 @@ void Renderer::LoadLoop() {
                 try {
                     decoded_.Clear();selected_.Clear();auto loaded=ReadModel(path,&cancel_);
                     const uint32_t count=loaded.points.size();
-                    publish(std::make_shared<Scene>(std::move(loaded)),true,Ms(start),{{nextSourceId_++,0,count}});
+                    publish(std::make_shared<Scene>(std::move(loaded)),false,Ms(start),{{nextSourceId_++,0,count}});
                 } catch(const std::exception &e) {
                     std::lock_guard<std::mutex> lock(mutex_);if(!cancel_){status_.state="error";status_.message=e.what();}
                 }

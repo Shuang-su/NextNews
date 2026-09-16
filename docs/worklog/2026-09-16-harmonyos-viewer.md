@@ -98,3 +98,8 @@ cache diagnostics. Configured animation is held behind initial loading.
 See [implementation, checks and unfinished scope](../harmonyos/metaflow-loading-events-20260916.md).
 This is the opening/configuration batch only; the full approved plan is not yet
 complete. Signed HAP and device images remain local ignored artifacts.
+
+
+## MetaFlow 场景入口与声音/环境接续
+
+见 [阶段记录](../harmonyos/metaflow-scene-20260916.md)。配套构建与手机首开/六次转向回归通过；主机验证配置、声音生命周期、动画、环境选择和揭示连续性。双资源视觉、声音真机、后处理及整体性能仍待验收。

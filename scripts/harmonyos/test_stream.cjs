@@ -71,6 +71,17 @@ console.log('PASS AABB distance, rear penalty, offscreen detail, fixed budget, i
  turning.tick([Math.PI,0,1,0,0,0],true,45,1);
  assert.equal(published,beforeTurn+2,'cached front/back selections must publish during pending downloads');
  console.log('PASS cached camera turn does not wait for the network batch');
+ const composed=new sandbox.exports.StreamSession(()=>{});composed.budget=100;
+ composed.manifest={version:1,bounds:[0,0,0,1],chunks:[{file:'a.sog',count:40,bytes:16,bounds:[0,0,0,1]}]};
+ composed.cache.set('a.sog','/cache/a.sog');let submitted;
+ const oldChunks=render.chunks;render.chunks=(...args)=>{submitted=args};
+ composed.attachEnvironment('/cache/env.sog',30);composed.publishCached();
+ assert.deepEqual(Array.from(submitted[0]),['/cache/a.sog','/cache/env.sog']);
+ assert.deepEqual(Array.from(new Uint32Array(submitted[2])),[0,0,40,1,0,30]);assert.equal(composed.requestedCount,70);
+ assert.throws(()=>composed.attachEnvironment('/cache/oversize.sog',61));assert.equal(composed.environmentPath,'/cache/env.sog');
+ composed.stop();composed.attachEnvironment('/cache/late.sog',10);assert.equal(composed.environmentPath,'/cache/env.sog');
+ render.chunks=oldChunks;
+ console.log('PASS subject/environment global selection, exact ranges/count, budget rejection preserves frame, late attachment ignored');
 
  const pressure=new sandbox.exports.StreamSession(()=>{}),removed=[];
  fakeFs.unlink=async path=>removed.push(path);

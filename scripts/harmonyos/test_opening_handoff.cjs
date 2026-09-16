@@ -8,7 +8,7 @@ const method=handoff+'\n'+event;
 const calls=[];let presented=4;
 const box={exports:{},nativeRender:{status:()=>({openingPresented:presented}),beginIntro:(...v)=>{calls.push(v);return true}}};
 vm.runInNewContext(ts.transpileModule(`export class Page {${method}}`,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,box);
-const page=new box.exports.Page();Object.assign(page,{opening:true,introAwaitingVisible:true,active:true,backendName:'OpenGL',openingRequest:4,viewer:{pose:()=>({target:[1,2,3]})}});
+const page=new box.exports.Page();Object.assign(page,{sound:{shown(){}},opening:true,introAwaitingVisible:true,active:true,backendName:'OpenGL',openingRequest:4,viewer:{pose:()=>({target:[1,2,3]})}});
 page.beginVisibleIntro();assert.equal(calls.length,0,'loading overlay must exit first');
 page.opening=false;page.active=false;page.beginVisibleIntro();assert.equal(calls.length,0);assert.equal(page.introAwaitingVisible,true,'background does not consume handoff');
 page.active=true;presented=3;page.beginVisibleIntro();assert.equal(calls.length,0,'stale scene cannot release new intro');

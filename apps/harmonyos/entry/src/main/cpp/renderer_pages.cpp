@@ -80,7 +80,7 @@ void Renderer::PreparePages(const std::vector<std::string>& paths,const std::arr
                 const auto &page=work->pages[pageIndex];
                 if(inPage+n>page->Count())throw std::runtime_error("Selection exceeds source page");
                 scene.ranges.push_back({page,inPage,n,uint32_t(scene.Count())});
-                for(uint32_t i=0;i<n;++i){const auto *p=page->Position(inPage+i);scene.positions.push_back({p[0],p[1],p[2]});scene.addresses.push_back(pageIndex*PagePoints+inPage+i);}
+                for(uint32_t i=0;i<n;++i){const auto *p=page->Position(inPage+i);scene.Include(p);scene.positions.push_back({p[0],p[1],p[2]});scene.addresses.push_back(pageIndex*PagePoints+inPage+i);}
                 offset+=n;left-=n;
             }
         }
@@ -171,7 +171,7 @@ void Renderer::AdvancePages(){
     std::lock_guard<std::mutex> lock(mutex_);status_.uploadMs=Now()-start;dirty_=true;
     if(work.cursor==work.keys.size()&&work.generation==loadGeneration_){
         OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","PageGpuReady revision=%{public}llu uploadedBytes=%{public}zu elapsedMs=%{public}.2f",(unsigned long long)work.revision,work.uploaded,Now()-work.requestAt);
-        retiredScenes_.push_back(std::move(scene_));scene_=work.scene;if(scene_->Count() && work.generation>=openingMinGeneration_){intro_.Commit(scene_->radius);openingCommitted_=status_.openingPresented<status_.openingRequest;}initialIndices_=std::move(work.indices);if(work.encoded){activeEncodedPages_=work.keys;activeBooks_=work.books;activePages_.clear();}else{activePages_=work.keys;activeEncodedPages_.clear();activeBooks_.clear();}
+        retiredScenes_.push_back(std::move(scene_));scene_=work.scene;scene_->FitClipping();ExtendOpening();if(scene_->Count() && work.generation>=openingMinGeneration_){intro_.Commit(scene_->radius);openingCommitted_=status_.openingPresented<status_.openingRequest;}initialIndices_=std::move(work.indices);if(work.encoded){activeEncodedPages_=work.keys;activeBooks_=work.books;activePages_.clear();}else{activePages_=work.keys;activeEncodedPages_.clear();activeBooks_.clear();}
         encodedDrawable_=work.encoded;atlasDrawable_=true;
         uploadDirty_=true;preuploaded_=true;sortPending_=sortReady_=false;sortScene_.reset();sortedScene_.reset();sortedIndices_.clear();
         const auto view=MakeView(*scene_,camera_);

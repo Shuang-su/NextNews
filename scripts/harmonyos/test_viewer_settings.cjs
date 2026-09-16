@@ -29,3 +29,10 @@ if(fs.existsSync(reference+'core/spline.ts')) {
  for(let t=0;t<7;t+=.03125){const a=[],b=[];ours.evaluate(t,a);theirs.evaluate(t,b);assert.deepEqual(a,b);}
 }
 console.log('PASS: real 75-degree profile, camera normalization, default animation loop, repeat/pingpong/end, invalid settings, reference spline parity');
+
+const jsonc = '// config\n' + JSON.stringify(settings).replace('"version":2', '"version":2 /* revision */').replace(/}$/, ',}');
+assert.equal(api.parseViewerSettings(jsonc).version, 2);
+assert.deepEqual(JSON.parse(api.settingsJson('{"url":"https://a.test/a//b", "text":",] /* x */ \\"quote\\"", "items":[1, /* x */ 2,],}')), {url:'https://a.test/a//b',text:',] /* x */ "quote"',items:[1,2]});
+assert.throws(()=>api.settingsJson('{/* never closed'));
+assert.throws(()=>JSON.parse(api.settingsJson('{"value":1/* gap */2}')));
+console.log('PASS JSONC comments and trailing commas preserve quoted content and reject malformed tokens');

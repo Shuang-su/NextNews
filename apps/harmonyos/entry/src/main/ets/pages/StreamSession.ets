@@ -234,6 +234,15 @@ export class StreamSession {
     if (this.stopped) { throw new Error('流式加载已取消'); }
     await fs.rename(`${path}.part`, path);
   }
+  private environmentPath: string = '';
+  private environmentCount: number = 0;
+  attachEnvironment(path: string, count: number): void {
+    if (this.stopped || !this.manifest) { return; }
+    const m = this.manifest;
+    const minimum = m.leaves && m.levels ? m.leaves.reduce((n: number, l: StreamLeaf) => n + l.lods[m.levels! - 1][2], 0) : m.chunks.reduce((n: number, c: StreamChunk) => n + c.count, 0);
+    if (!Number.isInteger(count) || count < 1 || minimum + count > this.budget) { throw new Error('主体基础层与环境超过当前预算；环境未替换现有画面，请提高预算后重试'); }
+    this.environmentPath = path; this.environmentCount = count; this.selectionKey = ''; this.publishDirty = true;
+  }
   retry(): void { this.publishDirty = true; this.published = ''; this.active = true; }
   stop(): void { this.stopped = true; for (const request of this.requests) { request.destroy(); } this.requests.clear(); }
   async dispose(): Promise<void> { this.stop(); if (this.directory && !this.persistent) { try { await fs.rmdir(this.directory); } catch (_) {} } }
@@ -247,8 +256,9 @@ export class StreamSession {
   }
   private updateSelection(camera: number[], fly: boolean, fov: number, aspect: number): void {
     const m = this.manifest; if (!m) { return; }
-    const key = camera.map((v: number) => v.toFixed(2)).join(',') + `${fly}:${this.budget}:${fov}:${aspect}`;
-    if (key !== this.selectionKey) { this.targetAt = Date.now(); this.selection = this.paged && m.leaves ? Array.from(new Uint32Array(nativeRender.selectLods(new Float64Array([...camera, fly ? 1 : 0]).buffer, this.budget, fov, aspect))) : selectLods(m, camera, fly, this.budget, fov, aspect); this.selectionKey = key; this.targetRevision++; console.info(`StreamTarget target=${this.targetRevision} cameraAt=${this.targetAt} selectedAt=${Date.now()} budget=${this.budget} fov=${fov} aspect=${aspect}`); this.publishDirty = true; }
+    const available = this.budget - this.environmentCount;
+    const key = camera.map((v: number) => v.toFixed(2)).join(',') + `${fly}:${available}:${fov}:${aspect}`;
+    if (key !== this.selectionKey) { this.targetAt = Date.now(); this.selection = this.paged && m.leaves ? Array.from(new Uint32Array(nativeRender.selectLods(new Float64Array([...camera, fly ? 1 : 0]).buffer, available, fov, aspect))) : selectLods(m, camera, fly, available, fov, aspect); this.selectionKey = key; this.targetRevision++; console.info(`StreamTarget target=${this.targetRevision} cameraAt=${this.targetAt} selectedAt=${Date.now()} budget=${this.budget} fov=${fov} aspect=${aspect}`); this.publishDirty = true; }
     if (m.leaves && this.publishDirty) {
       const files = new Set<string>();
       for (let i = 0; i < m.leaves.length; i++) { const file = m.leaves[i].lods[this.selection[i]][0]; if (file >= 0) { files.add(m.chunks[file].file); } }
@@ -276,7 +286,14 @@ export class StreamSession {
           let index = paths.indexOf(path); if (index < 0) { index = paths.length; paths.push(path); }
           ranges.push(index, r[1], r[2]); count += r[2]; if (level < m.levels - 1) { refined++; }
         }
-      } else { for (const c of m.chunks) { paths.push(this.cache.get(c.file) as string); count += c.count; } }
+      } else { for (const c of m.chunks) { paths.push(this.cache.get(c.file) as string); count += c.count; } desiredCount = count; }
+      if (this.environmentPath) {
+        // Convert whole-file selections before adding an explicit companion range.
+        if (!ranges.length) { for (let i = 0; i < paths.length; i++) { ranges.push(i, 0, m.chunks[i].count); } }
+        ranges.push(paths.length, 0, this.environmentCount); paths.push(this.environmentPath);
+        count += this.environmentCount; desiredCount += this.environmentCount;
+      }
+      if (count > this.budget) { throw new Error('主体与环境超出当前预算，保留上一帧；请提高预算'); }
       const key = paths.join('|') + ':' + ranges.join(',');
       this.coverage = m.leaves ? matched / m.leaves.length : 1; this.requestedCount = desiredCount || count;
       if (key !== this.published && (nativeRender.status().state !== 'loading' || (this.paged && this.submittedTarget !== this.targetRevision))) {

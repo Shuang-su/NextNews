@@ -37,7 +37,12 @@ public:
     }
     void Commit(float radius = 1) { if (pending_) { duration_ = Duration(radius); pending_ = false; progress_ = 0; last_ = -1; } }
     void Pause() { last_ = -1; }
-    void BeginVisible(float radius = 1, int profile = 0) { if(held_ || progress_ == 0){motion_=RevealMotion::For(radius,profile);duration_ = motion_.Duration(radius);} held_ = false; last_ = -1; }
+    void BeginVisible(float radius = 1, int profile = 0) { if(held_ || progress_ == 0){profile_=profile;motion_=RevealMotion::For(radius,profile);duration_ = motion_.Duration(radius);} held_ = false; last_ = -1; }
+    void Extend(float radius) {
+        if(progress_>=1)return;
+        const double seconds=Seconds();duration_=std::max(duration_,motion_.Duration(radius));progress_=seconds/duration_;
+        const auto next=RevealMotion::For(radius,profile_);motion_.dotSize=next.dotSize;motion_.oscillation=next.oscillation;
+    }
     bool Running() const { return progress_ < 1.0 && !held_; }
     float Frame(double seconds) {
         if (Running() && last_ >= 0) progress_ = std::min(1.0, progress_ + std::clamp(seconds-last_, 0.0, 1.0/30.0) / duration_);
@@ -49,6 +54,7 @@ public:
     static double Duration(float radius) { return RevealMotion::For(radius,0).Duration(radius); }
 private:
     RevealMotion motion_;
+    int profile_=0;
     double duration_ = 5;
     bool pending_ = false, held_ = false;
     double progress_ = 1, last_ = -1;

@@ -21,6 +21,11 @@ int main() {
     intro.Frame(600);assert(intro.Seconds()<1.04); // long frames cannot skip the wave
     for(int i=1;i<1000;i++)intro.Frame(600+i/30.0);
     assert(!intro.Running());
+    intro.Extend(1000);assert(!intro.Running()); // late environment never replays a completed opening
+    intro.Request(true,false);intro.BeginVisible(20);intro.Frame(0);intro.Frame(1./30);
+    const auto elapsed=intro.Seconds();const auto motion=intro.Motion();
+    intro.Extend(100);assert(std::abs(intro.Seconds()-elapsed)<1e-10);
+    assert(intro.Motion().speed==motion.speed && intro.Motion().acceleration==motion.acceleration);
     intro.Request(true,false);assert(intro.Frame(700)==0);
     intro.Request(false,false);assert(intro.Frame(701)==1);
     intro.Request(true,true);intro.Request(false,false);intro.Commit();assert(intro.Frame(800)==1);

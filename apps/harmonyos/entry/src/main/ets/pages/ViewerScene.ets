@@ -1,9 +1,11 @@
+import { MetaFlowConfig } from './MetaFlowScene';
 import { url } from '@kit.ArkTS';
 import { ViewerSettings } from './ViewerSettings';
 
 // A scene owns the provenance of its URLs. Resolution creates a copy so cached
 // configuration and user-provided JSON retain their original relative addresses.
 export interface ViewerScene {
+  player?: MetaFlowConfig;
   content: string;
   configuration: string;
   poster: string;

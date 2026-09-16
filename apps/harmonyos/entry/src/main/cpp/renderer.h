@@ -51,6 +51,7 @@ public:
     Status GetStatus();
     std::vector<float> Pick(float x,float y);
 private:
+    void ExtendOpening();
     void Loop(void *window);
     void SortLoop();
     void LoadLoop();

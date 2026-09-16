@@ -60,6 +60,16 @@ struct Scene {
     float radius = 1;
     std::array<float,6> worldBox{};
     bool hasWorldBox=false;
+    float clippingRadius=0;
+    void Include(const float *p){
+        if(!hasWorldBox){for(int k=0;k<3;++k)worldBox[k]=worldBox[k+3]=p[k];hasWorldBox=true;}
+        else for(int k=0;k<3;++k){worldBox[k]=std::min(worldBox[k],p[k]);worldBox[k+3]=std::max(worldBox[k+3],p[k]);}
+    }
+    void FitClipping(){
+        if(!hasWorldBox)return;double square=0;
+        for(int k=0;k<3;++k){double d=std::max(std::abs(double(center[k])-worldBox[k]),std::abs(double(center[k])-worldBox[k+3]));square+=d*d;}
+        clippingRadius=std::max(radius,float(std::sqrt(square)));
+    }
 };
 Scene ReadSog(const std::string &path, const std::atomic<bool> *cancel = nullptr,bool encoded=false);
 Scene ReadModel(const std::string &path, const std::atomic<bool> *cancel = nullptr,bool encoded=false);

@@ -1,3 +1,4 @@
+import { metaFlowIndexUrl, resolveMetaFlow } from './MetaFlowScene';
 import { ViewerScene, describeScene } from './ViewerScene';
 import { http } from '@kit.NetworkKit';
 import { fileIo as fs } from '@kit.CoreFileKit';
@@ -86,6 +87,27 @@ export class ViewerCatalog {
     if (result.code !== 200 || !Number.isInteger(result.total) || result.total < 0 || !Array.isArray(result.rows) || result.rows.length > 20) { throw new Error('项目列表响应无效'); }
     result.rows.forEach((p: CatalogProject) => validateProject(p)); return result;
   }
+  async player(address: string): Promise<CatalogAsset> {
+    address = catalogUrl(address);
+    const page = new url.URL(address);
+    const config = resolveMetaFlow(address, page.searchParams.get('content') ? '{"resources":[]}' : await this.text(metaFlowIndexUrl(address)));
+    const settings = config.settings ? parseViewerSettings(await this.text(config.settings)) : createSettings();
+    settings.revealEffect = config.reveal ? 'radial' : 'none'; settings.experienceType = config.experienceType;
+    if (config.skybox) { settings.background.skyboxUrl = config.skybox; }
+    if (config.voxelManifest) { settings.voxelManifestUrl = config.voxelManifest; }
+    if (config.voxel) { settings.voxelUrl = config.voxel; }
+    if (config.collision) { settings.collisionUrl = config.collision; }
+    if (config.highPrecision !== undefined) { settings.highPrecisionRendering = config.highPrecision; }
+    if (config.nofx) {
+      settings.postEffectSettings.sharpness.enabled = false; settings.postEffectSettings.bloom.enabled = false;
+      settings.postEffectSettings.grading.enabled = false; settings.postEffectSettings.vignette.enabled = false; settings.postEffectSettings.fringing.enabled = false;
+    }
+    const scene = describeScene(config.content, config.settings || address, settings, config.poster, config.collision || config.voxelManifest || config.voxel);
+    const project: CatalogProject = { modelId: '0', modelTitle: config.title,
+      modelType: new url.URL(config.content).pathname.endsWith('.json') ? 'lod' : 'default' };
+    return { project, content: scene.content, configuration: scene.configuration, poster: scene.poster,
+      settings: scene.settings, collision: scene.collision, player: config };
+  }
   async detail(id: string): Promise<CatalogAsset> {
     if (!/^[0-9]{1,24}$/.test(id)) { throw new Error('项目编号无效'); }
     const cached = this.details.get(id); if (cached) { return cached; }
@@ -104,12 +126,16 @@ export class ViewerCatalog {
       poster: scene.poster, settings: scene.settings, collision: scene.collision }; this.details.set(id, result); return result;
   }
   async model(asset: CatalogAsset, directory: string, progress?: (percent: number) => void): Promise<string> {
-    if (!new url.URL(asset.content).pathname.endsWith('.sog')) { throw new Error('单体模型暂时仅支持 SOG'); }
-    const hash = cryptoFramework.createMd('SHA256'); await hash.update({ data: new util.TextEncoder().encodeInto(asset.content) });
+    return this.resource(asset.content, directory, progress);
+  }
+  async resource(content: string, directory: string, progress?: (percent: number) => void): Promise<string> {
+    const extension = new url.URL(content).pathname.endsWith('.sog') ? '.sog' : new url.URL(content).pathname.endsWith('.ply') ? '.ply' : '';
+    if (!extension) { throw new Error('单体模型暂时仅支持 SOG / 标准 3DGS PLY'); }
+    const hash = cryptoFramework.createMd('SHA256'); await hash.update({ data: new util.TextEncoder().encodeInto(content) });
     const key = Array.from((await hash.digest()).data).map((v: number) => v.toString(16).padStart(2, '0')).join('');
-    const path = `${directory}/cdn-${key}.sog`;
+    const path = `${directory}/cdn-${key}${extension}`;
     try { if ((await fs.stat(path)).size > 0) { progress?.(100); return path; } } catch (_) {}
-    const bytes = progress ? await this.download(asset.content, 134217728, progress) : await this.fetch(asset.content, 134217728);
+    const bytes = progress ? await this.download(content, 134217728, progress) : await this.fetch(content, 134217728);
     const file = await fs.open(`${path}.part`, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
     try { let offset = 0; while (offset < bytes.byteLength) { const n = await fs.write(file.fd, bytes.slice(offset)); if (n <= 0) { throw new Error('模型缓存写入失败'); } offset += n; } }
     finally { await fs.close(file); }

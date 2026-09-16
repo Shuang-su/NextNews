@@ -1,3 +1,4 @@
+import { MetaFlowConfig } from './MetaFlowScene';
 import { OrbitControls } from './OrbitControls';
 import { ViewerProfile } from './ViewerProfile';
 import { ViewerPose, ViewerSettings, normalizedPose } from './ViewerSettings';
@@ -27,7 +28,7 @@ export class ViewerRuntime {
     if (!fly) { for (let i = 0; i < 3; i++) { c[i + 3] = (pose.target[i] - this.bounds[i]) / this.bounds[3]; } }
     this.controls.current = c; this.controls.target = c.slice(); this.controls.fly = fly; this.controls.fov = pose.fov;
   }
-  configure(settings: ViewerSettings): void { this.profile = new ViewerProfile(settings, this.bounds); this.selected = -1; this.interrupt(); }
+  configure(settings: ViewerSettings, player?: MetaFlowConfig): void { this.profile = new ViewerProfile(settings, this.bounds, player); this.selected = -1; this.interrupt(); }
   initial(): void {
     if (!this.profile) { return; }
     if (this.profile.settings.startMode === 'annotation' && this.profile.settings.annotations.length) { this.selected = 0; }

@@ -43,8 +43,33 @@ export function validatePose(p: ViewerPose): void {
 function finite(values: number[]): void {
   if (!values.every((v: number) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 1e8)) { throw new Error('Viewer 效果参数无效'); }
 }
+// Accept authored MetaFlow JSONC without altering comment-like text inside strings.
+export function settingsJson(text: string): string {
+  let output = '', quoted = false, escaped = false, line = false, block = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], next = text[i + 1];
+    if (line) { if (c === '\n' || c === '\r') { line = false; output += c; } continue; }
+    if (block) { if (c === '*' && next === '/') { block = false; i++; } else if (c === '\n' || c === '\r') { output += c; } continue; }
+    if (quoted) { output += c; if (escaped) { escaped = false; } else if (c === '\\') { escaped = true; } else if (c === '"') { quoted = false; } continue; }
+    if (c === '"') { quoted = true; output += c; }
+    else if (c === '/' && next === '/') { line = true; output += ' '; i++; }
+    else if (c === '/' && next === '*') { block = true; output += ' '; i++; }
+    else { output += c; }
+  }
+  if (block) { throw new Error('Viewer 配置注释未结束'); }
+  let clean = ''; quoted = false; escaped = false;
+  for (let i = 0; i < output.length; i++) {
+    const c = output[i];
+    if (quoted) { clean += c; if (escaped) { escaped = false; } else if (c === '\\') { escaped = true; } else if (c === '"') { quoted = false; } continue; }
+    if (c === '"') { quoted = true; }
+    if (c === ',') { let j = i + 1; while (j < output.length && /\s/.test(output[j])) { j++; } if (output[j] === '}' || output[j] === ']') { continue; } }
+    clean += c;
+  }
+  return clean;
+}
 export function parseViewerSettings(text: string): ViewerSettings {
   if (text.length > 4 * 1024 * 1024) { throw new Error('Viewer 配置超过 4 MiB'); }
+  text = settingsJson(text);
   let settings = JSON.parse(text) as ViewerSettings;
   if (!settings || typeof settings !== 'object') { throw new Error('Viewer 配置无效'); }
   if (settings.version === undefined) {
