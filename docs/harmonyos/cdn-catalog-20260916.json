@@ -1,0 +1,2832 @@
+{
+  "capturedAt": "2026-09-16T04:12:59.895195+00:00",
+  "listUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/list?pageNum=1&pageSize=20",
+  "total": 49,
+  "inspected": 49,
+  "payloadsDownloaded": false,
+  "projects": [
+    {
+      "modelId": "2095135795485462530",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2095135795485462530",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2095135795485462530",
+      "modelTitle": "前海冰雪世界",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/huafa1/viewer-settings.json",
+      "lodMeta": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/huafa1/streamed/lod-meta.json",
+      "lodBin": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/huafa1/v24-tiled/voxel-tiles.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/huafa1/viewer-settings.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/huafa1/viewer-settings.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode"
+          ],
+          "bytes": 6426,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/huafa1/streamed/lod-meta.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/huafa1/streamed/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "asset",
+            "count",
+            "counts",
+            "lodLevels",
+            "lodErrors",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 2288127,
+          "version": 1,
+          "count": 297170328,
+          "lodLevels": 9,
+          "filenamesCount": 532,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": "env/meta.json",
+          "chunkSample": {
+            "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/huafa1/streamed/3_0/meta.json",
+            "version": 2,
+            "count": 526546,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/huafa1/v24-tiled/voxel-tiles.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/huafa1/v24-tiled/voxel-tiles.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "voxelResolution",
+            "opacityThreshold",
+            "tileSize",
+            "overlap",
+            "rotation",
+            "standaloneSogCliRotation",
+            "fullBounds",
+            "grid",
+            "tiles"
+          ],
+          "bytes": 19956,
+          "version": 1,
+          "tilesCount": 32
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode"
+        ],
+        "cameras": 1,
+        "animations": 0,
+        "annotations": 10,
+        "startMode": "default",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2092976335892742145",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2092976335892742145",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2092976335892742145",
+      "modelTitle": "项链",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/08/27/14ec3e357a9e42a1814faad94304d521.sog",
+      "modelFileSize": "3899297",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "hasStartPose",
+          "startMode"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2092976051711868930",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2092976051711868930",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2092976051711868930",
+      "modelTitle": "祖先像",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/08/27/d5322feedca4488fa2d8afeb3c474307.sog",
+      "modelFileSize": "13471766",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "hasStartPose",
+          "startMode"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2092975785068003329",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2092975785068003329",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2092975785068003329",
+      "modelTitle": "哇扬木偶",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/08/27/200459ce2f564dbba869dd9f7e565909.sog",
+      "modelFileSize": "5227552",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "hasStartPose",
+          "startMode"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2092975451151073282",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2092975451151073282",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2092975451151073282",
+      "modelTitle": "面具",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/08/27/915f0df46fb5410d8b08a87896ccb38e.sog",
+      "modelFileSize": "21159757",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "hasStartPose",
+          "startMode"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2092525422731177986",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2092525422731177986",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2092525422731177986",
+      "modelTitle": "祖先像 天空美术馆 玛娜展",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/sky-art-mana-1/fig8-micro.settings.json",
+      "lodMeta": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/sky-art-mana-1/streamed/lod-meta.json",
+      "lodBin": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/sky-art-mana-1/voxel_rot_none/walk.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/sky-art-mana-1/fig8-micro.settings.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/sky-art-mana-1/fig8-micro.settings.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "hasStartPose",
+            "startMode"
+          ],
+          "bytes": 5497,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/sky-art-mana-1/streamed/lod-meta.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/sky-art-mana-1/streamed/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 13696,
+          "lodLevels": 5,
+          "filenamesCount": 18,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": null,
+          "chunkSample": {
+            "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/sky-art-mana-1/streamed/1_0/meta.json",
+            "version": 2,
+            "count": 593573,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0",
+              "shN"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/sky-art-mana-1/voxel_rot_none/walk.voxel.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/sky-art-mana-1/voxel_rot_none/walk.voxel.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 551,
+          "version": "1.1"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "hasStartPose",
+          "startMode"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2085695208280940546",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2085695208280940546",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2085695208280940546",
+      "modelTitle": null,
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/08/07/4424395e2a074c73af954acc3794f94a.sog",
+      "modelFileSize": "66584477",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2075522947565322242",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2075522947565322242",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2075522947565322242",
+      "modelTitle": "Meerkat_HD",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/07/10/449539939a6e4a188d450d08f540c43f.sog",
+      "modelFileSize": "244873187",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2072631593041539074",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2072631593041539074",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2072631593041539074",
+      "modelTitle": "Meerkat",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/07/02/3788516061894dc5b635479fe5ce41aa.sog",
+      "modelFileSize": "64924238",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2061760103657709569",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2061760103657709569",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2061760103657709569",
+      "modelTitle": "深圳技术大学 图书馆",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/tushuguan/settings-merged.json",
+      "lodMeta": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/tushuguan/lod-meta.json",
+      "lodBin": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/tushuguan/walk.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/tushuguan/settings-merged.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/tushuguan/settings-merged.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode",
+            "hasStartPose"
+          ],
+          "bytes": 3828,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/tushuguan/lod-meta.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/tushuguan/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 731431,
+          "lodLevels": 7,
+          "filenamesCount": 87,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": "env/meta.json",
+          "chunkSample": {
+            "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/tushuguan/5_0/meta.json",
+            "version": 2,
+            "count": 524621,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/tushuguan/walk.voxel.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/tushuguan/walk.voxel.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 589,
+          "version": "1.1"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode",
+          "hasStartPose"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2059632066415759361",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2059632066415759361",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2059632066415759361",
+      "modelTitle": "文博会",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/wenbo_lod/settings.merged.json",
+      "lodMeta": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/wenbo_lod/lod-meta.json",
+      "lodBin": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/wenbo_lod/walk.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/wenbo_lod/settings.merged.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/wenbo_lod/settings.merged.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode",
+            "hasStartPose"
+          ],
+          "bytes": 5984,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/wenbo_lod/lod-meta.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/wenbo_lod/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 587309,
+          "lodLevels": 6,
+          "filenamesCount": 50,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": "env/meta.json",
+          "chunkSample": {
+            "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/wenbo_lod/1_0/meta.json",
+            "version": 2,
+            "count": 525885,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0",
+              "shN"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/wenbo_lod/walk.voxel.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/wenbo_lod/walk.voxel.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 606,
+          "version": "1.1"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode",
+          "hasStartPose"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2056329831717900290",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2056329831717900290",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2056329831717900290",
+      "modelTitle": "广电金融街_流式",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_jinrongjie_lod/settings-v2.json",
+      "lodMeta": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_jinrongjie_lod/lod-meta.json",
+      "lodBin": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_jinrongjie_lod/walk.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_jinrongjie_lod/settings-v2.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_jinrongjie_lod/settings-v2.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode",
+            "hasStartPose"
+          ],
+          "bytes": 3712,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_jinrongjie_lod/lod-meta.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_jinrongjie_lod/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 2049684,
+          "lodLevels": 7,
+          "filenamesCount": 67,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": "env/meta.json",
+          "chunkSample": {
+            "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_jinrongjie_lod/0_0/meta.json",
+            "version": 2,
+            "count": 525566,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_jinrongjie_lod/walk.voxel.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_jinrongjie_lod/walk.voxel.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 602,
+          "version": "1.1"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode",
+          "hasStartPose"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2056329140035227650",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2056329140035227650",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2056329140035227650",
+      "modelTitle": "1800演播厅_流式",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/1800/settings-v2.json",
+      "lodMeta": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/1800/lod-meta.json",
+      "lodBin": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/1800/1800.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/1800/settings-v2.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/1800/settings-v2.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode",
+            "hasStartPose"
+          ],
+          "bytes": 10990,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/1800/lod-meta.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/1800/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 4414738,
+          "lodLevels": 7,
+          "filenamesCount": 84,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": null,
+          "chunkSample": {
+            "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/1800/0_0/meta.json",
+            "version": 2,
+            "count": 559364,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/1800/1800.voxel.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/1800/1800.voxel.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 562,
+          "version": "1.0"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode",
+          "hasStartPose"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2056327641553014786",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2056327641553014786",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2056327641553014786",
+      "modelTitle": "6楼演播厅_流式",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_6L_lod/settings-v2.json",
+      "lodMeta": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_6L_lod/lod-meta.json",
+      "lodBin": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_6L_lod/walk.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_6L_lod/settings-v2.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_6L_lod/settings-v2.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode",
+            "hasStartPose"
+          ],
+          "bytes": 2864,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_6L_lod/lod-meta.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_6L_lod/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 35627,
+          "lodLevels": 4,
+          "filenamesCount": 14,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": "env/meta.json",
+          "chunkSample": {
+            "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_6L_lod/3_0/meta.json",
+            "version": 2,
+            "count": 464757,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_6L_lod/walk.voxel.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_6L_lod/walk.voxel.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 559,
+          "version": "1.1"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode",
+          "hasStartPose"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2056326187907026945",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2056326187907026945",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2056326187907026945",
+      "modelTitle": "3楼演播厅_流式",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_3L_lod/settings-v2.json",
+      "lodMeta": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_3L_lod/lod-meta.json",
+      "lodBin": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_3L_lod/walk.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_3L_lod/settings-v2.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_3L_lod/settings-v2.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode",
+            "hasStartPose"
+          ],
+          "bytes": 3293,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_3L_lod/lod-meta.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_3L_lod/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 17268,
+          "lodLevels": 5,
+          "filenamesCount": 17,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": "env/meta.json",
+          "chunkSample": {
+            "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_3L_lod/0_0/meta.json",
+            "version": 2,
+            "count": 571245,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_3L_lod/walk.voxel.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/SZMG_3L_lod/walk.voxel.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 584,
+          "version": "1.1"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode",
+          "hasStartPose"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2054844180283756546",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2054844180283756546",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2054844180283756546",
+      "modelTitle": "大运",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/dayun/settings-rx90-close.json",
+      "lodMeta": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/dayun/lod-meta.json",
+      "lodBin": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/dayun/walk.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/dayun/settings-rx90-close.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/dayun/settings-rx90-close.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode"
+          ],
+          "bytes": 3837,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/dayun/lod-meta.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/dayun/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 9521834,
+          "lodLevels": 7,
+          "filenamesCount": 820,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": null,
+          "chunkSample": {
+            "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/dayun/2_0/meta.json",
+            "version": 2,
+            "count": 525301,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/dayun/walk.voxel.json",
+          "requestUrl": "https://exhibition-1253925857.cos.ap-guangzhou.myqcloud.com/sk-lod/dayun/walk.voxel.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 583,
+          "version": "1.0"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2052363260111380481",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2052363260111380481",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2052363260111380481",
+      "modelTitle": "宗祠2",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/05/07/5b2bac92e6b843bbbb9edd3d44b7d596.sog",
+      "modelFileSize": "100067590",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2047680146704474113",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2047680146704474113",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2047680146704474113",
+      "modelTitle": "宗祠",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/04/24/f347b74576414217a7fc6dc24c151d07.sog",
+      "modelFileSize": "100067590",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2038957243135094786",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2038957243135094786",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2038957243135094786",
+      "modelTitle": "粤港澳大湾区花园大赛 全景",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/quanjing-2/settings-merged-2.json",
+      "lodMeta": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/quanjing-2/lod-meta.json",
+      "lodBin": " https://exhibition-cos.mp.sztv.com.cn/sk-lod/quanjing-2/meta.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/quanjing-2/settings-merged-2.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/quanjing-2/settings-merged-2.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode",
+            "hasStartPose"
+          ],
+          "bytes": 13134,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/quanjing-2/lod-meta.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/quanjing-2/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 3261092,
+          "lodLevels": 7,
+          "filenamesCount": 285,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": null,
+          "chunkSample": {
+            "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/quanjing-2/1_0/meta.json",
+            "version": 2,
+            "count": 524856,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": " https://exhibition-cos.mp.sztv.com.cn/sk-lod/quanjing-2/meta.voxel.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/quanjing-2/meta.voxel.json",
+          "trimmedWhitespace": true,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 568,
+          "version": "1.0"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode",
+          "hasStartPose"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 12,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2038253898356477953",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2038253898356477953",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2038253898356477953",
+      "modelTitle": "大师园 探索之境+自行花园+蜂巢花园",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": " https://exhibition-cos.mp.sztv.com.cn/sk-lod/dashi/settings-merged.json",
+      "lodMeta": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/dashi/lod-meta.json",
+      "lodBin": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/dashi/meta.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": " https://exhibition-cos.mp.sztv.com.cn/sk-lod/dashi/settings-merged.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/dashi/settings-merged.json",
+          "trimmedWhitespace": true,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode",
+            "hasStartPose"
+          ],
+          "bytes": 16219,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/dashi/lod-meta.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/dashi/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 284094,
+          "lodLevels": 6,
+          "filenamesCount": 46,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": "env/meta.json",
+          "chunkSample": {
+            "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/dashi/0_0/meta.json",
+            "version": 2,
+            "count": 558554,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/dashi/meta.voxel.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/dashi/meta.voxel.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 568,
+          "version": "1.0"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode",
+          "hasStartPose"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 13,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2037550721718013954",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2037550721718013954",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2037550721718013954",
+      "modelTitle": "湾畔·春荟 Wanpan·Spring Gathering",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/baoan/settings-merged.json",
+      "lodMeta": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/baoan/lod-meta.json",
+      "lodBin": " https://exhibition-cos.mp.sztv.com.cn/sk-lod/baoan/meta.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/baoan/settings-merged.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/baoan/settings-merged.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode",
+            "hasStartPose"
+          ],
+          "bytes": 7762,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/baoan/lod-meta.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/baoan/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 2410765,
+          "lodLevels": 6,
+          "filenamesCount": 38,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": null,
+          "chunkSample": {
+            "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/baoan/1_0/meta.json",
+            "version": 2,
+            "count": 571394,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": " https://exhibition-cos.mp.sztv.com.cn/sk-lod/baoan/meta.voxel.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/baoan/meta.voxel.json",
+          "trimmedWhitespace": true,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 566,
+          "version": "1.0"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode",
+          "hasStartPose"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 7,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2037415042433257473",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2037415042433257473",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2037415042433257473",
+      "modelTitle": "蜂巢花园 THE BEE HAVEN ",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/usgarden/settings-merged.json",
+      "lodMeta": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/usgarden/lod-meta.json",
+      "lodBin": " https://exhibition-cos.mp.sztv.com.cn/sk-lod/usgarden/usgarden.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/usgarden/settings-merged.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/usgarden/settings-merged.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode",
+            "hasStartPose"
+          ],
+          "bytes": 6483,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/usgarden/lod-meta.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/usgarden/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 342232,
+          "lodLevels": 6,
+          "filenamesCount": 41,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": "env/meta.json",
+          "chunkSample": {
+            "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/usgarden/0_0/meta.json",
+            "version": 2,
+            "count": 559203,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": " https://exhibition-cos.mp.sztv.com.cn/sk-lod/usgarden/usgarden.voxel.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/usgarden/usgarden.voxel.json",
+          "trimmedWhitespace": true,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 571,
+          "version": "1.0"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode",
+          "hasStartPose"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 7,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2036625038761885697",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2036625038761885697",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2036625038761885697",
+      "modelTitle": "未来花园 Future Garden",
+      "modelType": "lod",
+      "modelFileUrl": null,
+      "modelFileSize": "0",
+      "lodSettings": " https://exhibition-cos.mp.sztv.com.cn/sk-lod/futian48/settings-merged.json",
+      "lodMeta": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/futian48/lod-meta.json",
+      "lodBin": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/futian48/meta.voxel.json",
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "lodSettings URL",
+      "metadata": {
+        "lodSettings": {
+          "url": " https://exhibition-cos.mp.sztv.com.cn/sk-lod/futian48/settings-merged.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/futian48/settings-merged.json",
+          "trimmedWhitespace": true,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "tonemapping",
+            "highPrecisionRendering",
+            "background",
+            "postEffectSettings",
+            "animTracks",
+            "cameras",
+            "annotations",
+            "startMode",
+            "hasStartPose"
+          ],
+          "bytes": 8747,
+          "version": 2
+        },
+        "lodMeta": {
+          "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/futian48/lod-meta.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/futian48/lod-meta.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "lodLevels",
+            "environment",
+            "filenames",
+            "tree"
+          ],
+          "bytes": 65545,
+          "lodLevels": 7,
+          "filenamesCount": 62,
+          "filenameFormats": [
+            "json"
+          ],
+          "environment": null,
+          "chunkSample": {
+            "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/futian48/0_0/meta.json",
+            "version": 2,
+            "count": 654207,
+            "keys": [
+              "version",
+              "asset",
+              "count",
+              "means",
+              "scales",
+              "quats",
+              "sh0"
+            ],
+            "status": "JSON ready"
+          }
+        },
+        "lodBin": {
+          "url": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/futian48/meta.voxel.json",
+          "requestUrl": "https://exhibition-cos.mp.sztv.com.cn/sk-lod/futian48/meta.voxel.json",
+          "trimmedWhitespace": false,
+          "status": "JSON ready",
+          "keys": [
+            "version",
+            "gridBounds",
+            "sceneBounds",
+            "voxelResolution",
+            "leafSize",
+            "treeDepth",
+            "numInteriorNodes",
+            "numMixedLeaves",
+            "nodeCount",
+            "leafDataCount"
+          ],
+          "bytes": 538,
+          "version": "1.0"
+        }
+      },
+      "settings": {
+        "version": 2,
+        "keys": [
+          "version",
+          "tonemapping",
+          "highPrecisionRendering",
+          "background",
+          "postEffectSettings",
+          "animTracks",
+          "cameras",
+          "annotations",
+          "startMode",
+          "hasStartPose"
+        ],
+        "cameras": 1,
+        "animations": 1,
+        "annotations": 7,
+        "startMode": "animTrack",
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2033540242879676417",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2033540242879676417",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2033540242879676417",
+      "modelTitle": "深圳技术大学 赛车工作室",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/03/16/823ed84ca1f74209bba4464ac9996666.sog",
+      "modelFileSize": "52164195",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2031916861863297025",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2031916861863297025",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2031916861863297025",
+      "modelTitle": "香蜜花园爱心花圃高清补拍",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/03/12/5a2a3926ff994411880bff6f0b976de9.sog",
+      "modelFileSize": "33682121",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2028454520191582209",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2028454520191582209",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2028454520191582209",
+      "modelTitle": "全景新闻",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/03/02/fc55684813784c61a3df69faf5769750.sog",
+      "modelFileSize": "87899979",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 0,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2026672143519686658",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2026672143519686658",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2026672143519686658",
+      "modelTitle": "深广电4K超高清转播车",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/02/25/1b31a4535a7e4136aca4eb451372b86d.sog",
+      "modelFileSize": "188075660",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2019675925298597890",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2019675925298597890",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2019675925298597890",
+      "modelTitle": "盘",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/02/06/38b9b78784704c7e9e23d1401a4d6ca9.sog",
+      "modelFileSize": "3596236",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2018681555007610881",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2018681555007610881",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2018681555007610881",
+      "modelTitle": "市民中心 中心",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/02/03/98559eed14924916acbc8743b34d2541.sog",
+      "modelFileSize": "108634618",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 0,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2018669757147684866",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2018669757147684866",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2018669757147684866",
+      "modelTitle": "市民中心 路边 深圳图书馆",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/02/03/8ee5776491c848178ecbd34b6e9da5ca.sog",
+      "modelFileSize": "38715833",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 0,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2018602109877657601",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2018602109877657601",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2018602109877657601",
+      "modelTitle": "市民中心 后方",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/02/03/b432e06a7ff546c29dbb62edde20b0d6.sog",
+      "modelFileSize": "76951567",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 0,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2017156635929948161",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2017156635929948161",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2017156635929948161",
+      "modelTitle": "市民中心 前广场",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/30/d9cb48a7ec5947f3ad316d3ea9ab6fc5.sog",
+      "modelFileSize": "88037512",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 0,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2016877493057921026",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2016877493057921026",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2016877493057921026",
+      "modelTitle": "深圳技术大学 创设展览",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/29/f3e1196ada01421896c9b1537735e9d1.sog",
+      "modelFileSize": "154380940",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2016448837722447874",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2016448837722447874",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2016448837722447874",
+      "modelTitle": "罗湖深圳市国家气候观象台 活动室",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/28/2f3a49f612ce4486945054a077c792d4.sog",
+      "modelFileSize": "53480106",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2016442789288615938",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2016442789288615938",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2016442789288615938",
+      "modelTitle": "罗湖深圳市国家气候观象台 气象美学",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/28/3c34d3fc73f8413c95fed1f987f878b1.sog",
+      "modelFileSize": "64003620",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2016106119892705282",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2016106119892705282",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2016106119892705282",
+      "modelTitle": "深圳龙华高谷仓 漫展痛车",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/27/49e077a7e510482189d93a84017297ab.sog",
+      "modelFileSize": "112692221",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2016086109782679553",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2016086109782679553",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2016086109782679553",
+      "modelTitle": "广电大厦1楼1800演播厅 贵宾路线",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/27/b1de4e1ffa7a4e5bafd3b2d169ddc87f.sog",
+      "modelFileSize": "247891090",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2016074902904381442",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2016074902904381442",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2016074902904381442",
+      "modelTitle": "广电大厦1楼1800演播厅 演员路线",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/27/9cbff3e9d01448fea9f250cd118faa98.sog",
+      "modelFileSize": "247891090",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2015735755419058178",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2015735755419058178",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2015735755419058178",
+      "modelTitle": "广电大厦1楼1800演播厅",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/26/3feed1dd04284974b1ac8e3272633264.sog",
+      "modelFileSize": "62311154",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2015652816467427329",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2015652816467427329",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2015652816467427329",
+      "modelTitle": "广电大厦3楼演播厅",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/26/eb962efa32474236970f5a704966d990.sog",
+      "modelFileSize": "62311154",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2015635883563057153",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2015635883563057153",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2015635883563057153",
+      "modelTitle": "广电大厦6楼演播厅",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/26/a7ca558a12db423db553ecc0cc572b84.sog",
+      "modelFileSize": "54533945",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2014684858685489154",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2014684858685489154",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2014684858685489154",
+      "modelTitle": "广电大厦一楼走廊",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/23/4f9a1c78d68446ea8449f8ba458d4849.sog",
+      "modelFileSize": "72847356",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2014639973043437570",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2014639973043437570",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2014639973043437570",
+      "modelTitle": "广电金融街广场",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/23/d1b1b40fc59b45b29b62cea60097b5d3.sog",
+      "modelFileSize": "99067780",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2014588832216838145",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2014588832216838145",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2014588832216838145",
+      "modelTitle": "南山 云门画廊",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/28/79a71a641ba94b06a1542c9d2aa10783.sog",
+      "modelFileSize": "49652966",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2014581846641274882",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2014581846641274882",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2014581846641274882",
+      "modelTitle": "南山前海，深圳",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/23/ebb1bbacd969419998ad64010a7f4bb6.sog",
+      "modelFileSize": "55382379",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2014253110005198849",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2014253110005198849",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2014253110005198849",
+      "modelTitle": "木质佛像",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/22/a19328871387443db6d12ed0d915094b.sog",
+      "modelFileSize": "62812880",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2014251209142431745",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2014251209142431745",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2014251209142431745",
+      "modelTitle": "陶瓷佛像",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/22/7add2069d432463f920fa921ef8240e7.sog",
+      "modelFileSize": "19569923",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2014250773110976514",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2014250773110976514",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2014250773110976514",
+      "modelTitle": "瓷盘",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/22/05cc865ffd49460ba581bafdb921708d.sog",
+      "modelFileSize": "36251198",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    },
+    {
+      "modelId": "2014250074331541505",
+      "detailUrl": "https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/2014250074331541505",
+      "pageUrl": "https://www.sztv.com.cn/h5/3dgs/#/detail/2014250074331541505",
+      "modelTitle": "观音",
+      "modelType": "default",
+      "modelFileUrl": "https://exhibition-cos.mp.sztv.com.cn/bms/2026/01/22/215492ff38c949f29def2339d52cd227.sog",
+      "modelFileSize": "42676396",
+      "lodSettings": null,
+      "lodMeta": null,
+      "lodBin": null,
+      "folderFilesType": "NoneType",
+      "jsonDataType": "NoneType",
+      "settingsSource": "inline modelSetting",
+      "metadata": {},
+      "settings": {
+        "version": "legacy",
+        "keys": [
+          "camera",
+          "background",
+          "animTracks"
+        ],
+        "cameras": 0,
+        "animations": 1,
+        "annotations": 0,
+        "startMode": null,
+        "collisionUrl": null,
+        "voxelUrl": null,
+        "voxelManifestUrl": null,
+        "soundUrl": null
+      },
+      "status": "detail ready"
+    }
+  ],
+  "settingsParserCheck": {
+    "passed": 49,
+    "failed": 0,
+    "failures": [],
+    "scope": "Existing ArkTS settings parser only, not rendering acceptance"
+  }
+}
