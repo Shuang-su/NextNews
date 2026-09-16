@@ -1,0 +1,8 @@
+{
+  "fixture": "3 Gaussian occluders, 5 world-space annotations",
+  "functionalUi": "passed",
+  "openglDepth": "available",
+  "huaweiDepth": "unverified; 2D fallback",
+  "visualReviewRequired": true,
+  "performanceAcceptance": false
+}

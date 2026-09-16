@@ -253,7 +253,7 @@ struct Index {
   @State @Watch('syncAnnotationStyle') showAnnotations: boolean = true;
   @State @Watch('syncAnnotationStyle') gaming: boolean = false;
   @State annotationDepth: number = 0;
-  @State @Watch('syncAnnotations') gpuAnnotations: boolean = false;
+  @State @Watch('syncAnnotations') gpuAnnotations: boolean = true;
   @State hoveredAnnotation: number = -1;
   @State popupVisible: boolean = false;
   @State popup: AnnotationPopup = { x: 8, y: 8, width: 200, arrow: 16, flipped: false };
@@ -936,7 +936,7 @@ struct Index {
                   Text('设置').fontSize(16).fontColor('#FFFFFF').width('100%')
                   Button(this.gaming ? '游戏控制：开' : '游戏控制：关').fontSize(12).onClick(() => { this.gaming = !this.gaming; this.viewer.gaming = this.gaming; this.resetJoystick(); })
                   Button(this.showAnnotations ? '标注：显示' : '标注：隐藏').fontSize(12).onClick(() => { this.showAnnotations = !this.showAnnotations; })
-                  Button(this.gpuAnnotations ? '深度标注：开（实验）' : '深度标注：关').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.gpuAnnotations = !this.gpuAnnotations; })
+                  Button(this.gpuAnnotations ? '深度标注：开' : '深度标注：关').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.gpuAnnotations = !this.gpuAnnotations; })
                   Row({ space: 12 }) {
                     Button('完整取景').fontSize(12).onClick(() => { this.frame(); this.settingsVisible = false; })
                     Button('复位').fontSize(12).onClick(() => { this.reset(); this.settingsVisible = false; })
