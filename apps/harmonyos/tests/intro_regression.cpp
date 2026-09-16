@@ -5,7 +5,8 @@ int main() {
     splat::Intro intro;
     assert(intro.Frame(0)==1);
     intro.Request(true,true);assert(!intro.Running() && intro.Frame(50)==1);
-    intro.Commit(20);assert(intro.Frame(100)==0);
+    intro.Commit(20);assert(intro.Frame(10)==0);assert(intro.Frame(90)==0);assert(!intro.Running());
+    intro.BeginVisible(20);assert(intro.Running());assert(intro.Frame(100)==0);
     for(int i=1;i<=30;i++)intro.Frame(100+i/30.0);
     const float before=intro.Frame(101);assert(before>0 && before<1);
     intro.Commit(200);assert(intro.Frame(101)==before); // LOD must not change duration

@@ -195,7 +195,11 @@ void Renderer::SetCamera(Camera camera) {
 }
 void Renderer::SetActive(bool active) { {std::lock_guard<std::mutex> lock(mutex_);active_=active;intro_.Pause();dirty_=true;}changed_.notify_one();loadChanged_.notify_one(); }
 void Renderer::SetIntro(bool enabled,bool waitForModel) {
-    {std::lock_guard<std::mutex> lock(mutex_);intro_.Request(enabled,waitForModel,scene_->radius);dirty_=true;}
+    {std::lock_guard<std::mutex> lock(mutex_);intro_.Request(enabled,waitForModel,scene_->radius);if(waitForModel){++status_.openingRequest;openingCommitted_=false;openingMinGeneration_=loadGeneration_+1;}dirty_=true;}
+    changed_.notify_one();
+}
+void Renderer::BeginIntro(uint64_t request, std::array<float,3> focus) {
+    {std::lock_guard<std::mutex> lock(mutex_);if(request!=status_.openingRequest||request!=status_.openingPresented)return;const float dx=focus[0]-scene_->center[0],dy=focus[1]-scene_->center[1],dz=focus[2]-scene_->center[2];introBounds_={focus[0],focus[1],focus[2],scene_->radius+std::sqrt(dx*dx+dy*dy+dz*dz)};intro_.BeginVisible(introBounds_[3]);dirty_=true;OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsOpening","VisiblePlayback request=%{public}llu",(unsigned long long)request);}
     changed_.notify_one();
 }
 void Renderer::SetBackground(std::array<float,3> color) {
@@ -316,7 +320,7 @@ void Renderer::AdvanceUpload() {
     if(stagingRow_==rows){
         std::lock_guard<std::mutex> lock(mutex_);
         if(stagingGeneration_==loadGeneration_){
-            activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);if(scene_->Count())intro_.Commit(scene_->radius);initialIndices_=std::move(stagingIndices_);
+            activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);if(scene_->Count() && stagingGeneration_>=openingMinGeneration_){intro_.Commit(scene_->radius);openingCommitted_=status_.openingPresented<status_.openingRequest;}initialIndices_=std::move(stagingIndices_);
             spareTexture_=dataTexture_;spareCapacity_=dataCapacity_;
             spareRows_=std::move(dataRows_);dataRows_=std::move(stagingRows_);stagingPreviousRows_.clear();
             status_.uploadedRows=stagingUploadedRows_;status_.reusedRows=stagingReusedRows_;
@@ -361,8 +365,8 @@ void Renderer::Draw(const View &view,int width,int height) {
         }
     }
     const auto drawStart=Clock::now();
-    std::shared_ptr<const HotspotData> annotations;HotspotStyle style;std::array<float,3> background;float introProgress;float introTime;
-    {std::lock_guard<std::mutex> lock(mutex_);annotations=annotationData_;style=annotationStyle_;background=background_;introProgress=intro_.Frame(std::chrono::duration<double>(Clock::now().time_since_epoch()).count());introTime=float(intro_.Seconds());}
+    std::shared_ptr<const HotspotData> annotations;HotspotStyle style;std::array<float,3> background;std::array<float,4> introBounds;float introProgress;float introTime;uint64_t openingRequest;
+    {std::lock_guard<std::mutex> lock(mutex_);annotations=annotationData_;style=annotationStyle_;background=background_;introBounds=introBounds_;openingRequest=status_.openingRequest;introProgress=intro_.Frame(std::chrono::duration<double>(Clock::now().time_since_epoch()).count());introTime=float(intro_.Seconds());}
     if(introProgress<1)style.visible=false;
     const bool annotationReady=depthBits_>0&&hotspots_.Prepare(annotations);
     {std::lock_guard<std::mutex> lock(mutex_);status_.annotationDepth=annotationReady?depthBits_:0;}
@@ -373,7 +377,7 @@ void Renderer::Draw(const View &view,int width,int height) {
     glUniform1i(optimizedLocation_,optimized_.load());
     glUniform1f(glGetUniformLocation(program_,"introProgress"),introProgress);
     glUniform1f(glGetUniformLocation(program_,"introTime"),introTime);
-    glUniform4f(glGetUniformLocation(program_,"introBounds"),scene_->center[0],scene_->center[1],scene_->center[2],scene_->radius);
+    glUniform4f(glGetUniformLocation(program_,"introBounds"),introBounds[0],introBounds[1],introBounds[2],introBounds[3]);
     glUniformMatrix4fv(viewLocation_,1,GL_FALSE,view.matrix.data());
     glUniform2f(viewportLocation_,float(width),float(height));
     glUniform1f(glGetUniformLocation(program_,"tanHalfFov"),view.tanHalfFov);glUniform1f(nearLocation_,view.nearPlane);glUniform1f(farLocation_,view.farPlane);
@@ -410,6 +414,7 @@ void Renderer::Draw(const View &view,int width,int height) {
     const GLenum error=glGetError();if(error!=GL_NO_ERROR)throw std::runtime_error("OpenGL error: "+std::to_string(error));
     if(!eglSwapBuffers(display_,surface_))throw std::runtime_error("EGL swap failed");
     std::lock_guard<std::mutex> lock(mutex_);
+    if(openingCommitted_ && openingRequest==status_.openingRequest && scene_->Count()){status_.openingPresented=openingRequest;openingCommitted_=false;OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsOpening","FirstFrame request=%{public}llu",(unsigned long long)openingRequest);}
     if(pendingDisplayRevision_ && scene_->paged && atlasDrawable_){
         status_.displayRevision=pendingDisplayRevision_;status_.refineMs=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count()-pendingDisplayAt_;
         OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","PageDisplay revision=%{public}llu count=%{public}zu prepareMs=%{public}.2f sortMs=%{public}.2f refineMs=%{public}.2f uploadedBytes=%{public}.0f pageHits=%{public}.0f frameMs=%{public}.2f",(unsigned long long)pendingDisplayRevision_,scene_->Count(),pendingPrepareMs_,pendingSortMs_,status_.refineMs,status_.uploadedBytes,status_.pageHits,Ms(drawStart));

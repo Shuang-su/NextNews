@@ -50,3 +50,5 @@ AR/VR、标注/模型编辑和生成不在这次 Viewer 范围内。
 [Particle opening](intro-20260916.md) is phone-verified for ordinary OpenGL samples, with enable/replay controls. It is not claimed as an upstream v1.31.2 effect. Encoded streaming and Huawei equivalence remain unverified.
 
 MetaFlow clarification supersedes the random stagger: [loading/range-wave preview](metaflow-opening-20260916.md). Poster, exact progress/first-frame handoff, focus-centered reveal and specialized profiles remain pending.
+
+[First-open-only loading](firstframe-20260916.md) supersedes the earlier target-refinement loading indicator. Phone verified: six camera turns keep loading UI absent; first EGL presentation releases loading before particle playback; reveal starts at the world camera target. Exact AABB radius and other opening effects remain pending.

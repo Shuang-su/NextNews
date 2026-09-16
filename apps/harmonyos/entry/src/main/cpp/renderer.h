@@ -19,6 +19,7 @@ struct Status {
     size_t count = 0, bytes = 0, frames = 0;
     int width = 1, height = 1;
     int annotationDepth = 0;
+    uint64_t openingRequest = 0, openingPresented = 0;
     std::array<float,4> bounds{0,0,0,1};
     double gpuMs = -1, uploadMs = 0;
     size_t uploadedRows = 0, reusedRows = 0, decodedFiles = 0, subsetHits = 0;
@@ -35,6 +36,7 @@ public:
     void Load(std::string path);
     void SetCamera(Camera camera);
     void SetIntro(bool enabled, bool waitForModel);
+    void BeginIntro(uint64_t request, std::array<float,3> focus);
     void SetBackground(std::array<float,3> color);
     void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {},bool paged=false,uint64_t revision=0,bool encoded=false);
     void SetActive(bool active);
@@ -134,6 +136,9 @@ private:
     Camera camera_;
     std::array<float,3> background_{0,0,0};
     Intro intro_;
+    bool openingCommitted_ = false;
+    uint64_t openingMinGeneration_ = 0;
+    std::array<float,4> introBounds_{0,0,0,1};
     Status status_;
     std::shared_ptr<Scene> scene_ = std::make_shared<Scene>();
     bool uploadDirty_ = true;

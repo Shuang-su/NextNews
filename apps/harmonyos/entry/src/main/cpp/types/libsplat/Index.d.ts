@@ -4,6 +4,8 @@ export interface RenderStatus {
   message: string;
   graphics: string;
   annotationDepth: number;
+  openingRequest: number;
+  openingPresented: number;
   count: number;
   frames: number;
   width: number;
@@ -63,3 +65,5 @@ export const collisionStatus: () => CollisionStatus;
 export const collisionDebug: (generation: number, x: number, y: number, z: number) => Promise<number[]>;
 
 export const intro: (enabled: boolean, waitForModel: boolean) => void;
+
+export const beginIntro: (request: number, x: number, y: number, z: number) => void;

@@ -82,3 +82,7 @@ stagger with dot/lift radial waves and the generic spinner with cyan sweep,
 stage/elapsed and stopped red failure presentation. Phone-tested CDN loading and
 panel removal; native/stream/input/runtime regressions and HAP builds pass.
 [Detailed report and remaining differences](../harmonyos/metaflow-opening-20260916.md).
+
+## First-open-only loading correction
+
+Separated opening from recurring LOD activity, added per-request presented-frame acknowledgement and loading-component disappearance handoff, protected old upload generations and background/resume. Reveal origin now follows the camera target, frozen across LOD commits. Final HAP phone-tested with six alternating turns and Home/resume; all checks retained loading-panel dismissal. Native sanitizer, page handoff, viewer/input/stream regressions and both builds pass. [Evidence and remaining gaps](../harmonyos/firstframe-20260916.md).

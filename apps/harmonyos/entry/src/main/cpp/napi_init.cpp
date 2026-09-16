@@ -38,6 +38,13 @@ napi_value Intro(napi_env env,napi_callback_info info) {
     if(argc!=2||napi_get_value_bool(env,args[0],&enabled)!=napi_ok||napi_get_value_bool(env,args[1],&wait)!=napi_ok){napi_throw_type_error(env,nullptr,"Expected enabled and waitForModel booleans");return Undefined(env);}
     splat::Renderer::Get().SetIntro(enabled,wait);return Undefined(env);
 }
+napi_value BeginIntro(napi_env env,napi_callback_info info) {
+    napi_value args[4];size_t argc=4;double v[4]{};napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+    if(argc!=4){napi_throw_type_error(env,nullptr,"Expected request and focus coordinates");return Undefined(env);}
+    for(size_t i=0;i<4;++i)if(napi_get_value_double(env,args[i],&v[i])!=napi_ok||!std::isfinite(v[i])){napi_throw_range_error(env,nullptr,"Invalid opening values");return Undefined(env);}
+    if(v[0]<1||v[0]>9007199254740991.0||std::floor(v[0])!=v[0]||std::abs(v[1])>1e6||std::abs(v[2])>1e6||std::abs(v[3])>1e6){napi_throw_range_error(env,nullptr,"Invalid opening request or focus");return Undefined(env);}
+    splat::Renderer::Get().BeginIntro(static_cast<uint64_t>(v[0]),{float(v[1]),float(v[2]),float(v[3])});return Undefined(env);
+}
 napi_value Background(napi_env env,napi_callback_info info) {
     napi_value args[3];size_t argc=3;double values[3];napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
     if(argc!=3){napi_throw_type_error(env,nullptr,"Expected three background color values");return Undefined(env);}
@@ -144,7 +151,7 @@ napi_value Status(napi_env env,napi_callback_info) {
     const auto s=splat::Renderer::Get().GetStatus();napi_value result;napi_create_object(env,&result);
     napi_value bounds; napi_create_array_with_length(env,4,&bounds); for(uint32_t i=0;i<4;i++){napi_value v;napi_create_double(env,s.bounds[i],&v);napi_set_element(env,bounds,i,v);} napi_set_named_property(env,result,"bounds",bounds);
     String(env,result,"state",s.state);String(env,result,"message",s.message);String(env,result,"graphics",s.graphics);
-    Number(env,result,"annotationDepth",s.annotationDepth);
+    Number(env,result,"annotationDepth",s.annotationDepth);Number(env,result,"openingRequest",s.openingRequest);Number(env,result,"openingPresented",s.openingPresented);
     Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"uploadMs",s.uploadMs);Number(env,result,"uploadedRows",s.uploadedRows);Number(env,result,"reusedRows",s.reusedRows);Number(env,result,"decodedFiles",s.decodedFiles);Number(env,result,"subsetHits",s.subsetHits);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);Number(env,result,"requestRevision",s.requestRevision);Number(env,result,"displayRevision",s.displayRevision);Number(env,result,"prepareMs",s.prepareMs);Number(env,result,"refineMs",s.refineMs);Number(env,result,"uploadedBytes",s.uploadedBytes);Number(env,result,"pageHits",s.pageHits);return result;
 }
 struct PickWork { napi_async_work work; napi_deferred deferred; float x,y;std::vector<float> point;std::string error; };
@@ -193,6 +200,7 @@ napi_value Init(napi_env env,napi_value exports) {
         {"load",nullptr,Load,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"chunks",nullptr,Chunks,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"optimize",nullptr,Optimize,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"beginIntro",nullptr,BeginIntro,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"intro",nullptr,Intro,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"background",nullptr,Background,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"camera",nullptr,Camera,nullptr,nullptr,nullptr,napi_default,nullptr},

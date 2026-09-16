@@ -4,6 +4,7 @@ export struct ViewerLoading {
   @Prop @Watch('stageChanged') stage: string = '';
   @Prop failed: boolean = false;
   @Prop progress: number = -1;
+  onHidden: () => void = () => {};
   @State elapsed: string = '0.0';
   private canvas: CanvasRenderingContext2D = new CanvasRenderingContext2D(new RenderingContextSettings(true));
   private timer: number = -1;
@@ -19,7 +20,7 @@ export struct ViewerLoading {
       this.elapsed = seconds.toFixed(1); this.paint(seconds);
     }, 33);
   }
-  aboutToDisappear(): void { if (this.timer !== -1) { clearInterval(this.timer); this.timer = -1; } }
+  aboutToDisappear(): void { if (this.timer !== -1) { clearInterval(this.timer); this.timer = -1; } this.onHidden(); }
   private paint(seconds: number): void {
     if (!this.ready) { return; }
     const c = this.canvas, w = this.barWidth;
