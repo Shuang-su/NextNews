@@ -124,7 +124,8 @@ Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel,bool encod
         else scene.points[i]=DecodeSog(position,codes,*tables);
     }
     double radius2=0;for(int k=0;k<3;++k){scene.center[k]=(mins[k]+maxs[k])*.5f;radius2+=double(maxs[k]-mins[k])*(maxs[k]-mins[k])*.25;}
-    scene.radius=std::max(.001f,float(std::sqrt(radius2)));return scene;
+    scene.radius=std::max(.001f,float(std::sqrt(radius2)));
+    for(int k=0;k<3;++k){scene.worldBox[k]=mins[k];scene.worldBox[k+3]=maxs[k];}scene.hasWorldBox=true;return scene;
 }
 Scene ReadModel(const std::string &path,const std::atomic<bool> *cancel,bool encoded) {
     auto scene=(path.size()>=4&&path.substr(path.size()-4)==".sog")||(path.size()>=10&&path.substr(path.size()-10)=="/meta.json")?ReadSog(path,cancel,encoded):ReadPly(path,cancel);

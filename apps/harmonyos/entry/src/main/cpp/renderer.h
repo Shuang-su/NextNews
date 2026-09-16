@@ -12,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <thread>
+#include <functional>
 
 namespace splat {
 struct Status {
@@ -36,7 +37,9 @@ public:
     void Load(std::string path);
     void SetCamera(Camera camera);
     void SetIntro(bool enabled, bool waitForModel);
-    void BeginIntro(uint64_t request, std::array<float,3> focus);
+    bool IsPresented(uint64_t request,uint64_t surface);
+    void OnPresented(std::function<void(uint64_t,uint64_t)> callback);
+    bool BeginIntro(uint64_t request, std::array<float,3> focus, const std::vector<float>& box={}, int profile=0);
     void SetBackground(std::array<float,3> color);
     void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {},bool paged=false,uint64_t revision=0,bool encoded=false);
     void SetActive(bool active);
@@ -135,8 +138,10 @@ private:
     bool chunksDirty_ = false;
     Camera camera_;
     std::array<float,3> background_{0,0,0};
+    std::function<void(uint64_t,uint64_t)> presentedCallback_;
     Intro intro_;
     bool openingCommitted_ = false;
+    uint64_t surfaceGeneration_ = 0, presentedSurface_ = 0;
     uint64_t openingMinGeneration_ = 0;
     std::array<float,4> introBounds_{0,0,0,1};
     Status status_;

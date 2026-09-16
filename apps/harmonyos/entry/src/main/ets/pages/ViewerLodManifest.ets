@@ -41,7 +41,7 @@ export function parseLodManifest(text: string): StreamManifest {
     }
     if (node.children) { if (!Array.isArray(node.children) || node.children.length > 8) { throw new Error('LOD 子节点无效'); } nodes.push(...node.children); }
   }
-  return { version: 2, bounds, chunks, leaves, levels: src.lodLevels, environment: src.environment ? chunks.length - 1 : undefined };
+  return { version: 2, aabb: src.tree.bound.min.concat(src.tree.bound.max), bounds, chunks, leaves, levels: src.lodLevels, environment: src.environment ? chunks.length - 1 : undefined };
 }
 interface Files { files: string[]; }
 export interface SogMetadata { version: number; count: number; means: Files; quats: Files; scales: Files; sh0: Files; }

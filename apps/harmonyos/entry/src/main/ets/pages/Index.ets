@@ -62,6 +62,8 @@ struct Index {
   private catalogRevision: number = 0;
   private catalogLoading: boolean = false;
   private streamAsset: CatalogAsset | undefined = undefined;
+  @State loadingPoster: string = '';
+  @State loadProgress: number = -1;
   @State catalogVisible: boolean = false;
   @State catalogRows: CatalogProject[] = [];
   @State catalogPage: number = 1;
@@ -89,6 +91,7 @@ struct Index {
     try {
       const asset = await this.catalog.detail(id);
       if (revision !== this.generation || !this.visible) { return; }
+      this.loadingPoster = asset.poster;
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       if (asset.project.modelType === 'lod') {
         if (this.backendName !== 'OpenGL') { throw new Error('线上整场流式请切换 OpenGL；华为瓦片尚未通过验证'); }
@@ -97,8 +100,11 @@ struct Index {
         if (revision !== this.generation || !this.visible || !this.stream?.manifest) { return; }
       } else {
         this.catalogMessage = '正在下载单体 SOG';
-        const path = await this.catalog.model(asset, context.cacheDir);
+        const path = await this.catalog.model(asset, context.cacheDir, (percent: number) => {
+          if (revision === this.generation && this.visible && this.opening) { this.loadProgress = percent; }
+        });
         if (revision !== this.generation || !this.visible) { return; }
+        this.loadProgress = -1; this.catalogMessage = '正在解码并准备 GPU 资源';
         const bounds = await nativeRender.inspectModel(path);
         if (revision !== this.generation || !this.visible) { return; }
         this.viewer.bounds = bounds; this.sourcePath = path; this.title = asset.project.modelTitle;
@@ -466,7 +472,7 @@ struct Index {
     this.active = this.foreground; this.motionTime = Date.now(); this.pickGeneration++; this.resetJoystick(); this.controls.cancel(); this.pointers.cancel();
     this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.collision?.pause(!this.foreground);
     this.backend.active(this.foreground); if (this.stream) { this.stream.active = this.foreground; }
-    if(this.foreground){setTimeout(() => { this.beginVisibleIntro(); }, 0);}
+    if(this.foreground){setTimeout(() => { this.resumeOpening(); }, 0);}
     if (this.foreground && this.backendName === 'Huawei' && this.sourcePath && !this.busy) { this.restoreHuawei(); }
   }
   private async restoreHuawei(): Promise<void> {
@@ -478,6 +484,7 @@ struct Index {
   }
   aboutToAppear(): void {
     this.visible = true;
+    nativeRender.onPresented((request: number) => { this.presented(request); });
     this.motionTime = Date.now();
     this.motionTimer = setInterval(() => {
       const now = Date.now(); const dt = now - this.motionTime; this.motionTime = now;
@@ -488,7 +495,7 @@ struct Index {
       if (this.active && !this.busy) { this.collision?.tick(this.viewer.pose().position); }
       if (this.active && !this.busy && now - this.debugAt >= 500) { this.debugAt = now; this.refreshDebug(); }
       if (this.active && !this.busy && this.walkMode) { this.walkFrame(dt);
-      } else if (this.active && this.profilePlaying && this.viewer.profile) {
+      } else if (this.active && !this.opening && this.profilePlaying && this.viewer.profile) {
         this.applyProfilePose(this.viewer.profile.advance(dt / 1000));
         if (now - this.timelineUpdated >= 100) { this.timelineUpdated = now; this.timeline = this.viewer.profile.animation.cursor(this.viewer.profile.time); }
         if (this.viewer.profile.ended) { this.profilePlaying = false; }
@@ -518,7 +525,6 @@ struct Index {
       this.annotationDepth = state.annotationDepth;
       this.drawableCount = state.count;
       this.streamWorking = this.stream?.loadingVisible ?? false;
-      if(this.active && this.opening && state.openingPresented === this.openingRequest && this.openingRequest > 0){this.opening = false;}
       this.streamFailure = this.stream && !this.stream.active ? this.streamMessage : '';
       this.loadStage = this.streamWorking ?
         (this.stream?.manifest ? '[流式加载] 加载场景分块 · 渐进细化' : '[清单] 正在读取场景清单') : this.catalogLoading ? `[资源] ${this.catalogMessage}` :
@@ -534,6 +540,7 @@ struct Index {
     }, 500);
   }
   aboutToDisappear(): void {
+    nativeRender.onPresented(null);
     this.visible = false; this.catalog.cancel(); this.catalogRevision++; this.stopStream(); this.stopCollision();
     this.generation++;
     if (this.timer !== -1) { clearInterval(this.timer); this.timer = -1; }
@@ -541,7 +548,7 @@ struct Index {
     this.controls.cancel(); this.pointers.cancel(); this.resetJoystick();
     this.backend.dispose();
   }
-  onPageShow(): void { this.collision?.pause(false); this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); this.backend.active(true); setTimeout(() => { this.beginVisibleIntro(); }, 0); }
+  onPageShow(): void { this.collision?.pause(false); this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); this.backend.active(true); setTimeout(() => { this.resumeOpening(); }, 0); }
   onPageHide(): void { this.clearNav(); this.scrubResume = false; this.clearDebug(); this.collision?.pause(true); this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); this.backend.active(false); }
   private updateCamera(): void {
     this.backend.background(this.viewer.profile?.settings.background.color ?? [0, 0, 0]);
@@ -632,14 +639,27 @@ struct Index {
     else { this.controls.reset(); this.controls.fov = 85; this.viewer.apply(framePose(this.viewer.bounds), false); }
     this.flyMode = this.controls.fly; this.timeline = 0; this.updateCamera();
   }
+  private presented(request: number): void {
+    if(!this.visible || !this.active || this.backendName !== 'OpenGL' || request !== this.openingRequest || request <= 0){return;}
+    if (!this.opening) { this.beginVisibleIntro(); return; }
+    this.opening = false;
+  }
+  private resumeOpening(): void {
+    // A frame may have completed just as the app entered the background. Replay
+    // its acknowledgement once on resume; ordinary loading is event-driven.
+    this.presented(nativeRender.status().openingPresented);
+    this.beginVisibleIntro();
+  }
   private beginVisibleIntro(replay: boolean = false): void {
     if((!this.introAwaitingVisible && !replay) || this.opening || !this.active || this.backendName !== 'OpenGL' || this.openingRequest === 0){return;}
     if(nativeRender.status().openingPresented !== this.openingRequest){return;}
-    this.introAwaitingVisible = false;
     const focus = this.viewer.pose().target;
-    nativeRender.beginIntro(this.openingRequest, focus[0], focus[1], focus[2]);
+    const settings = this.viewer.profile?.settings;
+    if (settings?.revealEffect === 'none') { this.introAwaitingVisible = false; nativeRender.intro(false, false); return; }
+    const profile = !this.stream && settings?.experienceType === 'character' ? 1 : settings?.voxelManifestUrl ? 2 : 0;
+    if (nativeRender.beginIntro(this.openingRequest, focus[0], focus[1], focus[2], this.stream?.manifest?.aabb ?? [], profile)) { this.introAwaitingVisible = false; }
   }
-  private clearProfile(): void { nativeRender.intro(this.introEnabled && this.backendName === 'OpenGL', true); this.openingRequest = nativeRender.status().openingRequest; this.introAwaitingVisible = true; this.opening = true; this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.syncAnnotations(); }
+  private clearProfile(): void { this.loadingPoster = ''; this.loadProgress = -1; nativeRender.intro(this.introEnabled && this.backendName === 'OpenGL', true); this.openingRequest = nativeRender.status().openingRequest; this.introAwaitingVisible = true; this.opening = true; this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.syncAnnotations(); }
   private touch(event: TouchEvent): void {
     if (event.source === SourceType.Mouse) { return; }
     if (event.type === TouchType.Down) { this.clearNav(); this.pickGeneration++; }
@@ -736,7 +756,7 @@ struct Index {
     const selected = asset ?? (this.streamAsset?.content === this.streamUrl ? this.streamAsset : undefined);
     this.streamAsset = selected;
     if (this.backendName !== 'OpenGL') { this.localError = '华为原生瓦片请使用独立实验入口'; return; }
-    this.stopStream(); this.clearProfile(); this.localError = ''; this.title = '流式场景'; this.reset();
+    this.stopStream(); this.clearProfile(); this.loadingPoster = selected?.poster ?? ''; this.localError = ''; this.title = '流式场景'; this.reset();
     const session = new StreamSession((message: string) => { if (this.stream === session) { this.streamMessage = message; } });
     this.stream = session; this.streamWorking = true; this.loadStage = '正在读取场景清单'; session.budget = this.quality; session.paged = this.paged; session.encoded = this.encoded;
     try {
@@ -880,9 +900,14 @@ struct Index {
         }, (marker: HotspotPosition) => marker.index.toString())
       }
       if (this.active && this.opening) {
+        if (this.loadingPoster) {
+          Image(this.loadingPoster).width('100%').height('100%').objectFit(ImageFit.Cover)
+            .blur(this.loadProgress >= 0 ? Math.floor((100 - this.loadProgress) * .4) : 0)
+            .hitTestBehavior(HitTestMode.None).id('MetaFlow场景海报')
+        }
         Column() {
           Blank()
-          ViewerLoading({ stage: this.localError || this.streamFailure || this.loadStage, failed: this.localError.length > 0 || this.streamFailure.length > 0,
+          ViewerLoading({ progress: this.loadProgress, stage: this.localError || this.streamFailure || this.loadStage, failed: this.localError.length > 0 || this.streamFailure.length > 0,
             onHidden: () => { this.beginVisibleIntro(); } })
         }.width('100%').height('100%').padding({ left: 16, right: 16, bottom: 120 })
           .hitTestBehavior(HitTestMode.None)
@@ -897,9 +922,6 @@ struct Index {
           ViewerTool({ icon: this.toolsVisible ? $r('app.media.viewer_expand') : $r('app.media.viewer_collapse'), label: this.toolsVisible ? '隐藏工具' : '显示工具', selected: !this.toolsVisible, action: () => { this.toolsVisible = !this.toolsVisible; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
         }.width('100%')
         if (!this.opening && this.localError) { Text(this.localError).fontSize(12).fontColor('#FF9090').maxLines(3) }
-        if (this.streamMessage && this.toolsVisible) {
-          Text(this.streamMessage).fontSize(10).fontColor('#B7C9DE').maxLines(2).width('100%')
-        }
         if (this.collisionDebug && this.collisionDebugMessage) {
           Text(this.collisionDebugMessage).fontSize(10).fontColor('#66F3DB').width('100%').backgroundColor('#99000000')
         }
@@ -1019,6 +1041,7 @@ struct Index {
                   Button('文件缓存测量 20 次').fontSize(12).enabled(this.paged && !this.streamMeasuring).onClick(() => { this.measureStream(true); })
                   Button('测量 10 秒').fontSize(12).enabled(this.benchmarkStart === 0).onClick(() => { this.benchmark(); })
                   if (this.benchmarkResult) { Text(this.benchmarkResult).fontSize(11).fontColor('#EBC478') }
+                  if (this.streamMessage) { Text(this.streamMessage).fontSize(11).fontColor('#B7C9DE').width('100%') }
                   Text(this.details).fontSize(11).fontColor('#99B1C4').width('100%')
                   Text(this.graphics).fontSize(10).fontColor('#6F899F').width('100%')
                 }

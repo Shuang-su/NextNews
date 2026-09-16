@@ -17,6 +17,56 @@ void Changed(OH_NativeXComponent *component,void *window) {
 void Destroyed(OH_NativeXComponent *,void *) {splat::Renderer::Get().Stop();}
 OH_NativeXComponent_Callback callbacks={Created,Changed,Destroyed,nullptr};
 napi_value Undefined(napi_env env){napi_value result;napi_get_undefined(env,&result);return result;}
+// Renderer never enters ArkTS directly. Subscription replacement aborts queued
+// notifications, and environment teardown disconnects without joining the UI thread.
+struct PresentedEvent { uint64_t request,surface; };
+struct PresentedSubscription { std::atomic<bool> active{true}; };
+struct PresentedBridge {
+    std::mutex mutex;
+    napi_threadsafe_function function=nullptr;
+    PresentedSubscription *subscription=nullptr;
+    void Clear() {
+        if(subscription)subscription->active=false;
+        subscription=nullptr;
+        if(function)napi_release_threadsafe_function(function,napi_tsfn_abort);
+        function=nullptr;
+    }
+};
+using PresentedOwner=std::shared_ptr<PresentedBridge>;
+void PresentedJs(napi_env env,napi_value callback,void *context,void *data) {
+    std::unique_ptr<PresentedEvent> event(static_cast<PresentedEvent*>(data));
+    if(!env||!callback||!static_cast<PresentedSubscription*>(context)->active||!splat::Renderer::Get().IsPresented(event->request,event->surface))return;
+    napi_value value,receiver,result;napi_create_double(env,double(event->request),&value);
+    napi_get_undefined(env,&receiver);napi_call_function(env,receiver,callback,1,&value,&result);
+}
+napi_value OnPresented(napi_env env,napi_callback_info info) {
+    napi_value arg;size_t argc=1;void *data=nullptr;
+    napi_get_cb_info(env,info,&argc,&arg,nullptr,&data);napi_valuetype type=napi_undefined;
+    if(argc==1)napi_typeof(env,arg,&type);
+    if(argc!=1||(type!=napi_function&&type!=napi_null)){napi_throw_type_error(env,nullptr,"Expected callback or null");return Undefined(env);}
+    auto bridge=*static_cast<PresentedOwner*>(data);
+    napi_threadsafe_function next=nullptr;PresentedSubscription *subscription=nullptr;
+    if(type==napi_function){
+        napi_value name;napi_create_string_utf8(env,"NextNewsFirstFrame",NAPI_AUTO_LENGTH,&name);
+        subscription=new PresentedSubscription;
+        const auto status=napi_create_threadsafe_function(env,arg,nullptr,name,0,1,subscription,
+            [](napi_env,void *p,void*){delete static_cast<PresentedSubscription*>(p);},
+            subscription,PresentedJs,&next);
+        if(status!=napi_ok){delete subscription;napi_throw_error(env,nullptr,"Cannot create first-frame event");return Undefined(env);}
+        napi_unref_threadsafe_function(env,next);
+    }
+    {std::lock_guard<std::mutex> lock(bridge->mutex);bridge->Clear();bridge->function=next;bridge->subscription=subscription;}
+    if(next){
+        std::weak_ptr<PresentedBridge> weak=bridge;
+        splat::Renderer::Get().OnPresented([weak](uint64_t request,uint64_t surface){
+            auto bridge=weak.lock();if(!bridge)return;
+            std::lock_guard<std::mutex> lock(bridge->mutex);if(!bridge->function)return;
+            auto event=new PresentedEvent{request,surface};
+            if(napi_call_threadsafe_function(bridge->function,event,napi_tsfn_nonblocking)!=napi_ok)delete event;
+        });
+    }
+    return Undefined(env);
+}
 napi_value Load(napi_env env,napi_callback_info info) {
     napi_value arg;size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
     size_t length=0;
@@ -39,11 +89,19 @@ napi_value Intro(napi_env env,napi_callback_info info) {
     splat::Renderer::Get().SetIntro(enabled,wait);return Undefined(env);
 }
 napi_value BeginIntro(napi_env env,napi_callback_info info) {
-    napi_value args[4];size_t argc=4;double v[4]{};napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
-    if(argc!=4){napi_throw_type_error(env,nullptr,"Expected request and focus coordinates");return Undefined(env);}
+    napi_value args[6];size_t argc=6;double v[4]{};napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+    if(argc!=4&&argc!=6){napi_throw_type_error(env,nullptr,"Expected request and focus coordinates");return Undefined(env);}
     for(size_t i=0;i<4;++i)if(napi_get_value_double(env,args[i],&v[i])!=napi_ok||!std::isfinite(v[i])){napi_throw_range_error(env,nullptr,"Invalid opening values");return Undefined(env);}
     if(v[0]<1||v[0]>9007199254740991.0||std::floor(v[0])!=v[0]||std::abs(v[1])>1e6||std::abs(v[2])>1e6||std::abs(v[3])>1e6){napi_throw_range_error(env,nullptr,"Invalid opening request or focus");return Undefined(env);}
-    splat::Renderer::Get().BeginIntro(static_cast<uint64_t>(v[0]),{float(v[1]),float(v[2]),float(v[3])});return Undefined(env);
+    std::vector<float> box;double profile=0;
+    if(argc==6){
+        bool array=false;uint32_t length=0;napi_is_array(env,args[4],&array);
+        if(!array||napi_get_array_length(env,args[4],&length)!=napi_ok||(length!=0&&length!=6)||napi_get_value_double(env,args[5],&profile)!=napi_ok||!std::isfinite(profile)||profile<0||profile>2||std::floor(profile)!=profile){napi_throw_type_error(env,nullptr,"Invalid reveal bounds or profile");return Undefined(env);}
+        for(uint32_t i=0;i<length;++i){napi_value item;double number;napi_get_element(env,args[4],i,&item);
+            if(napi_get_value_double(env,item,&number)!=napi_ok||!std::isfinite(number)||std::abs(number)>1e6){napi_throw_range_error(env,nullptr,"Invalid reveal bound");return Undefined(env);}box.push_back(float(number));}
+        for(size_t i=0;i<box.size()/2;++i)if(box[i]>box[i+3]){napi_throw_range_error(env,nullptr,"Inverted reveal bounds");return Undefined(env);}
+    }
+    const bool accepted=splat::Renderer::Get().BeginIntro(static_cast<uint64_t>(v[0]),{float(v[1]),float(v[2]),float(v[3])},box,int(profile));napi_value result;napi_get_boolean(env,accepted,&result);return result;
 }
 napi_value Background(napi_env env,napi_callback_info info) {
     napi_value args[3];size_t argc=3;double values[3];napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
@@ -187,7 +245,17 @@ napi_value Pick(napi_env env,napi_callback_info info) {
 }
 napi_value Init(napi_env env,napi_value exports) {
     RegisterCollision(env,exports);
+    auto owner=new PresentedOwner(std::make_shared<PresentedBridge>());
+    napi_add_env_cleanup_hook(env,[](void *p){
+        auto *owner=static_cast<PresentedOwner*>(p);
+        {std::lock_guard<std::mutex> lock((*owner)->mutex);(*owner)->Clear();}
+        delete owner;
+    },owner);
+    // Registration can occur again for an XComponent. Install the renderer bridge
+    // only when ArkTS subscribes, not while another module instance initializes.
+
     napi_property_descriptor methods[]={
+        {"onPresented",nullptr,OnPresented,nullptr,nullptr,nullptr,napi_default,owner},
         {"annotations",nullptr,Annotations,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"annotationStyle",nullptr,AnnotationStyle,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"inspectModel",nullptr,InspectModel,nullptr,nullptr,nullptr,napi_default,nullptr},

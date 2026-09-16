@@ -86,3 +86,15 @@ panel removal; native/stream/input/runtime regressions and HAP builds pass.
 ## First-open-only loading correction
 
 Separated opening from recurring LOD activity, added per-request presented-frame acknowledgement and loading-component disappearance handoff, protected old upload generations and background/resume. Reveal origin now follows the camera target, frozen across LOD commits. Final HAP phone-tested with six alternating turns and Home/resume; all checks retained loading-panel dismissal. Native sanitizer, page handoff, viewer/input/stream regressions and both builds pass. [Evidence and remaining gaps](../harmonyos/firstframe-20260916.md).
+
+## MetaFlow-first implementation: loading events and reveal profiles
+
+Continued from `3434e53` in PR #5. Implemented native first-presentation events,
+request/surface/subscription invalidation, CDN posters and real byte-based SOG
+progress, config-relative resource resolution, exact supplied world AABB reveal
+range, three motion profiles and GPU oscillation. Normal view no longer shows LOD
+cache diagnostics. Configured animation is held behind initial loading.
+
+See [implementation, checks and unfinished scope](../harmonyos/metaflow-loading-events-20260916.md).
+This is the opening/configuration batch only; the full approved plan is not yet
+complete. Signed HAP and device images remain local ignored artifacts.

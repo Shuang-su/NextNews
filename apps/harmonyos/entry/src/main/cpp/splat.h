@@ -58,6 +58,8 @@ struct Scene {
     }
     std::array<float, 3> center{};
     float radius = 1;
+    std::array<float,6> worldBox{};
+    bool hasWorldBox=false;
 };
 Scene ReadSog(const std::string &path, const std::atomic<bool> *cancel = nullptr,bool encoded=false);
 Scene ReadModel(const std::string &path, const std::atomic<bool> *cancel = nullptr,bool encoded=false);

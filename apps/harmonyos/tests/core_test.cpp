@@ -10,6 +10,10 @@ int main(int argc,char **argv) {
         auto scene=splat::ReadPly(argv[2]);
         if(mode=="invalid"){std::cerr<<"Accepted invalid file\n";return 1;}
         assert(!scene.points.empty());
+        assert(scene.hasWorldBox);
+        for(const auto &point:scene.points)for(int k=0;k<3;++k){assert(point.position[k]>=scene.worldBox[k]);assert(point.position[k]<=scene.worldBox[k+3]);}
+        auto transformed=scene;splat::ApplyViewerTransform(transformed);
+        for(const auto &point:transformed.points)for(int k=0;k<3;++k){assert(point.position[k]>=transformed.worldBox[k]);assert(point.position[k]<=transformed.worldBox[k+3]);}
         auto view=splat::MakeView(scene,{});auto sorted=splat::Sort(scene,view);
         float previous=-INFINITY;
         for(const auto &g:sorted){auto &m=view.matrix;float depth=m[2]*g.position[0]+m[6]*g.position[1]+m[10]*g.position[2]+m[14];assert(depth>=previous);previous=depth;}
@@ -22,7 +26,9 @@ int main(int argc,char **argv) {
             for (int row=0; row<3; ++row) {
                 float value=orbitView.matrix[12+row];
                 for (int k=0;k<3;++k) value+=orbitView.matrix[k*4+row]*target[k];
-                const float expected=row==2 ? -scene.radius*3.f*orbit.zoom : 0.f;
+                // The one-point fixture has a 0.001 radius; the Viewer keeps a
+                // 0.01 world-unit minimum orbit distance (not a radius-relative cap).
+                const float expected=row==2 ? -std::max(.01f,scene.radius*3.f*orbit.zoom) : 0.f;
                 assert(std::abs(value-expected)<1e-4f);
             }
             orbit.fly=1;

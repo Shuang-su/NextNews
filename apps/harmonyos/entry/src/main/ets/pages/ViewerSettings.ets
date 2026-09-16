@@ -17,6 +17,7 @@ export interface Vignette { enabled: boolean; intensity: number; inner: number; 
 export interface Fringing { enabled: boolean; intensity: number; }
 export interface ViewerEffects { sharpness: Sharpness; bloom: Bloom; grading: Grading; vignette: Vignette; fringing: Fringing; }
 export interface ViewerSettings {
+  revealEffect?: string; experienceType?: string;
   version: number; cameras: ViewerCamera[]; animTracks: ViewerTrack[]; startMode: string;
   annotations: ViewerAnnotation[]; background: ViewerBackground; tonemapping: string;
   highPrecisionRendering: boolean; postEffectSettings: ViewerEffects; soundUrl?: string; collisionUrl?: string; voxelUrl?: string; voxelManifestUrl?: string;
@@ -67,6 +68,8 @@ export function parseViewerSettings(text: string): ViewerSettings {
     !Array.isArray(settings.animTracks) || settings.animTracks.length > 64 || !['default', 'animTrack', 'annotation'].includes(settings.startMode)) {
     throw new Error('需要有效的 Viewer v1 / v2 配置');
   }
+  if ((settings.revealEffect !== undefined && !['radial', 'none'].includes(settings.revealEffect)) ||
+    (settings.experienceType !== undefined && !['character', 'scene'].includes(settings.experienceType))) { throw new Error('MetaFlow 揭示配置无效'); }
   settings.annotations = settings.annotations ?? []; settings.background = settings.background ?? { color: [0, 0, 0] };
   settings.tonemapping = settings.tonemapping ?? 'linear'; settings.highPrecisionRendering = settings.highPrecisionRendering ?? false;
   settings.postEffectSettings = settings.postEffectSettings ?? defaultEffects();

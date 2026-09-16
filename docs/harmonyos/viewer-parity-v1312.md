@@ -52,3 +52,10 @@ AR/VR、标注/模型编辑和生成不在这次 Viewer 范围内。
 MetaFlow clarification supersedes the random stagger: [loading/range-wave preview](metaflow-opening-20260916.md). Poster, exact progress/first-frame handoff, focus-centered reveal and specialized profiles remain pending.
 
 [First-open-only loading](firstframe-20260916.md) supersedes the earlier target-refinement loading indicator. Phone verified: six camera turns keep loading UI absent; first EGL presentation releases loading before particle playback; reveal starts at the world camera target. Exact AABB radius and other opening effects remain pending.
+
+[MetaFlow loading events and reveal profiles](metaflow-loading-events-20260916.md)
+supersede the 500 ms opening acknowledgement and conservative radius for sources
+with a world AABB. Posters, actual single-SOG byte progress and config-relative
+resource resolution are implemented. Three reveal profiles exist; ordinary
+profile has phone evidence, character/mega visual comparison is still pending.
+Environment orchestration and the broader MetaFlow-first plan remain incomplete.

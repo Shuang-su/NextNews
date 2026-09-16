@@ -2,6 +2,13 @@
 #include <cassert>
 #include <cmath>
 int main() {
+    assert(std::abs(splat::FarthestCorner({10,0,0},{-1,-2,-3,1,2,3})-std::sqrt(134.f))<1e-5);
+    const auto ordinary=splat::RevealMotion::For(100,0),character=splat::RevealMotion::For(100,1),mega=splat::RevealMotion::For(100,2);
+    assert(std::abs(character.dotSize-.00063f)<1e-8);
+    assert(std::abs(ordinary.dotSize-.0066f)<1e-7);
+    assert(std::abs(mega.dotSize-.022f)<1e-7);
+    assert(mega.Duration(100)<ordinary.Duration(100));
+    assert(mega.delay>1 && mega.oscillation==.16f);
     splat::Intro intro;
     assert(intro.Frame(0)==1);
     intro.Request(true,true);assert(!intro.Running() && intro.Frame(50)==1);

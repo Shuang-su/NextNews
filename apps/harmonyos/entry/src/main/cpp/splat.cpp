@@ -111,6 +111,7 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
     double radius2 = 0;
     for (int k = 0; k < 3; ++k) { scene.center[k] = (lo[k] + hi[k]) * .5f; radius2 += double(hi[k]-lo[k]) * (hi[k]-lo[k]) * .25; }
     scene.radius = std::max(float(std::sqrt(radius2)), .001f);
+    for(int k=0;k<3;++k){scene.worldBox[k]=lo[k];scene.worldBox[k+3]=hi[k];}scene.hasWorldBox=true;
     return scene;
 }
 
@@ -118,6 +119,7 @@ void ApplyViewerTransform(Scene &scene) {
     if(scene.tables){for(auto &p:scene.positions){p[0]=-p[0];p[1]=-p[1];}scene.tables->viewerTransform=!scene.tables->viewerTransform;}
     // SuperSplat viewer's import entity: setLocalEulerAngles(0, 0, 180).
     for(auto &g:scene.points) {g.position[0]=-g.position[0];g.position[1]=-g.position[1];g.covariance[2]=-g.covariance[2];g.covariance[4]=-g.covariance[4];}
+    if(scene.hasWorldBox)for(int k=0;k<2;++k){const float lo=scene.worldBox[k];scene.worldBox[k]=-scene.worldBox[k+3];scene.worldBox[k+3]=-lo;}
     scene.center[0]=-scene.center[0];scene.center[1]=-scene.center[1];
 }
 View MakeView(const Scene &scene, const Camera &camera) {

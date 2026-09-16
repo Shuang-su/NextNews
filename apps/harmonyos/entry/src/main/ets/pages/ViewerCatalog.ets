@@ -1,3 +1,4 @@
+import { ViewerScene, describeScene } from './ViewerScene';
 import { http } from '@kit.NetworkKit';
 import { fileIo as fs } from '@kit.CoreFileKit';
 import { util, url } from '@kit.ArkTS';
@@ -10,7 +11,7 @@ export interface CatalogProject {
 }
 interface CatalogList { code: number; total: number; rows: CatalogProject[]; }
 interface CatalogDetail { code: number; data: CatalogProject; }
-export interface CatalogAsset { project: CatalogProject; content: string; settings: ViewerSettings; collision: string; }
+export interface CatalogAsset extends ViewerScene { project: CatalogProject; }
 export function catalogUrl(value: string): string {
   if (typeof value !== 'string' || !value.trim()) { throw new Error('项目缺少资源地址'); }
   const parsed = new url.URL(value.trim());
@@ -23,9 +24,10 @@ export function validateProject(p: CatalogProject): void {
 }
 export class ViewerCatalog {
   private stopped: boolean = false;
+  private cancellations: Set<() => void> = new Set();
   private requests: Set<http.HttpRequest> = new Set();
   private details: Map<string, CatalogAsset> = new Map();
-  cancel(): void { this.stopped = true; this.requests.forEach((r: http.HttpRequest) => r.destroy()); this.requests.clear(); }
+  cancel(): void { this.stopped = true; this.cancellations.forEach((cancel: () => void) => cancel()); this.cancellations.clear(); this.requests.forEach((r: http.HttpRequest) => r.destroy()); this.requests.clear(); }
   private async fetch(address: string, limit: number): Promise<ArrayBuffer> {
     await viewerRequests.acquire();
     if (this.stopped) { viewerRequests.release(); throw new Error('线上项目请求已取消'); }
@@ -35,6 +37,45 @@ export class ViewerCatalog {
       if (this.stopped || response.responseCode !== 200 || !(response.result instanceof ArrayBuffer) || response.result.byteLength > limit) { throw new Error(`资源加载失败 HTTP ${response.responseCode}`); }
       return response.result as ArrayBuffer;
     } finally { request.destroy(); this.requests.delete(request); viewerRequests.release(); }
+  }
+  private async download(address: string, limit: number, progress: (percent: number) => void): Promise<ArrayBuffer> {
+    await viewerRequests.acquire();
+    if (this.stopped) { viewerRequests.release(); throw new Error('线上项目请求已取消'); }
+    const request = http.createHttp(); this.requests.add(request);
+    let cancel: () => void = () => {};
+    try {
+      return await new Promise<ArrayBuffer>((resolve, reject) => {
+        const chunks: ArrayBuffer[] = []; let bytes = 0; let ended = false; let code = 0; let settled = false;
+        const fail = (message: string): void => {
+          if (settled) { return; } settled = true; chunks.length = 0; reject(new Error(message));
+        };
+        cancel = (): void => { fail('线上项目请求已取消'); };
+        this.cancellations.add(cancel);
+        const finish = (): void => {
+          // requestInStream may acknowledge HTTP before or after dataEnd.
+          if (settled || !ended || !code) { return; }
+          if (this.stopped || code !== 200) { fail(`资源加载失败 HTTP ${code}`); return; }
+          settled = true; const result = new Uint8Array(bytes); let offset = 0;
+          chunks.forEach((chunk: ArrayBuffer) => { result.set(new Uint8Array(chunk), offset); offset += chunk.byteLength; });
+          chunks.length = 0; progress(100); resolve(result.buffer);
+        };
+        request.on('dataReceive', (chunk: ArrayBuffer) => {
+          if (settled) { return; }
+          bytes += chunk.byteLength;
+          if (bytes > limit) { fail('模型下载超过大小限制'); request.destroy(); return; }
+          chunks.push(chunk);
+        });
+        request.on('dataReceiveProgress', (info: http.DataReceiveProgressInfo) => {
+          if (settled || this.stopped) { return; }
+          progress(Number.isFinite(info.totalSize) && info.totalSize > 0 && info.receiveSize >= 0 && info.receiveSize <= info.totalSize ? info.receiveSize / info.totalSize * 100 : -1);
+        });
+        request.on('dataEnd', () => { ended = true; finish(); });
+        progress(-1);
+        request.requestInStream(catalogUrl(address), { maxLimit: limit, usingCache: false, connectTimeout: 10000, readTimeout: 30000 })
+          .then((status: number) => { code = status; if (code !== 200) { fail(`资源加载失败 HTTP ${code}`); } else { finish(); } })
+          .catch((error: Error) => { fail(error.message || '模型下载失败'); });
+      });
+    } finally { this.cancellations.delete(cancel); request.destroy(); this.requests.delete(request); viewerRequests.release(); }
   }
   private async text(address: string): Promise<string> {
     return new util.TextDecoder('utf-8', { fatal: true }).decodeWithStream(new Uint8Array(await this.fetch(address, 4194304)));
@@ -55,18 +96,20 @@ export class ViewerCatalog {
     const content = catalogUrl((lod ? p.lodMeta : p.modelFileUrl) ?? '');
     let settings = createSettings({ position: [16.650447845458984, 22.538938522338867, -32.462284088134766], target: [-2.944159287248759, 10.141348153415594, .27791836255628866], fov: 75 });
     settings.tonemapping = 'none'; // MetaFlow business-player fallback when modelSetting is absent.
-    if (lod && p.lodSettings) { settings = parseViewerSettings(await this.text(p.lodSettings)); }
+    const configuration = lod && p.lodSettings ? catalogUrl(p.lodSettings) : `https://sztvbmsapi.sztv.com.cn/api/gaussian/model/detail/${id}`;
+    if (lod && p.lodSettings) { settings = parseViewerSettings(await this.text(configuration)); }
     else if (p.modelSetting) { settings = parseViewerSettings(typeof p.modelSetting === 'string' ? p.modelSetting : JSON.stringify(p.modelSetting)); }
-    const collision = lod ? (p.lodBin ? catalogUrl(p.lodBin) : '') : (settings.collisionUrl ?? settings.voxelManifestUrl ?? settings.voxelUrl ?? '');
-    const result: CatalogAsset = { project: p, content, settings, collision }; this.details.set(id, result); return result;
+    const scene = describeScene(content, configuration, settings, p.coverUrl || p.thumbnailUrl || '', lod ? p.lodBin || '' : '');
+    const result: CatalogAsset = { project: p, content: scene.content, configuration: scene.configuration,
+      poster: scene.poster, settings: scene.settings, collision: scene.collision }; this.details.set(id, result); return result;
   }
-  async model(asset: CatalogAsset, directory: string): Promise<string> {
+  async model(asset: CatalogAsset, directory: string, progress?: (percent: number) => void): Promise<string> {
     if (!new url.URL(asset.content).pathname.endsWith('.sog')) { throw new Error('单体模型暂时仅支持 SOG'); }
     const hash = cryptoFramework.createMd('SHA256'); await hash.update({ data: new util.TextEncoder().encodeInto(asset.content) });
     const key = Array.from((await hash.digest()).data).map((v: number) => v.toString(16).padStart(2, '0')).join('');
     const path = `${directory}/cdn-${key}.sog`;
-    try { if ((await fs.stat(path)).size > 0) { return path; } } catch (_) {}
-    const bytes = await this.fetch(asset.content, 134217728);
+    try { if ((await fs.stat(path)).size > 0) { progress?.(100); return path; } } catch (_) {}
+    const bytes = progress ? await this.download(asset.content, 134217728, progress) : await this.fetch(asset.content, 134217728);
     const file = await fs.open(`${path}.part`, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
     try { let offset = 0; while (offset < bytes.byteLength) { const n = await fs.write(file.fd, bytes.slice(offset)); if (n <= 0) { throw new Error('模型缓存写入失败'); } offset += n; } }
     finally { await fs.close(file); }

@@ -66,4 +66,6 @@ export const collisionDebug: (generation: number, x: number, y: number, z: numbe
 
 export const intro: (enabled: boolean, waitForModel: boolean) => void;
 
-export const beginIntro: (request: number, x: number, y: number, z: number) => void;
+export const beginIntro: (request: number, x: number, y: number, z: number, bounds?: number[], profile?: number) => boolean;
+
+export const onPresented: (callback: ((request: number) => void) | null) => void;
