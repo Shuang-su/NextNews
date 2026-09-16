@@ -115,6 +115,10 @@ export class StreamSession {
   targetAt: number = 0;
   coverage: number = 0;
   requestedCount: number = 0;
+  get loadingVisible(): boolean {
+    return this.active && !this.stopped && (!this.manifest || this.publishDirty ||
+      this.coverage < 1 || (this.fullLoad && this.cache.size < this.manifest.chunks.length));
+  }
   get selectionSubmitted(): boolean { return !this.publishDirty; }
   get submittedRevision(): number { return this.revision; }
   private publishDirty: boolean = true;

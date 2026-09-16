@@ -90,3 +90,16 @@ console.log('PASS AABB distance, rear penalty, offscreen detail, fixed budget, i
  console.log('PASS disk pressure: current/previous views pinned; no prefetch churn without headroom');
 
 })().catch(e=>{console.error(e);process.exitCode=1;});
+// Loading is about target detail, not opportunistic background prefetch.
+{
+ const s=new box.exports.StreamSession(()=>{});
+ assert.equal(s.loadingVisible,true);
+ s.manifest=base;s.coverage=1;s.publishDirty=false;s.busy=true;
+ assert.equal(s.loadingVisible,false);
+ s.coverage=.5;assert.equal(s.loadingVisible,true);
+ s.active=false;assert.equal(s.loadingVisible,false);
+ s.active=true;s.coverage=1;s.fullLoad=true;assert.equal(s.loadingVisible,true);
+ s.cache.set(base.chunks[0].file,'/cache/model');assert.equal(s.loadingVisible,false);
+ s.stop();assert.equal(s.loadingVisible,false);
+ console.log('PASS loading indicator: initial manifest, target refinement, prefetch exclusion, full preload, failure and cancellation');
+}

@@ -73,3 +73,12 @@ HAP/签名构建、标注与原交互单测、原生 ASan/UBSan 通过。
 ## Particle opening after main merge
 
 Continued from PR #2 merge on `codex/viewer-parity-next`. Added GPU opacity/size stagger, first-selection start, no LOD replay, pause/resume timeline and UI enable/replay controls. Built, signed and installed on Mate 80 Pro Max; inspected early/middle/final public-sample captures. Host timeline sanitizer and existing viewer/input/background regressions pass. See [report](../harmonyos/intro-20260916.md) for evidence and outstanding encoded-stream/Huawei/performance checks. No visionOS files changed.
+
+## MetaFlow correction: loading panel and two range waves
+
+User clarified that the opening must advance spatially, and loading must follow
+MetaFlow. Located the actual local MetaFlow source (a871786), replaced random
+stagger with dot/lift radial waves and the generic spinner with cyan sweep,
+stage/elapsed and stopped red failure presentation. Phone-tested CDN loading and
+panel removal; native/stream/input/runtime regressions and HAP builds pass.
+[Detailed report and remaining differences](../harmonyos/metaflow-opening-20260916.md).

@@ -47,6 +47,8 @@ uniform float tanHalfFov;
 uniform float farPlane;
 uniform bool optimized;
 uniform float introProgress;
+uniform vec4 introBounds;
+uniform float introTime;
 out vec2 gaussian;
 out vec4 tint;
 void main() {
@@ -57,13 +59,28 @@ void main() {
         vec3 covA=vec3(t1.w,t2.xy),covB=vec3(t2.zw,t3.x);
         covariance=mat3(covA.x,covA.y,covA.z,covA.y,covB.x,covB.y,covA.z,covB.y,covB.z);
     }
-    // Position-based timing survives GPU page relocation. Keep centers fixed:
-    // the existing depth order remains valid throughout the opening.
+    // MetaFlow dot wave followed by the delayed lift wave. Covariance trace
+    // gives the same RMS size as gsplatGetSizeFromScale without eigenvectors.
     if (introProgress < 1.0) {
-        float seed=fract(sin(dot(position,vec3(12.9898,78.233,37.719)))*43758.5453);
-        float reveal=smoothstep(seed*0.45,seed*0.45+0.55,introProgress);
-        color.a*=reveal;
-        covariance*=mix(0.025,1.0,reveal*reveal);
+        float dist=length(position-introBounds.xyz);
+        float dotWave=0.36*introTime+1.05*introTime*introTime;
+        float liftTime=max(0.0,introTime-1.0);
+        float liftWave=0.36*liftTime+1.05*liftTime*liftTime;
+        bool lifted=liftTime>0.0 && liftWave>dist;
+        float revealScale=0.035;
+        if(lifted)revealScale=mix(0.035,1.0,clamp((liftWave-dist)*0.5,0.0,1.0));
+        else if(dist>dotWave+0.005)color.a=0.0;
+        else if(dist>max(dotWave-1.0,0.0)) {
+            float waveDistance=abs(dist-dotWave);
+            revealScale=waveDistance<0.5?mix(0.035,0.07,1.0-waveDistance*2.0):
+                0.035*(1.0-smoothstep(max(dotWave-1.0,0.0),dotWave+0.005,dist));
+        }
+        if(revealScale<1.0) {
+            float originalSize=sqrt(max(0.0,(covariance[0][0]+covariance[1][1]+covariance[2][2])/3.0));
+            float dotSize=clamp(introBounds.w*0.000066,0.0012,0.015);
+            float size=lifted?mix(dotSize,originalSize*revealScale,(revealScale-0.035)/0.965):dotSize*revealScale/0.035;
+            size=min(size,originalSize);covariance=mat3(size*size);
+        }
     }
     tint=color;
     vec3 center=(view*vec4(position,1.0)).xyz;
@@ -178,7 +195,7 @@ void Renderer::SetCamera(Camera camera) {
 }
 void Renderer::SetActive(bool active) { {std::lock_guard<std::mutex> lock(mutex_);active_=active;intro_.Pause();dirty_=true;}changed_.notify_one();loadChanged_.notify_one(); }
 void Renderer::SetIntro(bool enabled,bool waitForModel) {
-    {std::lock_guard<std::mutex> lock(mutex_);intro_.Request(enabled,waitForModel);dirty_=true;}
+    {std::lock_guard<std::mutex> lock(mutex_);intro_.Request(enabled,waitForModel,scene_->radius);dirty_=true;}
     changed_.notify_one();
 }
 void Renderer::SetBackground(std::array<float,3> color) {
@@ -299,7 +316,7 @@ void Renderer::AdvanceUpload() {
     if(stagingRow_==rows){
         std::lock_guard<std::mutex> lock(mutex_);
         if(stagingGeneration_==loadGeneration_){
-            activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);if(scene_->Count())intro_.Commit();initialIndices_=std::move(stagingIndices_);
+            activePages_.clear();retiredScenes_.push_back(std::move(scene_));scene_=std::move(stagingScene_);if(scene_->Count())intro_.Commit(scene_->radius);initialIndices_=std::move(stagingIndices_);
             spareTexture_=dataTexture_;spareCapacity_=dataCapacity_;
             spareRows_=std::move(dataRows_);dataRows_=std::move(stagingRows_);stagingPreviousRows_.clear();
             status_.uploadedRows=stagingUploadedRows_;status_.reusedRows=stagingReusedRows_;
@@ -344,8 +361,8 @@ void Renderer::Draw(const View &view,int width,int height) {
         }
     }
     const auto drawStart=Clock::now();
-    std::shared_ptr<const HotspotData> annotations;HotspotStyle style;std::array<float,3> background;float introProgress;
-    {std::lock_guard<std::mutex> lock(mutex_);annotations=annotationData_;style=annotationStyle_;background=background_;introProgress=intro_.Frame(std::chrono::duration<double>(Clock::now().time_since_epoch()).count());}
+    std::shared_ptr<const HotspotData> annotations;HotspotStyle style;std::array<float,3> background;float introProgress;float introTime;
+    {std::lock_guard<std::mutex> lock(mutex_);annotations=annotationData_;style=annotationStyle_;background=background_;introProgress=intro_.Frame(std::chrono::duration<double>(Clock::now().time_since_epoch()).count());introTime=float(intro_.Seconds());}
     if(introProgress<1)style.visible=false;
     const bool annotationReady=depthBits_>0&&hotspots_.Prepare(annotations);
     {std::lock_guard<std::mutex> lock(mutex_);status_.annotationDepth=annotationReady?depthBits_:0;}
@@ -355,6 +372,8 @@ void Renderer::Draw(const View &view,int width,int height) {
     glDepthMask(GL_FALSE);glUseProgram(program_);
     glUniform1i(optimizedLocation_,optimized_.load());
     glUniform1f(glGetUniformLocation(program_,"introProgress"),introProgress);
+    glUniform1f(glGetUniformLocation(program_,"introTime"),introTime);
+    glUniform4f(glGetUniformLocation(program_,"introBounds"),scene_->center[0],scene_->center[1],scene_->center[2],scene_->radius);
     glUniformMatrix4fv(viewLocation_,1,GL_FALSE,view.matrix.data());
     glUniform2f(viewportLocation_,float(width),float(height));
     glUniform1f(glGetUniformLocation(program_,"tanHalfFov"),view.tanHalfFov);glUniform1f(nearLocation_,view.nearPlane);glUniform1f(farLocation_,view.farPlane);

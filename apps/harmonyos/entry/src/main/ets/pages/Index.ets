@@ -1,3 +1,4 @@
+import { ViewerLoading } from './ViewerLoading';
 import { HotspotPosition, ViewerHotspot } from './ViewerHotspot';
 import { ViewerNavCursor } from './ViewerNavCursor';
 import { ViewerCatalog, CatalogProject, CatalogAsset } from './ViewerCatalog';
@@ -83,7 +84,7 @@ struct Index {
   }
   private async openCatalog(id: string): Promise<void> {
     if (this.busy) { return; }
-    const revision = ++this.generation; this.busy = true; this.catalogLoading = true; this.localError = ''; this.catalogMessage = '正在读取项目配置';
+    const revision = ++this.generation; this.modelsVisible = false; this.settingsVisible = false; this.busy = true; this.catalogLoading = true; this.localError = ''; this.catalogMessage = '正在读取项目配置';
     this.stopStream(); this.clearProfile();
     try {
       const asset = await this.catalog.detail(id);
@@ -402,6 +403,10 @@ struct Index {
   @State graphics: string = '';
   @State busy: boolean = false;
   @State loading: boolean = false;
+  @State drawableCount: number = 0;
+  @State streamWorking: boolean = false;
+  @State loadStage: string = '准备场景';
+  @State streamFailure: string = '';
   @State localError: string = '';
   @State title: string = 'NextNews · 3DGS';
   @State panMode: boolean = false;
@@ -500,13 +505,19 @@ struct Index {
     }, 16);
     this.timer = setInterval(() => {
       if (this.backendName !== 'OpenGL') {
-        this.loading = false; this.message = this.backend.capabilities.note;
+        this.loading = false; this.streamWorking = false; this.message = this.backend.capabilities.note;
         this.graphics = 'SpatialReconKit / ArkGraphics3D';
         this.details = '华为渲染帧率和显存需使用系统工具采集。当前接口未提供等价的 GPU/排序统计。';
         return;
       }
       const state = nativeRender.status();
       this.annotationDepth = state.annotationDepth;
+      this.drawableCount = state.count;
+      this.streamWorking = this.stream?.loadingVisible ?? false;
+      this.streamFailure = this.stream && !this.stream.active ? this.streamMessage : '';
+      this.loadStage = this.streamWorking ?
+        (this.stream?.manifest ? '[流式加载] 加载场景分块 · 渐进细化' : '[清单] 正在读取场景清单') : this.catalogLoading ? `[资源] ${this.catalogMessage}` :
+        state.state === 'loading' ? '[准备] 解码模型并准备 GPU 资源' : '[准备] 正在准备模型';
       if (state.state === 'ready' && !this.stream && state.count > 0) { this.viewer.bounds = state.bounds; if (this.awaitingModelCamera) { this.awaitingModelCamera = false; this.updateCamera(); } }
       this.loading = state.state === 'loading';
       if (this.stream) { console.info(`StreamFrame state=${state.state} frames=${state.frames} count=${state.count} loadMs=${state.loadMs.toFixed(0)} frameMs=${state.frameMs.toFixed(1)} uploadMs=${state.uploadMs.toFixed(1)} uploadedRows=${state.uploadedRows} reusedRows=${state.reusedRows} decodedFiles=${state.decodedFiles} subsetHits=${state.subsetHits} request=${state.requestRevision} display=${state.displayRevision} prepareMs=${state.prepareMs.toFixed(1)} refineMs=${state.refineMs.toFixed(1)} uploadedBytes=${state.uploadedBytes} pageHits=${state.pageHits}`); }
@@ -707,7 +718,7 @@ struct Index {
     const old = this.stream; this.stream = undefined; old?.stop();
     if (old) { nativeRender.chunks([], [0, 0, 0, 1]); }
     if (old) { setTimeout(() => { old.dispose(); }, 1000); }
-    this.streamMessage = '';
+    this.streamMessage = ''; this.streamWorking = false; this.streamFailure = '';
   }
   private async startStream(asset?: CatalogAsset): Promise<void> {
     const selected = asset ?? (this.streamAsset?.content === this.streamUrl ? this.streamAsset : undefined);
@@ -715,7 +726,7 @@ struct Index {
     if (this.backendName !== 'OpenGL') { this.localError = '华为原生瓦片请使用独立实验入口'; return; }
     this.stopStream(); this.clearProfile(); this.localError = ''; this.title = '流式场景'; this.reset();
     const session = new StreamSession((message: string) => { if (this.stream === session) { this.streamMessage = message; } });
-    this.stream = session; session.budget = this.quality; session.paged = this.paged; session.encoded = this.encoded;
+    this.stream = session; this.streamWorking = true; this.loadStage = '正在读取场景清单'; session.budget = this.quality; session.paged = this.paged; session.encoded = this.encoded;
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       await session.open(this.streamUrl, context.cacheDir, this.fullLoad);
@@ -725,7 +736,7 @@ struct Index {
         else if (this.streamUrl === 'http://127.0.0.1:8768/scene.json') { await this.profileCamera(false); }
         session.tick(this.controls.current, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
       }
-    } catch (error) { if (this.stream === session) { this.streamMessage = `流式失败：${((error as BusinessError).message || String(error))}`; } }
+    } catch (error) { if (this.stream === session) { this.streamWorking = false; session.active = false; this.localError = String(error); this.streamMessage = `流式失败：${((error as BusinessError).message || String(error))}`; } }
   }
   private async sample(name: string, label: string): Promise<void> {
     if (this.busy) { return; }
@@ -856,6 +867,13 @@ struct Index {
             hover: (value: boolean) => { this.hoveredAnnotation = value ? marker.index : this.hoveredAnnotation === marker.index ? -1 : this.hoveredAnnotation; this.syncAnnotationStyle(); } })
         }, (marker: HotspotPosition) => marker.index.toString())
       }
+      if (this.active && (this.loading || this.busy || this.streamWorking || this.localError || this.streamFailure)) {
+        Column() {
+          Blank()
+          ViewerLoading({ stage: this.localError || this.streamFailure || this.loadStage, failed: this.localError.length > 0 || this.streamFailure.length > 0 })
+        }.width('100%').height('100%').padding({ left: 16, right: 16, bottom: 120 })
+          .hitTestBehavior(HitTestMode.None)
+      }
       Column({ space: 6 }) {
         Row() {
           Column({ space: 3 }) {
@@ -865,12 +883,6 @@ struct Index {
           Button('模型列表').fontSize(13).height(40).backgroundColor('#CC243247').fontColor('#FFFFFF').id('模型列表').onClick(() => { this.toolsVisible = true; this.modelsVisible = true; this.settingsVisible = this.helpVisible = this.diagnosticsVisible = false; this.catalogList(); })
           ViewerTool({ icon: this.toolsVisible ? $r('app.media.viewer_expand') : $r('app.media.viewer_collapse'), label: this.toolsVisible ? '隐藏工具' : '显示工具', selected: !this.toolsVisible, action: () => { this.toolsVisible = !this.toolsVisible; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
         }.width('100%')
-        if (this.loading || this.busy || this.localError) {
-          Row({ space: 8 }) {
-            if (this.loading || this.busy) { LoadingProgress().width(18).height(18).color('#90B7FF') }
-            Text(this.localError || this.message).fontSize(12).fontColor('#E7C78C').layoutWeight(1)
-          }.padding(8).backgroundColor('#D9162233').borderRadius(8)
-        }
         if (this.streamMessage && this.toolsVisible) {
           Text(this.streamMessage).fontSize(10).fontColor('#B7C9DE').maxLines(2).width('100%')
         }
