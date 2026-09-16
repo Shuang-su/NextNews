@@ -8,6 +8,9 @@
 #include <map>
 #include <memory>
 #include <stdexcept>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
 namespace splat {
 namespace {
 using Bytes=std::vector<uint8_t>;
@@ -46,6 +49,32 @@ std::map<std::string,Bytes> Unzip(const std::string &path) {
     }
     return files;
 }
+// Unbundled SuperSplat SOG uses the same decoder and GPU tables as ZIP SOG.
+// Open relative to a directory descriptor: metadata cannot escape the cache.
+std::map<std::string,Bytes> Unbundled(const std::string &path) {
+    const auto slash=path.find_last_of('/');
+    if(slash==std::string::npos||path.substr(slash+1)!="meta.json")throw std::runtime_error("Invalid SOG metadata path");
+    struct Handle { int fd; ~Handle(){if(fd>=0)close(fd);} } dir{open(path.substr(0,slash).c_str(),O_RDONLY|O_DIRECTORY|O_NOFOLLOW)};
+    if(dir.fd<0)throw std::runtime_error("Cannot open SOG directory");
+    size_t total=0;
+    auto read=[&](const std::string &name,size_t limit){
+        if(name.empty()||name=="."||name==".."||name.find_first_of("/\\")!=std::string::npos||name.find('\0')!=std::string::npos)throw std::runtime_error("Invalid SOG component name");
+        Handle file{openat(dir.fd,name.c_str(),O_RDONLY|O_NOFOLLOW)};struct stat st{};
+        if(file.fd<0||fstat(file.fd,&st)||!S_ISREG(st.st_mode)||st.st_size<=0||uint64_t(st.st_size)>limit||(total+=st.st_size)>128*1024*1024)throw std::runtime_error("SOG component size/type limit");
+        Bytes bytes(st.st_size);size_t offset=0;
+        while(offset<bytes.size()){auto n=::read(file.fd,bytes.data()+offset,bytes.size()-offset);if(n<=0)throw std::runtime_error("Incomplete SOG component");offset+=n;}
+        return bytes;
+    };
+    std::map<std::string,Bytes> files;files.emplace("meta.json",read("meta.json",1024*1024));
+    const auto &bytes=files.at("meta.json");
+    auto meta=nlohmann::json::parse(bytes.begin(),bytes.end(),[](int depth,nlohmann::json::parse_event_t,nlohmann::json &){if(depth>32)throw std::runtime_error("SOG metadata nesting limit");return true;});
+    for(const auto *field:{"means","quats","scales","sh0"}) {
+        const auto names=meta.at(field).at("files").get<std::vector<std::string>>();
+        if(names.size()!=(std::string(field)=="means"?2u:1u))throw std::runtime_error("SOG component count");
+        for(const auto &name:names){if(name=="meta.json"||files.count(name))throw std::runtime_error("Duplicate SOG component");files.emplace(name,read(name,32*1024*1024));}
+    }
+    return files;
+}
 Bytes Pixels(const std::map<std::string,Bytes> &files,const std::string &name,size_t count,int &width,int &height) {
     const auto &b=files.at(name);int w=0,h=0;
     if(!WebPGetInfo(b.data(),b.size(),&w,&h)||w<1||h<1||size_t(w)*h<count||size_t(w)*h>MaxGaussians+16384)throw std::runtime_error("SOG texture dimensions");
@@ -56,7 +85,7 @@ Bytes Pixels(const std::map<std::string,Bytes> &files,const std::string &name,si
 }
 }
 Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel,bool encoded) {
-    const auto files=Unzip(path);const auto &mb=files.at("meta.json");
+    const auto files=path.size()>=10&&path.substr(path.size()-10)=="/meta.json"?Unbundled(path):Unzip(path);const auto &mb=files.at("meta.json");
     if(mb.size()>1024*1024)throw std::runtime_error("SOG metadata too large");
     auto m=nlohmann::json::parse(mb.begin(),mb.end(),[](int depth,nlohmann::json::parse_event_t,nlohmann::json &){if(depth>32)throw std::runtime_error("SOG metadata nesting limit");return true;});
     if(m.at("version")!=2)throw std::runtime_error("SOG v2 required");
@@ -98,7 +127,7 @@ Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel,bool encod
     scene.radius=std::max(.001f,float(std::sqrt(radius2)));return scene;
 }
 Scene ReadModel(const std::string &path,const std::atomic<bool> *cancel,bool encoded) {
-    auto scene=path.size()>=4&&path.substr(path.size()-4)==".sog"?ReadSog(path,cancel,encoded):ReadPly(path,cancel);
+    auto scene=(path.size()>=4&&path.substr(path.size()-4)==".sog")||(path.size()>=10&&path.substr(path.size()-10)=="/meta.json")?ReadSog(path,cancel,encoded):ReadPly(path,cancel);
     ApplyViewerTransform(scene);return scene;
 }
 std::array<float,4> InspectModel(const std::string &path) {

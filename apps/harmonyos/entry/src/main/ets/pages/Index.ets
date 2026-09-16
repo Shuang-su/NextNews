@@ -1,3 +1,4 @@
+import { ViewerCatalog, CatalogProject, CatalogAsset } from './ViewerCatalog';
 import { ViewerCollision } from './ViewerCollision';
 import { ViewerProjection } from './ViewerProjection';
 import { ViewerTimeline } from './ViewerTimeline';
@@ -42,6 +43,64 @@ struct ViewerTool {
 @Entry
 @Component
 struct Index {
+  private catalog: ViewerCatalog = new ViewerCatalog();
+  private catalogRevision: number = 0;
+  private catalogLoading: boolean = false;
+  private streamAsset: CatalogAsset | undefined = undefined;
+  @State catalogVisible: boolean = false;
+  @State catalogRows: CatalogProject[] = [];
+  @State catalogPage: number = 1;
+  @State catalogTotal: number = 0;
+  @State catalogSearch: string = '';
+  @State catalogMessage: string = '';
+  @State catalogBusy: boolean = false;
+  private async catalogList(page: number = 1): Promise<void> {
+    const revision = ++this.catalogRevision; this.catalogBusy = true; this.catalogVisible = true; this.catalogMessage = '正在获取线上项目';
+    try {
+      const result = await this.catalog.list(page, this.catalogSearch);
+      if (revision !== this.catalogRevision || !this.visible) { return; }
+      this.catalogRows = result.rows; this.catalogTotal = result.total; this.catalogPage = page; this.catalogMessage = `共 ${result.total} 个项目 · 第 ${page} 页`;
+    } catch (error) { if (revision === this.catalogRevision) { this.catalogMessage = String(error); } }
+    finally { if (revision === this.catalogRevision) { this.catalogBusy = false; } }
+  }
+  private cancelCatalog(): void {
+    this.catalog.cancel(); this.catalog = new ViewerCatalog(); this.catalogRevision++; this.generation++; this.catalogBusy = false; this.busy = false;
+    if (this.catalogLoading) { this.stopStream(); } this.catalogLoading = false; this.catalogMessage = '已取消加载';
+  }
+  private async openCatalog(id: string): Promise<void> {
+    if (this.busy) { return; }
+    const revision = ++this.generation; this.busy = true; this.catalogLoading = true; this.localError = ''; this.catalogMessage = '正在读取项目配置';
+    this.stopStream(); this.clearProfile();
+    try {
+      const asset = await this.catalog.detail(id);
+      if (revision !== this.generation || !this.visible) { return; }
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      if (asset.project.modelType === 'lod') {
+        if (this.backendName !== 'OpenGL') { throw new Error('线上整场流式请切换 OpenGL；华为瓦片尚未通过验证'); }
+        this.sourcePath = ''; this.streamUrl = asset.content;
+        await this.startStream(asset);
+        if (revision !== this.generation || !this.visible || !this.stream?.manifest) { return; }
+      } else {
+        this.catalogMessage = '正在下载单体 SOG';
+        const path = await this.catalog.model(asset, context.cacheDir);
+        if (revision !== this.generation || !this.visible) { return; }
+        const bounds = await nativeRender.inspectModel(path);
+        if (revision !== this.generation || !this.visible) { return; }
+        this.viewer.bounds = bounds; this.sourcePath = path; this.title = asset.project.modelTitle;
+        this.awaitingModelCamera = this.backendName === 'OpenGL'; await this.backend.load({ path, bounds });
+        this.applyCatalogSettings(asset);
+      }
+      this.catalogMessage = '项目已提交，正在显示'; this.modelsVisible = false;
+    } catch (error) { if (revision === this.generation) { this.localError = String(error); this.catalogMessage = String(error); } }
+    finally { if (revision === this.generation) { this.busy = false; this.catalogLoading = false; } }
+  }
+  private applyCatalogSettings(asset: CatalogAsset): void {
+    this.viewer.configure(asset.settings); this.viewer.initial(); this.flyMode = this.controls.fly;
+    this.duration = this.viewer.profile!.animation.duration; this.timeline = 0;
+    this.profilePlaying = asset.settings.startMode === 'animTrack'; this.animationMode = this.profilePlaying;
+    if (asset.collision) { this.collisionUrl = asset.collision; this.loadCollision(); }
+    this.updateCamera();
+  }
   @State collisionDebug: boolean = false;
   @State collisionDebugMessage: string = '';
   private debugCanvas: CanvasRenderingContext2D = new CanvasRenderingContext2D(new RenderingContextSettings(true));
@@ -418,7 +477,7 @@ struct Index {
     }, 500);
   }
   aboutToDisappear(): void {
-    this.visible = false; this.stopStream(); this.stopCollision();
+    this.visible = false; this.catalog.cancel(); this.catalogRevision++; this.stopStream(); this.stopCollision();
     this.generation++;
     if (this.timer !== -1) { clearInterval(this.timer); this.timer = -1; }
     if (this.motionTimer !== -1) { clearInterval(this.motionTimer); this.motionTimer = -1; }
@@ -596,7 +655,9 @@ struct Index {
     if (old) { setTimeout(() => { old.dispose(); }, 1000); }
     this.streamMessage = '';
   }
-  private async startStream(): Promise<void> {
+  private async startStream(asset?: CatalogAsset): Promise<void> {
+    const selected = asset ?? (this.streamAsset?.content === this.streamUrl ? this.streamAsset : undefined);
+    this.streamAsset = selected;
     if (this.backendName !== 'OpenGL') { this.localError = '华为原生瓦片请使用独立实验入口'; return; }
     this.stopStream(); this.clearProfile(); this.localError = ''; this.title = '流式场景'; this.reset();
     const session = new StreamSession((message: string) => { if (this.stream === session) { this.streamMessage = message; } });
@@ -606,7 +667,8 @@ struct Index {
       await session.open(this.streamUrl, context.cacheDir, this.fullLoad);
       if (this.stream === session) {
         this.viewer.bounds = session.manifest!.bounds.slice();
-        if (this.streamUrl === 'http://127.0.0.1:8768/scene.json') { await this.profileCamera(false); }
+        if (selected) { this.title = selected.project.modelTitle; this.applyCatalogSettings(selected); }
+        else if (this.streamUrl === 'http://127.0.0.1:8768/scene.json') { await this.profileCamera(false); }
         session.tick(this.controls.current, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
       }
     } catch (error) { if (this.stream === session) { this.streamMessage = `流式失败：${((error as BusinessError).message || String(error))}`; } }
@@ -776,6 +838,30 @@ struct Index {
               Column({ space: 12 }) {
                 if (this.modelsVisible) {
                   Text('模型库').fontColor('#EEF4FF').fontSize(16).width('100%')
+                  Button('线上项目 · 数科 3DGS').width('100%').fontSize(14).enabled(!this.busy).onClick(() => { this.catalogList(); })
+                  if (this.catalogVisible) {
+                    TextInput({ text: this.catalogSearch, placeholder: '搜索项目名称' }).fontSize(13).onChange((value: string) => { this.catalogSearch = value; }).onSubmit(() => { this.catalogList(); })
+                    Row({ space: 8 }) {
+                      Button('搜索').fontSize(12).enabled(!this.catalogBusy && !this.busy).onClick(() => { this.catalogList(); })
+                      Button('取消加载').fontSize(12).onClick(() => { this.cancelCatalog(); })
+                    }
+                    Text(this.catalogMessage).fontSize(12).fontColor('#BBD0E4')
+                    ForEach(this.catalogRows, (project: CatalogProject) => {
+                      Button({ type: ButtonType.Normal }) {
+                        Row({ space: 10 }) {
+                          if (project.thumbnailUrl || project.coverUrl) { Image((project.thumbnailUrl || project.coverUrl || '').trim()).width(60).height(44).objectFit(ImageFit.Cover).borderRadius(6) }
+                          Column({ space: 3 }) {
+                            Text(project.modelTitle).fontSize(13).fontColor('#EEF4FF').maxLines(2).width('100%')
+                            Text(project.modelType === 'lod' ? '渐进流式' : '单体模型').fontSize(11).fontColor('#BBD0E4').width('100%')
+                          }.layoutWeight(1)
+                        }.padding(8)
+                      }.width('100%').backgroundColor('#243247').borderRadius(8).enabled(!this.busy).onClick(() => { this.openCatalog(project.modelId); })
+                    }, (project: CatalogProject) => project.modelId)
+                    Row({ space: 8 }) {
+                      Button('上一页').fontSize(12).enabled(!this.catalogBusy && !this.busy && this.catalogPage > 1).onClick(() => { this.catalogList(this.catalogPage - 1); })
+                      Button('下一页').fontSize(12).enabled(!this.catalogBusy && !this.busy && this.catalogPage * 20 < this.catalogTotal).onClick(() => { this.catalogList(this.catalogPage + 1); })
+                    }
+                  }
                   Row({ space: 6 }) {
                     Button('公开样例').fontSize(12).enabled(!this.busy).onClick(() => { this.sample('public.ply', '公开样例'); })
                     Button('Tripo').fontSize(12).enabled(!this.busy).onClick(() => { this.sample('tripo.ply', 'Tripo Splat'); })
@@ -801,7 +887,7 @@ struct Index {
                   Button('打开本地 PLY / SOG').fontSize(13).width('100%').enabled(!this.busy).onClick(() => { this.importModel(); })
                   Button('流式').fontSize(12).onClick(() => { this.streamPanel = !this.streamPanel; })
                   if (this.streamPanel) {
-                    TextInput({ text: this.streamUrl, placeholder: 'HTTP(S) scene.json' }).selectAll(true).fontSize(12)
+                    TextInput({ text: this.streamUrl, placeholder: 'HTTP(S) lod-meta.json / scene.json' }).selectAll(true).fontSize(12)
                       .fontColor('#EEF4FF').backgroundColor('#28354A').onChange((value: string) => { this.streamUrl = value; })
                     Button(this.fullLoad ? '加载：全量预载' : '加载：渐进 LOD').fontSize(12).onClick(() => { this.fullLoad = !this.fullLoad; })
                     Row({ space: 8 }) {

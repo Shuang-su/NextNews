@@ -46,7 +46,7 @@ template<class T> bool ReadBuffer(napi_env env,napi_value value,std::vector<T>& 
 napi_value RegisterLods(napi_env env,napi_callback_info info){
     napi_value args[4];size_t argc=4;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
     splat::LodTree tree;std::vector<double> bounds;double levels=0;
-    if(argc!=4||!ReadBuffer(env,args[0],bounds,4)||bounds.size()!=4||!ReadBuffer(env,args[1],tree.boxes,60000)||tree.boxes.size()%6||!ReadBuffer(env,args[2],tree.lods,480000)||napi_get_value_double(env,args[3],&levels)!=napi_ok||!std::isfinite(levels)||levels<1||levels>16||levels!=std::floor(levels)||tree.lods.size()!=tree.boxes.size()/6*levels*3){napi_throw_type_error(env,nullptr,"Invalid LOD tree buffers");return Undefined(env);}
+    if(argc!=4||!ReadBuffer(env,args[0],bounds,4)||bounds.size()!=4||!ReadBuffer(env,args[1],tree.boxes,196608)||tree.boxes.size()%6||!ReadBuffer(env,args[2],tree.lods,1572864)||napi_get_value_double(env,args[3],&levels)!=napi_ok||!std::isfinite(levels)||levels<1||levels>16||levels!=std::floor(levels)||tree.lods.size()!=tree.boxes.size()/6*levels*3){napi_throw_type_error(env,nullptr,"Invalid LOD tree buffers");return Undefined(env);}
     for(auto v:bounds)if(!std::isfinite(v)||std::abs(v)>1e6){napi_throw_range_error(env,nullptr,"Invalid LOD tree bounds");return Undefined(env);}
     if(bounds[3]<=0){napi_throw_range_error(env,nullptr,"Invalid LOD radius");return Undefined(env);}
     for(size_t i=0;i<tree.boxes.size();++i)if(!std::isfinite(tree.boxes[i])||std::abs(tree.boxes[i])>1e6||(i%6<3&&tree.boxes[i]>tree.boxes[i+3])){napi_throw_range_error(env,nullptr,"Invalid LOD box");return Undefined(env);}
@@ -85,13 +85,13 @@ napi_value ChunksImpl(napi_env env,napi_callback_info info,bool paged) {
     if(paged)napi_is_arraybuffer(env,args[2],&typed);
     if(typed){
         size_t bytes=0;void *data=nullptr;
-        if(napi_get_arraybuffer_info(env,args[2],&data,&bytes)!=napi_ok||bytes>60000*sizeof(uint32_t)||bytes%(3*sizeof(uint32_t))){napi_throw_type_error(env,nullptr,"Invalid LOD range buffer");return Undefined(env);}
+        if(napi_get_arraybuffer_info(env,args[2],&data,&bytes)!=napi_ok||bytes>98304*sizeof(uint32_t)||bytes%(3*sizeof(uint32_t))){napi_throw_type_error(env,nullptr,"Invalid LOD range buffer");return Undefined(env);}
         const auto *values=static_cast<const uint32_t*>(data);const size_t length=bytes/sizeof(uint32_t);
         // Copy before any other N-API call; the engine owns the input buffer.
         if(length)ranges.assign(values,values+length);
         for(size_t i=0;i<length;++i)if(ranges[i]>splat::MaxGaussians||(i%3==0&&ranges[i]>=n)){napi_throw_range_error(env,nullptr,"Invalid LOD range buffer value");return Undefined(env);}
     } else if(argc>=3){uint32_t size=0;
-        if(napi_is_array(env,args[2],&array)!=napi_ok||!array||napi_get_array_length(env,args[2],&size)!=napi_ok||size>60000||size%3){napi_throw_type_error(env,nullptr,"Invalid LOD ranges");return Undefined(env);}
+        if(napi_is_array(env,args[2],&array)!=napi_ok||!array||napi_get_array_length(env,args[2],&size)!=napi_ok||size>98304||size%3){napi_throw_type_error(env,nullptr,"Invalid LOD ranges");return Undefined(env);}
         for(uint32_t i=0;i<size;++i){napi_value v;napi_get_element(env,args[2],i,&v);double d;
             if(napi_get_value_double(env,v,&d)!=napi_ok||!std::isfinite(d)||d<0||d>4000000||d!=std::floor(d)||(i%3==0&&d>=n)){napi_throw_range_error(env,nullptr,"Invalid LOD range");return Undefined(env);}ranges.push_back(uint32_t(d));}
     }

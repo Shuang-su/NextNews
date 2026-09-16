@@ -22,6 +22,15 @@ int main(int argc,char**argv){if(argc<2)return 2;
  }
  splat::ApplyViewerTransform(a); // Restore the source frame for the independent PLY comparison.
  std::cout<<"PASS encoded byte codes, SH0, covariance and Rz180 for every Gaussian\n";
+ if(argc>3&&std::string(argv[2])=="--sog") {
+   const auto b=splat::ReadSog(argv[3]);if(a.Count()!=b.Count())throw std::runtime_error("ZIP/unbundled count mismatch");
+   for(size_t i=0;i<a.Count();++i){const auto &x=a.points[i],&y=b.points[i];
+     for(int k=0;k<3;++k)if(x.position[k]!=y.position[k])throw std::runtime_error("ZIP/unbundled position mismatch");
+     for(int k=0;k<4;++k)if(x.color[k]!=y.color[k])throw std::runtime_error("ZIP/unbundled color mismatch");
+     for(int k=0;k<6;++k)if(x.covariance[k]!=y.covariance[k])throw std::runtime_error("ZIP/unbundled covariance mismatch");
+   }
+   std::cout<<"PASS ZIP/unbundled exact position, color, covariance equality\n";return 0;
+ }
  if(argc>2){auto b=splat::ReadPly(argv[2]);if(a.points.size()!=b.points.size())throw std::runtime_error("count mismatch");
  double position=0,color=0,cov=0;
  for(size_t i=0;i<a.points.size();++i){for(int k=0;k<3;++k)position=std::max(position,double(std::abs(a.points[i].position[k]-b.points[i].position[k])));for(int k=0;k<4;++k)color=std::max(color,double(std::abs(a.points[i].color[k]-b.points[i].color[k])));for(int k=0;k<6;++k)cov=std::max(cov,double(std::abs(a.points[i].covariance[k]-b.points[i].covariance[k]))/std::max(1.,double(std::abs(b.points[i].covariance[k]))));}
