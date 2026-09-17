@@ -3,6 +3,8 @@
 2026-09-18 最新用户决定：停止研究 Spatial Recon。华为实现和已取得证据仅作历史记录，不再纳入后续开发与验收；后续范围为 C++ / OpenGL 对齐 MetaFlow / SuperSplat。
 
 
+Latest performance follow-up: [精确排序优化与非单调 LOD 加载修复](perf-radix-20260918.md).
+
 Latest acceptance: [SH0 phone visual/performance/Huawei results](acceptance-20260918.md). The full release gate remains **not passed**; this report supersedes older completion wording.
 
 Current policy (2026-09-18): OpenGL uses fixed SH0 at the user’s request. The higher-order color toggle is removed; single and streamed models omit higher-order runtime data. Original assets are unchanged.

@@ -71,6 +71,20 @@ console.log('PASS AABB distance, rear penalty, offscreen detail, fixed budget, i
  turning.tick([Math.PI,0,1,0,0,0],true,45,1);
  assert.equal(published,beforeTurn+2,'cached front/back selections must publish during pending downloads');
  console.log('PASS cached camera turn does not wait for the network batch');
+ const fallback=new sandbox.exports.StreamSession(()=>{});fallback.budget=100;
+ fallback.manifest={version:2,bounds:[0,0,0,1],levels:2,
+   chunks:[{file:'fine.sog',count:80},{file:'coarse.sog',count:120}],
+   leaves:[{bounds:[0,0,0,1],lods:[[0,0,80],[1,0,120]]}]};
+ fallback.selection=[0];fallback.cache.set('coarse.sog','/cache/coarse.sog');
+ const beforeFallback=published;
+ assert.deepEqual(Array.from(fallback.publishCached()),[]);
+ assert.equal(published,beforeFallback);assert.equal(fallback.publishDirty,true);
+ fallback.cache.set('fine.sog','/cache/fine.sog');fallback.publishCached();
+ assert.equal(published,beforeFallback+1);assert.equal(fallback.coverage,1);
+ assert.equal(fallback.requestedCount,80);
+ fallback.selection=[1];fallback.publishDirty=true;
+ assert.throws(()=>fallback.publishCached(),'an actually oversized target still fails');
+ console.log('PASS non-monotonic cached LOD waits for target without killing downloads or exceeding budget');
  const composed=new sandbox.exports.StreamSession(()=>{});composed.budget=100;
  composed.manifest={version:1,bounds:[0,0,0,1],chunks:[{file:'a.sog',count:40,bytes:16,bounds:[0,0,0,1]}]};
  composed.cache.set('a.sog','/cache/a.sog');let submitted;
