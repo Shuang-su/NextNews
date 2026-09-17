@@ -1,0 +1,16 @@
+{
+  "commit": "dd069b9",
+  "policy": "fixed SH0",
+  "hapSha256": "32c28e0bed0e8ecb13bb638bdbfbd99c8f494374b4930a4124469eef53f37afb",
+  "bytes": 14540592,
+  "renderResolution": [
+    1320,
+    2623
+  ],
+  "device": "HUAWEI Mate 80 Pro Max / SGT-AL10",
+  "api": 26,
+  "gpu": "Maleoon 935",
+  "thermalControl": "sequential runs; no randomized thermal control",
+  "acceptanceFixHapSha256": "3192189a84fbbf014ce9754d18b28b784994280d0b1d73ebe636faf119cecad5",
+  "acceptanceFixScope": "SpatialViewer resolves sample bounds by filename; WebComparison selects explicit reference and unique page request; GL renderer unchanged"
+}

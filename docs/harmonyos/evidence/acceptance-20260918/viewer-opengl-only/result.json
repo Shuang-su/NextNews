@@ -1,0 +1,9 @@
+{
+  "uiSmoke": "passed",
+  "annotations": 10,
+  "backends": [
+    "OpenGL"
+  ],
+  "visualReviewRequired": true,
+  "performanceGatesTested": false
+}

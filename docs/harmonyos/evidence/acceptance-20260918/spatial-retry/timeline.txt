@@ -1,0 +1,26 @@
+09-18 00:54:09.344 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: ComparisonSog file=chunk-0008.sog count=524598 sha256=788e478f94121c5a349244e5ee53a8744ce7fec0ae9dca98b087f0bd0b4b3cea diskHit=true
+09-18 00:54:25.092 20853 20853 I C03925/com.nextnews.splatviewer/AceRouter: [(100000:100000:scope)] Page router manager is creating page[2]: url: pages/SpatialViewer path: pages/SpatialViewer.js, recoverable: yes, namedRouter: no
+09-18 00:54:25.128 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer contextAvailable=true
+09-18 00:54:25.161 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer pluginLoaded elapsedMs=66
+09-18 00:54:25.172 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer sceneCreated elapsedMs=77
+09-18 00:54:25.675 20853 20853 I C03925/com.nextnews.splatviewer/AceRouter: [(100000:100000:scope)] pages/SpatialViewer finish inPage transition.
+09-18 00:54:34.108 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer contextAvailable=true
+09-18 00:54:34.109 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer pluginLoaded elapsedMs=55
+09-18 00:54:34.113 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer sceneCreated elapsedMs=59
+09-18 00:54:34.313 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: ComparisonSog file=chunk-0008.sog count=524598 sha256=788e478f94121c5a349244e5ee53a8744ce7fec0ae9dca98b087f0bd0b4b3cea diskHit=true
+09-18 00:54:49.046 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer contextAvailable=true
+09-18 00:54:49.046 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer pluginLoaded elapsedMs=59
+09-18 00:54:49.052 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer sceneCreated elapsedMs=65
+09-18 00:54:50.896 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: ComparisonSog file=comparison-sh0.ply count=524598 sha256=a7cbb5fd4dd19438bc2ba06b0547774ce8c1db8ed1bd32e6e7c2fe875b74844b diskHit=false
+09-18 00:55:03.366 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer contextAvailable=true
+09-18 00:55:03.367 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer pluginLoaded elapsedMs=57
+09-18 00:55:03.373 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer sceneCreated elapsedMs=63
+09-18 00:55:05.214 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: ComparisonSog file=comparison-sh0.ply count=524598 sha256=a7cbb5fd4dd19438bc2ba06b0547774ce8c1db8ed1bd32e6e7c2fe875b74844b diskHit=false
+09-18 00:55:13.117 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer contextAvailable=true
+09-18 00:55:13.118 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer pluginLoaded elapsedMs=49
+09-18 00:55:13.122 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer sceneCreated elapsedMs=53
+09-18 00:55:13.234 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialStream loadTiledGSNode begin
+09-18 00:55:13.271 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialStream node ready
+09-18 00:55:39.932 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer contextAvailable=true
+09-18 00:55:39.932 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer pluginLoaded elapsedMs=49
+09-18 00:55:39.936 20853 20853 I A03D00/com.nextnews.splatviewer/JSAPP: SpatialViewer sceneCreated elapsedMs=53

@@ -1,0 +1,7 @@
+{
+  "spatial": "completed before cancellation; historical only",
+  "annotations": "completed before cancellation; UI assertions passed, GL screenshots reviewed separately",
+  "viewerCommon": "interrupted by user scope change; not passed",
+  "scope": "OpenGL only going forward",
+  "viewerOpenGLOnly": "passed: model load, annotation selection, play/pause, timeline, Home/resume and gaming controls; screenshots retained, not complete visual parity"
+}

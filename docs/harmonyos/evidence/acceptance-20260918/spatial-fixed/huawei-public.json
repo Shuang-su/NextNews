@@ -1,0 +1,192 @@
+[
+  {
+    "bounds": [
+      0,
+      0,
+      1320,
+      2848
+    ],
+    "children": [
+      {
+        "type": "Button",
+        "text": "返回",
+        "bounds": [
+          40,
+          171,
+          256,
+          306
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Text",
+        "text": "Spatial Recon 原生对照",
+        "bounds": [
+          290,
+          199,
+          998,
+          278
+        ],
+        "children": []
+      },
+      {
+        "type": "Text",
+        "text": "public.ply · 加载接口 73 ms · SH0 输入\nSpatialReconKit / ArkGraphics3D · Rz 180°",
+        "bounds": [
+          40,
+          333,
+          1280,
+          435
+        ],
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "Tripo",
+        "bounds": [
+          192,
+          1742,
+          427,
+          1877
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "公开样例",
+        "bounds": [
+          454,
+          1742,
+          778,
+          1877
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "转换产物",
+        "bounds": [
+          805,
+          1742,
+          1129,
+          1877
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "拖动：旋转",
+        "bounds": [
+          155,
+          1904,
+          533,
+          2039
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "复位",
+        "bounds": [
+          560,
+          1904,
+          776,
+          2039
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "测量 10 秒",
+        "bounds": [
+          803,
+          1904,
+          1165,
+          2039
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "配置默认镜头",
+        "bounds": [
+          299,
+          2066,
+          650,
+          2201
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "播放配置动画",
+        "bounds": [
+          670,
+          2066,
+          1021,
+          2201
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "TextInput",
+        "text": "http://127.0.0.1:8768/huafa.scene.json",
+        "bounds": [
+          40,
+          2228,
+          1280,
+          2363
+        ],
+        "clickable": true,
+        "longClickable": true,
+        "scrollable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "同源 SOG · loadGSNode",
+        "bounds": [
+          236,
+          2390,
+          796,
+          2525
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "同源 PLY",
+        "bounds": [
+          816,
+          2390,
+          1083,
+          2525
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Button",
+        "text": "连接原生流式",
+        "bounds": [
+          444,
+          2552,
+          876,
+          2687
+        ],
+        "clickable": true,
+        "children": []
+      }
+    ]
+  }
+]

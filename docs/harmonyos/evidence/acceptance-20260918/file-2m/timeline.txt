@@ -1,0 +1,796 @@
+09-18 00:46:51.454 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=1 queueMs=0.29 files=19
+09-18 00:46:51.594 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=2 queueMs=113.32 files=31
+09-18 00:46:51.777 13900 15130 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=1 count=524433 decodeMs=180.46
+09-18 00:46:51.783 13900 15129 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=0 count=525060 decodeMs=187.30
+09-18 00:46:51.916 13900 15131 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=2 count=526334 decodeMs=131.83
+09-18 00:46:51.954 13900 15132 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=3 count=533698 decodeMs=142.14
+09-18 00:46:52.051 13900 15139 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=4 count=536369 decodeMs=135.25
+09-18 00:46:52.084 13900 15141 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=5 count=529804 decodeMs=128.56
+09-18 00:46:52.186 13900 15144 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=6 count=524598 decodeMs=132.75
+09-18 00:46:52.214 13900 15145 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=7 count=528399 decodeMs=127.04
+09-18 00:46:52.332 13900 15148 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=8 count=543347 decodeMs=145.61
+09-18 00:46:52.374 13900 15149 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=9 count=528889 decodeMs=153.60
+09-18 00:46:52.475 13900 15151 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=10 count=524294 decodeMs=142.02
+09-18 00:46:52.526 13900 15152 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=11 count=530959 decodeMs=144.07
+09-18 00:46:52.613 13900 15153 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=12 count=524755 decodeMs=137.01
+09-18 00:46:52.654 13900 15154 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=13 count=525283 decodeMs=125.19
+09-18 00:46:52.770 13900 15155 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=14 count=530510 decodeMs=155.62
+09-18 00:46:52.795 13900 15156 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=15 count=525034 decodeMs=140.90
+09-18 00:46:52.920 13900 15159 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=16 count=526519 decodeMs=148.68
+09-18 00:46:52.936 13900 15160 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=17 count=524510 decodeMs=136.37
+09-18 00:46:53.043 13900 15161 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=18 count=524390 decodeMs=122.51
+09-18 00:46:53.070 13900 15164 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=19 count=524694 decodeMs=129.44
+09-18 00:46:53.172 13900 15167 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=20 count=527594 decodeMs=128.03
+09-18 00:46:53.201 13900 15168 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=21 count=524819 decodeMs=129.14
+09-18 00:46:53.314 13900 15169 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=22 count=526063 decodeMs=140.58
+09-18 00:46:53.361 13900 15170 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=23 count=524846 decodeMs=159.02
+09-18 00:46:53.436 13900 15175 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=24 count=525331 decodeMs=121.26
+09-18 00:46:53.491 13900 15178 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=25 count=525847 decodeMs=128.25
+09-18 00:46:53.569 13900 15179 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=26 count=537008 decodeMs=132.74
+09-18 00:46:53.591 13900 15180 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=27 count=360824 decodeMs=94.51
+09-18 00:46:53.606 13900 15181 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=28 count=109462 decodeMs=36.51
+09-18 00:46:53.617 13900 15183 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=30 count=23974 decodeMs=10.53
+09-18 00:46:53.648 13900 15182 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=2 file=29 count=187962 decodeMs=55.08
+09-18 00:46:53.812 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=2 prepareMs=2217.59 sortMs=156.39 decoded=31 pageHits=0
+09-18 00:46:54.152 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=2 uploadedBytes=65785856 elapsedMs=2671.29
+09-18 00:46:54.156 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=3 queueMs=0.38 files=32
+09-18 00:46:54.159 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=2 count=1945010 prepareMs=2217.59 sortMs=156.39 refineMs=2677.68 uploadedBytes=65785856 pageHits=0 frameMs=5.61
+09-18 00:46:54.293 13900 15194 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=3 file=9 count=527719 decodeMs=132.19
+09-18 00:46:54.523 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=3 prepareMs=366.99 sortMs=187.78 decoded=1 pageHits=7747
+09-18 00:46:54.580 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=3 uploadedBytes=3952640 elapsedMs=423.97
+09-18 00:46:54.595 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=3 count=2000000 prepareMs=366.99 sortMs=187.78 refineMs=438.81 uploadedBytes=3952640 pageHits=7747 frameMs=12.60
+09-18 00:47:11.741 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=4 queueMs=0.05 files=31
+09-18 00:47:11.879 13900 15389 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=4 file=0 count=525060 decodeMs=136.90
+09-18 00:47:11.908 13900 15390 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=4 file=1 count=524433 decodeMs=165.79
+09-18 00:47:12.045 13900 15391 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=4 file=2 count=526334 decodeMs=159.23
+09-18 00:47:12.046 13900 15392 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=4 file=3 count=533698 decodeMs=134.94
+09-18 00:47:12.179 13900 15393 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=4 file=5 count=529804 decodeMs=130.38
+09-18 00:47:12.214 13900 15394 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=4 file=6 count=528399 decodeMs=155.56
+09-18 00:47:12.296 13900 15395 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=4 file=7 count=529140 decodeMs=113.78
+09-18 00:47:12.366 13900 15396 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=4 file=17 count=524598 decodeMs=148.70
+09-18 00:47:12.417 13900 15400 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=4 file=29 count=524880 decodeMs=119.71
+09-18 00:47:12.554 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=4 prepareMs=812.77 sortMs=134.92 decoded=9 pageHits=6191
+09-18 00:47:12.680 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=4 uploadedBytes=16596992 elapsedMs=938.37
+09-18 00:47:12.688 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=4 count=2000000 prepareMs=812.77 sortMs=134.92 refineMs=946.85 uploadedBytes=16596992 pageHits=6191 frameMs=7.08
+09-18 00:47:12.725 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=-2 cache=file budget=2000000 revision=4 target=3 elapsedMs=996 refineMs=946.85 uploadedBytes=16596992 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:13.083 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=5 queueMs=0.28 files=31
+09-18 00:47:13.223 13900 15421 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=5 file=14 count=525283 decodeMs=138.70
+09-18 00:47:13.238 13900 15420 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=5 file=12 count=530510 decodeMs=154.40
+09-18 00:47:13.391 13900 15424 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=5 file=22 count=526063 decodeMs=143.47
+09-18 00:47:13.400 13900 15423 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=5 file=16 count=526519 decodeMs=160.44
+09-18 00:47:13.562 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=5 prepareMs=479.49 sortMs=136.57 decoded=4 pageHits=6086
+09-18 00:47:13.738 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=5 uploadedBytes=17367040 elapsedMs=655.22
+09-18 00:47:13.752 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=5 count=2000000 prepareMs=479.49 sortMs=136.57 refineMs=669.71 uploadedBytes=17367040 pageHits=6086 frameMs=11.74
+09-18 00:47:13.772 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=-1 cache=file budget=2000000 revision=5 target=4 elapsedMs=708 refineMs=669.71 uploadedBytes=17367040 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:14.187 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=6 queueMs=48.12 files=31
+09-18 00:47:14.320 13900 15428 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=1 count=524433 decodeMs=131.73
+09-18 00:47:14.352 13900 15427 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=0 count=525060 decodeMs=164.54
+09-18 00:47:14.520 13900 15431 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=2 count=526334 decodeMs=166.21
+09-18 00:47:14.525 13900 15433 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=3 count=533698 decodeMs=155.44
+09-18 00:47:14.641 13900 15442 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=4 count=536369 decodeMs=120.60
+09-18 00:47:14.661 13900 15443 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=5 count=529804 decodeMs=133.21
+09-18 00:47:14.758 13900 15444 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=6 count=528399 decodeMs=117.14
+09-18 00:47:14.799 13900 15445 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=7 count=529140 decodeMs=136.20
+09-18 00:47:14.900 13900 15447 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=8 count=543347 decodeMs=139.99
+09-18 00:47:14.944 13900 15448 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=9 count=527719 decodeMs=143.87
+09-18 00:47:15.058 13900 15449 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=10 count=528889 decodeMs=156.45
+09-18 00:47:15.081 13900 15450 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=11 count=524294 decodeMs=135.69
+09-18 00:47:15.242 13900 15452 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=13 count=525283 decodeMs=158.70
+09-18 00:47:15.251 13900 15451 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=12 count=530959 decodeMs=189.82
+09-18 00:47:15.431 13900 15454 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=14 count=530510 decodeMs=175.10
+09-18 00:47:15.445 13900 15456 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=15 count=524755 decodeMs=157.27
+09-18 00:47:15.597 13900 15483 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=17 count=524598 decodeMs=149.89
+09-18 00:47:15.626 13900 15482 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=16 count=525034 decodeMs=190.01
+09-18 00:47:15.770 13900 15487 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=18 count=524510 decodeMs=140.74
+09-18 00:47:15.775 13900 15488 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=19 count=524694 decodeMs=145.12
+09-18 00:47:15.907 13900 15489 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=20 count=524390 decodeMs=135.18
+09-18 00:47:15.951 13900 15490 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=21 count=524819 decodeMs=165.52
+09-18 00:47:16.039 13900 15491 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=22 count=526063 decodeMs=131.12
+09-18 00:47:16.127 13900 15492 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=23 count=524846 decodeMs=174.35
+09-18 00:47:16.182 13900 15493 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=24 count=525331 decodeMs=141.44
+09-18 00:47:16.268 13900 15494 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=25 count=537008 decodeMs=139.24
+09-18 00:47:16.269 13900 15495 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=26 count=187962 decodeMs=84.50
+09-18 00:47:16.347 13900 15496 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=27 count=109462 decodeMs=72.86
+09-18 00:47:16.434 13900 15497 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=28 count=360824 decodeMs=159.85
+09-18 00:47:16.447 13900 15499 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=30 count=23974 decodeMs=10.42
+09-18 00:47:16.492 13900 15498 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=6 file=29 count=524880 decodeMs=142.51
+09-18 00:47:16.712 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=6 prepareMs=2524.50 sortMs=196.12 decoded=31 pageHits=0
+09-18 00:47:17.223 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=6 uploadedBytes=67432448 elapsedMs=3084.17
+09-18 00:47:17.235 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=6 count=2000000 prepareMs=2524.50 sortMs=196.12 refineMs=3096.21 uploadedBytes=67432448 pageHits=0 frameMs=9.33
+09-18 00:47:17.248 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=0 cache=file budget=2000000 revision=6 target=5 elapsedMs=3126 refineMs=3096.21 uploadedBytes=67432448 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:17.637 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=7 queueMs=50.38 files=31
+09-18 00:47:17.775 13900 15502 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=0 count=524433 decodeMs=136.23
+09-18 00:47:17.797 13900 15503 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=1 count=525060 decodeMs=158.95
+09-18 00:47:17.899 13900 15504 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=2 count=526334 decodeMs=124.05
+09-18 00:47:17.940 13900 15505 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=3 count=524598 decodeMs=142.36
+09-18 00:47:18.075 13900 15506 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=4 count=533698 decodeMs=174.33
+09-18 00:47:18.113 13900 15508 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=5 count=529804 decodeMs=170.86
+09-18 00:47:18.208 13900 15509 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=6 count=528399 decodeMs=132.78
+09-18 00:47:18.298 13900 15510 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=7 count=543347 decodeMs=180.01
+09-18 00:47:18.375 13900 15511 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=8 count=527719 decodeMs=163.56
+09-18 00:47:18.484 13900 15512 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=9 count=524294 decodeMs=180.69
+09-18 00:47:18.520 13900 15514 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=10 count=530959 decodeMs=142.96
+09-18 00:47:18.629 13900 15515 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=11 count=528889 decodeMs=143.66
+09-18 00:47:18.698 13900 15516 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=12 count=530510 decodeMs=176.62
+09-18 00:47:18.802 13900 15517 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=13 count=524755 decodeMs=169.22
+09-18 00:47:18.838 13900 15518 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=14 count=525283 decodeMs=139.16
+09-18 00:47:18.986 13900 15522 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=16 count=526519 decodeMs=146.20
+09-18 00:47:19.006 13900 15519 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=15 count=525034 decodeMs=202.15
+09-18 00:47:19.150 13900 15527 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=18 count=524694 decodeMs=134.51
+09-18 00:47:19.174 13900 15526 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=17 count=524510 decodeMs=164.96
+09-18 00:47:19.375 13900 15528 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=19 count=524390 decodeMs=196.24
+09-18 00:47:19.375 13900 15529 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=20 count=527594 decodeMs=173.56
+09-18 00:47:19.558 13900 15531 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=22 count=526063 decodeMs=178.17
+09-18 00:47:19.577 13900 15530 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=21 count=524819 decodeMs=196.92
+09-18 00:47:19.755 13900 15538 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=24 count=525331 decodeMs=173.35
+09-18 00:47:19.765 13900 15537 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=23 count=524846 decodeMs=184.35
+09-18 00:47:19.944 13900 15539 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=25 count=525847 decodeMs=171.32
+09-18 00:47:19.944 13900 15540 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=26 count=537008 decodeMs=171.61
+09-18 00:47:19.999 13900 15541 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=27 count=187962 decodeMs=51.82
+09-18 00:47:20.033 13900 15542 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=28 count=360824 decodeMs=86.24
+09-18 00:47:20.049 13900 15544 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=30 count=23974 decodeMs=13.90
+09-18 00:47:20.083 13900 15543 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=7 file=29 count=109462 decodeMs=76.29
+09-18 00:47:20.348 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=7 prepareMs=2710.83 sortMs=227.00 decoded=31 pageHits=0
+09-18 00:47:20.924 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=7 uploadedBytes=67350528 elapsedMs=3337.13
+09-18 00:47:20.941 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=7 count=2000000 prepareMs=2710.83 sortMs=227.00 refineMs=3354.29 uploadedBytes=67350528 pageHits=0 frameMs=14.66
+09-18 00:47:20.980 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=1 cache=file budget=2000000 revision=7 target=6 elapsedMs=3404 refineMs=3354.29 uploadedBytes=67350528 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:21.388 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=8 queueMs=51.31 files=31
+09-18 00:47:21.516 13900 15558 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=0 count=525060 decodeMs=127.01
+09-18 00:47:21.528 13900 15559 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=1 count=524433 decodeMs=139.27
+09-18 00:47:21.663 13900 15560 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=2 count=526334 decodeMs=145.53
+09-18 00:47:21.677 13900 15561 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=3 count=533698 decodeMs=146.53
+09-18 00:47:21.785 13900 15564 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=4 count=536369 decodeMs=121.06
+09-18 00:47:21.815 13900 15565 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=5 count=529804 decodeMs=136.01
+09-18 00:47:21.959 13900 15568 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=7 count=529140 decodeMs=143.01
+09-18 00:47:21.966 13900 15567 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=6 count=528399 decodeMs=180.86
+09-18 00:47:22.164 13900 15570 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=9 count=527719 decodeMs=188.61
+09-18 00:47:22.180 13900 15569 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=8 count=543347 decodeMs=212.95
+09-18 00:47:22.352 13900 15576 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=11 count=524294 decodeMs=164.23
+09-18 00:47:22.362 13900 15575 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=10 count=528889 decodeMs=180.50
+09-18 00:47:22.508 13900 15577 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=12 count=530959 decodeMs=144.36
+09-18 00:47:22.526 13900 15578 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=13 count=525283 decodeMs=154.11
+09-18 00:47:22.639 13900 15579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=14 count=530510 decodeMs=130.17
+09-18 00:47:22.676 13900 15580 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=15 count=524755 decodeMs=148.02
+09-18 00:47:22.785 13900 15581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=16 count=525034 decodeMs=143.34
+09-18 00:47:22.833 13900 15582 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=17 count=524598 decodeMs=155.51
+09-18 00:47:22.966 13900 15584 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=18 count=524510 decodeMs=179.30
+09-18 00:47:22.979 13900 15585 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=19 count=524694 decodeMs=144.96
+09-18 00:47:23.104 13900 15586 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=20 count=524390 decodeMs=132.34
+09-18 00:47:23.122 13900 15587 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=21 count=524819 decodeMs=140.22
+09-18 00:47:23.289 13900 15588 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=22 count=526063 decodeMs=183.30
+09-18 00:47:23.289 13900 15589 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=23 count=524846 decodeMs=166.35
+09-18 00:47:23.457 13900 15590 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=24 count=525331 decodeMs=166.07
+09-18 00:47:23.463 13900 15591 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=25 count=537008 decodeMs=158.58
+09-18 00:47:23.511 13900 15592 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=26 count=187962 decodeMs=52.09
+09-18 00:47:23.558 13900 15593 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=27 count=109462 decodeMs=69.23
+09-18 00:47:23.639 13900 15594 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=28 count=360824 decodeMs=121.07
+09-18 00:47:23.669 13900 15598 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=30 count=23974 decodeMs=28.40
+09-18 00:47:23.708 13900 15595 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=8 file=29 count=524880 decodeMs=149.99
+09-18 00:47:23.927 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=8 prepareMs=2538.65 sortMs=198.87 decoded=31 pageHits=0
+09-18 00:47:24.476 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=8 uploadedBytes=67432448 elapsedMs=3138.82
+09-18 00:47:24.490 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=8 count=2000000 prepareMs=2538.65 sortMs=198.87 refineMs=3153.50 uploadedBytes=67432448 pageHits=0 frameMs=12.31
+09-18 00:47:24.521 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=2 cache=file budget=2000000 revision=8 target=7 elapsedMs=3201 refineMs=3153.50 uploadedBytes=67432448 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:24.905 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=9 queueMs=60.36 files=31
+09-18 00:47:25.035 13900 15609 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=0 count=524433 decodeMs=129.15
+09-18 00:47:25.041 13900 15610 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=1 count=525060 decodeMs=136.09
+09-18 00:47:25.195 13900 15613 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=3 count=524598 decodeMs=152.99
+09-18 00:47:25.205 13900 15612 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=2 count=526334 decodeMs=169.58
+09-18 00:47:25.355 13900 15614 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=4 count=533698 decodeMs=149.90
+09-18 00:47:25.373 13900 15615 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=5 count=529804 decodeMs=164.05
+09-18 00:47:25.509 13900 15616 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=6 count=528399 decodeMs=150.90
+09-18 00:47:25.517 13900 15617 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=7 count=543347 decodeMs=142.25
+09-18 00:47:25.645 13900 15621 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=8 count=527719 decodeMs=134.14
+09-18 00:47:25.677 13900 15623 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=9 count=524294 decodeMs=155.28
+09-18 00:47:25.791 13900 15624 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=10 count=530959 decodeMs=145.20
+09-18 00:47:25.868 13900 15625 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=11 count=528889 decodeMs=185.44
+09-18 00:47:25.933 13900 15626 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=12 count=530510 decodeMs=139.55
+09-18 00:47:26.026 13900 15627 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=13 count=524755 decodeMs=154.88
+09-18 00:47:26.081 13900 15628 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=14 count=525283 decodeMs=146.57
+09-18 00:47:26.191 13900 15629 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=15 count=525034 decodeMs=160.15
+09-18 00:47:26.232 13900 15630 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=16 count=526519 decodeMs=149.71
+09-18 00:47:26.349 13900 15631 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=17 count=524510 decodeMs=152.83
+09-18 00:47:26.377 13900 15632 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=18 count=524694 decodeMs=144.07
+09-18 00:47:26.566 13900 15634 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=20 count=527594 decodeMs=182.89
+09-18 00:47:26.578 13900 15633 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=19 count=524390 decodeMs=223.84
+09-18 00:47:26.752 13900 15635 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=21 count=524819 decodeMs=172.70
+09-18 00:47:26.767 13900 15636 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=22 count=526063 decodeMs=187.52
+09-18 00:47:26.920 13900 15638 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=23 count=524846 decodeMs=167.23
+09-18 00:47:26.937 13900 15639 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=24 count=525331 decodeMs=164.87
+09-18 00:47:27.054 13900 15640 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=25 count=525847 decodeMs=132.28
+09-18 00:47:27.104 13900 15641 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=26 count=537008 decodeMs=164.40
+09-18 00:47:27.121 13900 15642 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=27 count=187962 decodeMs=66.26
+09-18 00:47:27.167 13900 15644 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=29 count=109462 decodeMs=37.43
+09-18 00:47:27.220 13900 15643 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=28 count=360824 decodeMs=113.77
+09-18 00:47:27.239 13900 15646 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=9 file=30 count=23974 decodeMs=18.07
+09-18 00:47:27.462 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=9 prepareMs=2557.24 sortMs=196.99 decoded=31 pageHits=0
+09-18 00:47:28.045 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=9 uploadedBytes=67350528 elapsedMs=3200.39
+09-18 00:47:28.061 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=9 count=2000000 prepareMs=2557.24 sortMs=196.99 refineMs=3216.11 uploadedBytes=67350528 pageHits=0 frameMs=13.20
+09-18 00:47:28.114 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=3 cache=file budget=2000000 revision=9 target=8 elapsedMs=3291 refineMs=3216.11 uploadedBytes=67350528 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:28.504 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=10 queueMs=60.59 files=31
+09-18 00:47:28.645 13900 15651 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=0 count=525060 decodeMs=140.43
+09-18 00:47:28.670 13900 15652 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=1 count=524433 decodeMs=166.26
+09-18 00:47:28.785 13900 15653 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=2 count=526334 decodeMs=139.88
+09-18 00:47:28.832 13900 15656 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=3 count=533698 decodeMs=161.47
+09-18 00:47:28.922 13900 15658 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=4 count=536369 decodeMs=135.53
+09-18 00:47:28.982 13900 15659 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=5 count=529804 decodeMs=148.23
+09-18 00:47:29.092 13900 15662 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=6 count=528399 decodeMs=167.44
+09-18 00:47:29.149 13900 15664 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=7 count=529140 decodeMs=162.42
+09-18 00:47:29.276 13900 15665 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=8 count=543347 decodeMs=183.03
+09-18 00:47:29.305 13900 15666 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=9 count=527719 decodeMs=154.04
+09-18 00:47:29.419 13900 15669 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=10 count=528889 decodeMs=140.93
+09-18 00:47:29.475 13900 15671 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=11 count=524294 decodeMs=165.39
+09-18 00:47:29.596 13900 15672 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=12 count=530959 decodeMs=176.44
+09-18 00:47:29.629 13900 15673 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=13 count=525283 decodeMs=149.44
+09-18 00:47:29.755 13900 15674 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=14 count=530510 decodeMs=157.80
+09-18 00:47:29.779 13900 15678 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=15 count=524755 decodeMs=146.05
+09-18 00:47:29.894 13900 15681 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=16 count=525034 decodeMs=138.24
+09-18 00:47:29.956 13900 15682 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=17 count=524598 decodeMs=175.49
+09-18 00:47:30.052 13900 15683 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=18 count=524510 decodeMs=156.42
+09-18 00:47:30.094 13900 15684 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=19 count=524694 decodeMs=136.87
+09-18 00:47:30.233 13900 15685 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=20 count=524390 decodeMs=179.73
+09-18 00:47:30.246 13900 15686 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=21 count=524819 decodeMs=149.79
+09-18 00:47:30.386 13900 15687 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=22 count=526063 decodeMs=151.70
+09-18 00:47:30.393 13900 15688 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=23 count=524846 decodeMs=144.47
+09-18 00:47:30.518 13900 15689 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=24 count=525331 decodeMs=130.73
+09-18 00:47:30.582 13900 15690 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=25 count=537008 decodeMs=181.31
+09-18 00:47:30.616 13900 15691 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=26 count=187962 decodeMs=86.08
+09-18 00:47:30.621 13900 15692 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=27 count=109462 decodeMs=36.74
+09-18 00:47:30.735 13900 15693 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=28 count=360824 decodeMs=106.11
+09-18 00:47:30.744 13900 15697 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=30 count=23974 decodeMs=8.69
+09-18 00:47:30.792 13900 15694 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=10 file=29 count=524880 decodeMs=155.59
+09-18 00:47:30.981 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=10 prepareMs=2477.51 sortMs=168.98 decoded=31 pageHits=0
+09-18 00:47:31.533 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=10 uploadedBytes=67432448 elapsedMs=3090.25
+09-18 00:47:31.546 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=10 count=2000000 prepareMs=2477.51 sortMs=168.98 refineMs=3102.92 uploadedBytes=67432448 pageHits=0 frameMs=10.01
+09-18 00:47:31.599 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=4 cache=file budget=2000000 revision=10 target=9 elapsedMs=3180 refineMs=3102.92 uploadedBytes=67432448 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:32.012 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=11 queueMs=53.54 files=31
+09-18 00:47:32.161 13900 15706 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=0 count=524433 decodeMs=148.21
+09-18 00:47:32.169 13900 15707 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=1 count=525060 decodeMs=156.51
+09-18 00:47:32.312 13900 15710 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=2 count=526334 decodeMs=150.34
+09-18 00:47:32.316 13900 15711 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=3 count=524598 decodeMs=146.59
+09-18 00:47:32.450 13900 15713 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=4 count=533698 decodeMs=137.25
+09-18 00:47:32.470 13900 15714 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=5 count=529804 decodeMs=152.39
+09-18 00:47:32.579 13900 15715 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=6 count=528399 decodeMs=126.57
+09-18 00:47:32.625 13900 15716 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=7 count=543347 decodeMs=154.38
+09-18 00:47:32.760 13900 15717 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=8 count=527719 decodeMs=180.04
+09-18 00:47:32.781 13900 15719 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=9 count=524294 decodeMs=154.15
+09-18 00:47:32.894 13900 15720 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=10 count=530959 decodeMs=132.44
+09-18 00:47:32.945 13900 15721 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=11 count=528889 decodeMs=161.99
+09-18 00:47:33.058 13900 15722 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=12 count=530510 decodeMs=163.40
+09-18 00:47:33.094 13900 15724 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=13 count=524755 decodeMs=147.83
+09-18 00:47:33.205 13900 15725 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=14 count=525283 decodeMs=146.00
+09-18 00:47:33.230 13900 15726 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=15 count=525034 decodeMs=132.78
+09-18 00:47:33.367 13900 15727 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=16 count=526519 decodeMs=161.06
+09-18 00:47:33.378 13900 15728 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=17 count=524510 decodeMs=147.61
+09-18 00:47:33.490 13900 15729 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=18 count=524694 decodeMs=122.11
+09-18 00:47:33.509 13900 15730 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=19 count=524390 decodeMs=127.74
+09-18 00:47:33.656 13900 15731 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=20 count=527594 decodeMs=163.83
+09-18 00:47:33.667 13900 15732 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=21 count=524819 decodeMs=156.03
+09-18 00:47:33.783 13900 15733 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=22 count=526063 decodeMs=125.57
+09-18 00:47:33.801 13900 15734 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=23 count=524846 decodeMs=131.47
+09-18 00:47:33.913 13900 15735 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=24 count=525331 decodeMs=128.66
+09-18 00:47:33.948 13900 15736 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=25 count=525847 decodeMs=136.59
+09-18 00:47:34.015 13900 15739 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=27 count=187962 decodeMs=57.70
+09-18 00:47:34.076 13900 15738 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=26 count=537008 decodeMs=162.12
+09-18 00:47:34.141 13900 15742 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=29 count=109462 decodeMs=51.15
+09-18 00:47:34.197 13900 15741 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=28 count=360824 decodeMs=107.52
+09-18 00:47:34.211 13900 15743 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=11 file=30 count=23974 decodeMs=12.48
+09-18 00:47:34.414 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=11 prepareMs=2401.90 sortMs=181.48 decoded=31 pageHits=0
+09-18 00:47:35.011 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=11 uploadedBytes=67350528 elapsedMs=3052.89
+09-18 00:47:35.025 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=11 count=2000000 prepareMs=2401.90 sortMs=181.48 refineMs=3066.82 uploadedBytes=67350528 pageHits=0 frameMs=13.00
+09-18 00:47:35.041 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=5 cache=file budget=2000000 revision=11 target=10 elapsedMs=3100 refineMs=3066.82 uploadedBytes=67350528 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:35.442 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=12 queueMs=44.46 files=31
+09-18 00:47:35.577 13900 15761 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=1 count=524433 decodeMs=133.22
+09-18 00:47:35.585 13900 15760 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=0 count=525060 decodeMs=141.23
+09-18 00:47:35.753 13900 15763 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=2 count=526334 decodeMs=167.09
+09-18 00:47:35.761 13900 15764 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=3 count=533698 decodeMs=153.39
+09-18 00:47:35.907 13900 15767 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=5 count=529804 decodeMs=138.66
+09-18 00:47:35.908 13900 15766 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=4 count=536369 decodeMs=154.71
+09-18 00:47:36.049 13900 15769 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=7 count=529140 decodeMs=139.67
+09-18 00:47:36.050 13900 15768 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=6 count=528399 decodeMs=141.37
+09-18 00:47:36.180 13900 15773 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=8 count=543347 decodeMs=130.13
+09-18 00:47:36.204 13900 15774 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=9 count=527719 decodeMs=150.74
+09-18 00:47:36.337 13900 15776 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=10 count=528889 decodeMs=149.38
+09-18 00:47:36.340 13900 15778 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=11 count=524294 decodeMs=133.32
+09-18 00:47:36.468 13900 15779 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=12 count=530959 decodeMs=128.15
+09-18 00:47:36.513 13900 15780 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=13 count=525283 decodeMs=165.84
+09-18 00:47:36.643 13900 15781 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=14 count=530510 decodeMs=170.64
+09-18 00:47:36.674 13900 15782 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=15 count=524755 decodeMs=159.08
+09-18 00:47:36.813 13900 15784 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=16 count=525034 decodeMs=169.98
+09-18 00:47:36.846 13900 15785 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=17 count=524598 decodeMs=171.07
+09-18 00:47:36.999 13900 15786 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=18 count=524510 decodeMs=181.99
+09-18 00:47:37.028 13900 15787 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=19 count=524694 decodeMs=178.82
+09-18 00:47:37.127 13900 15788 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=20 count=524390 decodeMs=125.07
+09-18 00:47:37.209 13900 15789 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=21 count=524819 decodeMs=178.26
+09-18 00:47:37.281 13900 15790 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=22 count=526063 decodeMs=151.71
+09-18 00:47:37.358 13900 15791 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=23 count=524846 decodeMs=145.55
+09-18 00:47:37.434 13900 15792 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=24 count=525331 decodeMs=151.05
+09-18 00:47:37.485 13900 15795 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=26 count=187962 decodeMs=48.04
+09-18 00:47:37.534 13900 15793 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=25 count=537008 decodeMs=172.14
+09-18 00:47:37.593 13900 15796 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=27 count=109462 decodeMs=51.27
+09-18 00:47:37.659 13900 15797 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=28 count=360824 decodeMs=117.68
+09-18 00:47:37.695 13900 15799 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=30 count=23974 decodeMs=31.07
+09-18 00:47:37.724 13900 15798 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=12 file=29 count=524880 decodeMs=129.31
+09-18 00:47:37.926 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=12 prepareMs=2484.70 sortMs=186.03 decoded=31 pageHits=0
+09-18 00:47:38.528 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=12 uploadedBytes=67432448 elapsedMs=3130.93
+09-18 00:47:38.542 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=12 count=2000000 prepareMs=2484.70 sortMs=186.03 refineMs=3145.22 uploadedBytes=67432448 pageHits=0 frameMs=11.46
+09-18 00:47:38.561 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=6 cache=file budget=2000000 revision=12 target=11 elapsedMs=3182 refineMs=3145.22 uploadedBytes=67432448 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:38.936 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=13 queueMs=50.62 files=31
+09-18 00:47:39.070 13900 15810 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=1 count=525060 decodeMs=132.75
+09-18 00:47:39.079 13900 15809 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=0 count=524433 decodeMs=141.78
+09-18 00:47:39.248 13900 15812 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=3 count=524598 decodeMs=163.11
+09-18 00:47:39.253 13900 15811 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=2 count=526334 decodeMs=173.31
+09-18 00:47:39.420 13900 15813 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=4 count=533698 decodeMs=165.63
+09-18 00:47:39.425 13900 15814 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=5 count=529804 decodeMs=161.97
+09-18 00:47:39.554 13900 15815 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=6 count=528399 decodeMs=132.97
+09-18 00:47:39.563 13900 15816 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=7 count=543347 decodeMs=137.41
+09-18 00:47:39.715 13900 15818 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=9 count=524294 decodeMs=149.75
+09-18 00:47:39.719 13900 15817 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=8 count=527719 decodeMs=163.04
+09-18 00:47:39.875 13900 15819 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=10 count=530959 decodeMs=155.22
+09-18 00:47:39.885 13900 15820 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=11 count=528889 decodeMs=152.56
+09-18 00:47:40.019 13900 15828 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=12 count=530510 decodeMs=142.37
+09-18 00:47:40.037 13900 15829 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=13 count=524755 decodeMs=147.50
+09-18 00:47:40.196 13900 15831 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=14 count=525283 decodeMs=175.71
+09-18 00:47:40.203 13900 15832 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=15 count=525034 decodeMs=155.57
+09-18 00:47:40.335 13900 15833 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=16 count=526519 decodeMs=137.21
+09-18 00:47:40.342 13900 15834 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=17 count=524510 decodeMs=136.97
+09-18 00:47:40.462 13900 15836 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=18 count=524694 decodeMs=126.74
+09-18 00:47:40.485 13900 15837 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=19 count=524390 decodeMs=134.95
+09-18 00:47:40.589 13900 15839 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=20 count=527594 decodeMs=123.93
+09-18 00:47:40.614 13900 15840 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=21 count=524819 decodeMs=126.74
+09-18 00:47:40.746 13900 15841 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=22 count=526063 decodeMs=156.19
+09-18 00:47:40.761 13900 15842 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=23 count=524846 decodeMs=145.87
+09-18 00:47:40.911 13900 15844 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=24 count=525331 decodeMs=159.71
+09-18 00:47:40.926 13900 15845 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=25 count=525847 decodeMs=162.53
+09-18 00:47:41.010 13900 15847 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=27 count=187962 decodeMs=71.90
+09-18 00:47:41.079 13900 15846 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=26 count=537008 decodeMs=160.11
+09-18 00:47:41.157 13900 15849 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=29 count=109462 decodeMs=68.27
+09-18 00:47:41.217 13900 15848 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=28 count=360824 decodeMs=128.10
+09-18 00:47:41.239 13900 15850 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=13 file=30 count=23974 decodeMs=18.89
+09-18 00:47:41.416 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=13 prepareMs=2479.70 sortMs=161.61 decoded=31 pageHits=0
+09-18 00:47:42.051 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=13 uploadedBytes=67350528 elapsedMs=3165.30
+09-18 00:47:42.062 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=13 count=2000000 prepareMs=2479.70 sortMs=161.61 refineMs=3176.37 uploadedBytes=67350528 pageHits=0 frameMs=9.42
+09-18 00:47:42.081 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=7 cache=file budget=2000000 revision=13 target=12 elapsedMs=3210 refineMs=3176.37 uploadedBytes=67350528 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:42.447 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=14 queueMs=46.98 files=31
+09-18 00:47:42.586 13900 15870 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=1 count=524433 decodeMs=133.95
+09-18 00:47:42.593 13900 15869 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=0 count=525060 decodeMs=144.68
+09-18 00:47:42.776 13900 15876 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=3 count=533698 decodeMs=173.10
+09-18 00:47:42.780 13900 15875 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=2 count=526334 decodeMs=185.05
+09-18 00:47:42.941 13900 15878 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=4 count=536369 decodeMs=159.31
+09-18 00:47:42.956 13900 15879 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=5 count=529804 decodeMs=158.72
+09-18 00:47:43.112 13900 15881 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=6 count=528399 decodeMs=168.45
+09-18 00:47:43.127 13900 15882 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=7 count=529140 decodeMs=167.88
+09-18 00:47:43.287 13900 15884 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=8 count=543347 decodeMs=173.66
+09-18 00:47:43.306 13900 15885 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=9 count=527719 decodeMs=176.55
+09-18 00:47:43.432 13900 15899 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=10 count=528889 decodeMs=145.12
+09-18 00:47:43.461 13900 15925 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=11 count=524294 decodeMs=154.69
+09-18 00:47:43.574 13900 15941 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=12 count=530959 decodeMs=138.98
+09-18 00:47:43.608 13900 15943 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=13 count=525283 decodeMs=143.82
+09-18 00:47:43.716 13900 15958 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=14 count=530510 decodeMs=141.68
+09-18 00:47:43.774 13900 15961 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=15 count=524755 decodeMs=164.36
+09-18 00:47:43.879 13900 15982 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=16 count=525034 decodeMs=161.27
+09-18 00:47:43.929 13900 15985 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=17 count=524598 decodeMs=151.03
+09-18 00:47:44.037 13900 16045 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=18 count=524510 decodeMs=157.51
+09-18 00:47:44.079 13900 16050 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=19 count=524694 decodeMs=149.63
+09-18 00:47:44.182 13900 16057 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=20 count=524390 decodeMs=144.68
+09-18 00:47:44.228 13900 16064 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=21 count=524819 decodeMs=148.35
+09-18 00:47:44.327 13900 16090 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=22 count=526063 decodeMs=142.89
+09-18 00:47:44.366 13900 16091 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=23 count=524846 decodeMs=136.07
+09-18 00:47:44.460 13900 16108 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=24 count=525331 decodeMs=131.48
+09-18 00:47:44.506 13900 16113 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=25 count=537008 decodeMs=139.50
+09-18 00:47:44.516 13900 16114 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=26 count=187962 decodeMs=55.95
+09-18 00:47:44.567 13900 16125 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=27 count=109462 decodeMs=58.86
+09-18 00:47:44.642 13900 16126 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=28 count=360824 decodeMs=122.89
+09-18 00:47:44.654 13900 16135 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=30 count=23974 decodeMs=12.23
+09-18 00:47:44.703 13900 16133 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=14 file=29 count=524880 decodeMs=135.44
+09-18 00:47:44.904 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=14 prepareMs=2456.35 sortMs=177.71 decoded=31 pageHits=0
+09-18 00:47:45.479 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=14 uploadedBytes=67432448 elapsedMs=3078.48
+09-18 00:47:45.492 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=14 count=2000000 prepareMs=2456.35 sortMs=177.71 refineMs=3091.65 uploadedBytes=67432448 pageHits=0 frameMs=10.79
+09-18 00:47:45.539 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=8 cache=file budget=2000000 revision=14 target=13 elapsedMs=3157 refineMs=3091.65 uploadedBytes=67432448 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:45.930 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=15 queueMs=53.54 files=31
+09-18 00:47:46.068 13900 16167 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=1 count=525060 decodeMs=137.23
+09-18 00:47:46.078 13900 16166 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=0 count=524433 decodeMs=147.94
+09-18 00:47:46.232 13900 16169 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=3 count=524598 decodeMs=146.47
+09-18 00:47:46.235 13900 16168 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=2 count=526334 decodeMs=155.23
+09-18 00:47:46.417 13900 16171 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=4 count=533698 decodeMs=180.69
+09-18 00:47:46.423 13900 16172 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=5 count=529804 decodeMs=175.13
+09-18 00:47:46.579 13900 16173 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=6 count=528399 decodeMs=161.06
+09-18 00:47:46.589 13900 16174 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=7 count=543347 decodeMs=164.88
+09-18 00:47:46.755 13900 16176 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=9 count=524294 decodeMs=163.51
+09-18 00:47:46.758 13900 16175 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=8 count=527719 decodeMs=177.50
+09-18 00:47:46.886 13900 16178 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=10 count=530959 decodeMs=126.85
+09-18 00:47:46.922 13900 16179 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=11 count=528889 decodeMs=150.57
+09-18 00:47:47.052 13900 16180 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=12 count=530510 decodeMs=164.91
+09-18 00:47:47.080 13900 16181 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=13 count=524755 decodeMs=156.25
+09-18 00:47:47.191 13900 16182 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=14 count=525283 decodeMs=136.78
+09-18 00:47:47.245 13900 16183 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=15 count=525034 decodeMs=164.86
+09-18 00:47:47.371 13900 16184 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=16 count=526519 decodeMs=178.84
+09-18 00:47:47.383 13900 16185 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=17 count=524510 decodeMs=135.72
+09-18 00:47:47.506 13900 16186 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=18 count=524694 decodeMs=133.83
+09-18 00:47:47.530 13900 16187 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=19 count=524390 decodeMs=145.84
+09-18 00:47:47.636 13900 16188 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=20 count=527594 decodeMs=128.57
+09-18 00:47:47.698 13900 16189 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=21 count=524819 decodeMs=167.22
+09-18 00:47:47.773 13900 16190 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=22 count=526063 decodeMs=134.53
+09-18 00:47:47.850 13900 16191 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=23 count=524846 decodeMs=150.15
+09-18 00:47:47.931 13900 16192 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=24 count=525331 decodeMs=156.87
+09-18 00:47:47.990 13900 16193 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=25 count=525847 decodeMs=136.02
+09-18 00:47:48.057 13900 16195 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=27 count=187962 decodeMs=64.66
+09-18 00:47:48.106 13900 16194 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=26 count=537008 decodeMs=172.58
+09-18 00:47:48.173 13900 16197 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=29 count=109462 decodeMs=53.57
+09-18 00:47:48.227 13900 16196 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=28 count=360824 decodeMs=119.33
+09-18 00:47:48.255 13900 16198 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=15 file=30 count=23974 decodeMs=26.59
+09-18 00:47:48.472 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=15 prepareMs=2541.57 sortMs=201.15 decoded=31 pageHits=0
+09-18 00:47:49.034 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=15 uploadedBytes=67350528 elapsedMs=3157.98
+09-18 00:47:49.051 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=15 count=2000000 prepareMs=2541.57 sortMs=201.15 refineMs=3174.78 uploadedBytes=67350528 pageHits=0 frameMs=14.04
+09-18 00:47:49.061 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=9 cache=file budget=2000000 revision=15 target=14 elapsedMs=3202 refineMs=3174.78 uploadedBytes=67350528 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:49.481 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=16 queueMs=65.96 files=31
+09-18 00:47:49.627 13900 16205 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=1 count=524433 decodeMs=144.59
+09-18 00:47:49.645 13900 16204 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=0 count=525060 decodeMs=162.99
+09-18 00:47:49.808 13900 16206 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=2 count=526334 decodeMs=162.57
+09-18 00:47:49.824 13900 16207 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=3 count=533698 decodeMs=164.98
+09-18 00:47:49.980 13900 16209 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=5 count=529804 decodeMs=152.70
+09-18 00:47:49.984 13900 16208 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=4 count=536369 decodeMs=174.53
+09-18 00:47:50.128 13900 16213 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=7 count=529140 decodeMs=142.38
+09-18 00:47:50.153 13900 16212 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=6 count=528399 decodeMs=167.32
+09-18 00:47:50.306 13900 16218 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=8 count=543347 decodeMs=151.77
+09-18 00:47:50.326 13900 16219 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=9 count=527719 decodeMs=148.95
+09-18 00:47:50.470 13900 16220 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=10 count=528889 decodeMs=162.04
+09-18 00:47:50.481 13900 16221 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=11 count=524294 decodeMs=154.31
+09-18 00:47:50.654 13900 16223 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=13 count=525283 decodeMs=170.14
+09-18 00:47:50.658 13900 16222 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=12 count=530959 decodeMs=186.64
+09-18 00:47:50.831 13900 16225 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=15 count=524755 decodeMs=152.82
+09-18 00:47:50.834 13900 16224 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=14 count=530510 decodeMs=175.45
+09-18 00:47:51.004 13900 16226 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=16 count=525034 decodeMs=168.65
+09-18 00:47:51.010 13900 16227 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=17 count=524598 decodeMs=167.89
+09-18 00:47:51.160 13900 16228 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=18 count=524510 decodeMs=150.66
+09-18 00:47:51.161 13900 16229 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=19 count=524694 decodeMs=151.32
+09-18 00:47:51.289 13900 16233 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=20 count=524390 decodeMs=127.76
+09-18 00:47:51.325 13900 16234 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=21 count=524819 decodeMs=149.00
+09-18 00:47:51.453 13900 16236 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=22 count=526063 decodeMs=162.42
+09-18 00:47:51.470 13900 16237 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=23 count=524846 decodeMs=136.88
+09-18 00:47:51.589 13900 16238 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=24 count=525331 decodeMs=135.44
+09-18 00:47:51.635 13900 16239 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=25 count=537008 decodeMs=163.44
+09-18 00:47:51.659 13900 16240 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=26 count=187962 decodeMs=68.15
+09-18 00:47:51.691 13900 16242 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=27 count=109462 decodeMs=55.32
+09-18 00:47:51.774 13900 16243 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=28 count=360824 decodeMs=113.37
+09-18 00:47:51.785 13900 16245 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=30 count=23974 decodeMs=9.88
+09-18 00:47:51.826 13900 16244 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=16 file=29 count=524880 decodeMs=132.88
+09-18 00:47:52.027 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=16 prepareMs=2546.32 sortMs=174.57 decoded=31 pageHits=0
+09-18 00:47:52.584 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=16 uploadedBytes=67432448 elapsedMs=3168.61
+09-18 00:47:52.598 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=16 count=2000000 prepareMs=2546.32 sortMs=174.57 refineMs=3182.41 uploadedBytes=67432448 pageHits=0 frameMs=11.27
+09-18 00:47:52.610 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=10 cache=file budget=2000000 revision=16 target=15 elapsedMs=3211 refineMs=3182.41 uploadedBytes=67432448 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:52.992 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=17 queueMs=50.98 files=31
+09-18 00:47:53.138 13900 16250 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=0 count=524433 decodeMs=145.07
+09-18 00:47:53.138 13900 16251 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=1 count=525060 decodeMs=145.30
+09-18 00:47:53.292 13900 16252 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=2 count=526334 decodeMs=153.13
+09-18 00:47:53.292 13900 16253 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=3 count=524598 decodeMs=149.09
+09-18 00:47:53.460 13900 16257 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=5 count=529804 decodeMs=160.40
+09-18 00:47:53.466 13900 16256 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=4 count=533698 decodeMs=173.21
+09-18 00:47:53.639 13900 16258 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=6 count=528399 decodeMs=170.97
+09-18 00:47:53.648 13900 16259 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=7 count=543347 decodeMs=177.47
+09-18 00:47:53.810 13900 16269 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=8 count=527719 decodeMs=169.73
+09-18 00:47:53.820 13900 16270 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=9 count=524294 decodeMs=170.74
+09-18 00:47:53.939 13900 16271 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=10 count=530959 decodeMs=126.79
+09-18 00:47:53.977 13900 16272 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=11 count=528889 decodeMs=150.32
+09-18 00:47:54.130 13900 16273 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=12 count=530510 decodeMs=188.60
+09-18 00:47:54.133 13900 16274 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=13 count=524755 decodeMs=153.13
+09-18 00:47:54.264 13900 16275 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=14 count=525283 decodeMs=133.31
+09-18 00:47:54.321 13900 16276 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=15 count=525034 decodeMs=162.85
+09-18 00:47:54.468 13900 16277 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=16 count=526519 decodeMs=201.69
+09-18 00:47:54.468 13900 16278 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=17 count=524510 decodeMs=145.02
+09-18 00:47:54.608 13900 16280 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=18 count=524694 decodeMs=135.20
+09-18 00:47:54.635 13900 16281 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=19 count=524390 decodeMs=146.81
+09-18 00:47:54.787 13900 16285 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=21 count=524819 decodeMs=150.91
+09-18 00:47:54.792 13900 16284 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=20 count=527594 decodeMs=182.84
+09-18 00:47:54.959 13900 16287 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=22 count=526063 decodeMs=165.80
+09-18 00:47:54.970 13900 16288 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=23 count=524846 decodeMs=176.58
+09-18 00:47:55.138 13900 16289 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=24 count=525331 decodeMs=178.04
+09-18 00:47:55.143 13900 16290 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=25 count=525847 decodeMs=171.55
+09-18 00:47:55.219 13900 16300 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=27 count=187962 decodeMs=58.54
+09-18 00:47:55.288 13900 16299 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=26 count=537008 decodeMs=148.89
+09-18 00:47:55.338 13900 16302 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=29 count=109462 decodeMs=42.31
+09-18 00:47:55.375 13900 16301 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=28 count=360824 decodeMs=86.36
+09-18 00:47:55.396 13900 16303 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=17 file=30 count=23974 decodeMs=19.24
+09-18 00:47:55.625 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=17 prepareMs=2633.62 sortMs=213.88 decoded=31 pageHits=0
+09-18 00:47:56.256 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=17 uploadedBytes=67350528 elapsedMs=3315.60
+09-18 00:47:56.274 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=17 count=2000000 prepareMs=2633.62 sortMs=213.88 refineMs=3332.78 uploadedBytes=67350528 pageHits=0 frameMs=14.54
+09-18 00:47:56.321 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=11 cache=file budget=2000000 revision=17 target=16 elapsedMs=3396 refineMs=3332.78 uploadedBytes=67350528 networkBytes=0 count=2000000 coverage=1
+09-18 00:47:56.698 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=18 queueMs=56.70 files=31
+09-18 00:47:56.833 13900 16309 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=0 count=525060 decodeMs=134.12
+09-18 00:47:56.841 13900 16310 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=1 count=524433 decodeMs=141.48
+09-18 00:47:56.997 13900 16314 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=2 count=526334 decodeMs=163.15
+09-18 00:47:57.011 13900 16315 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=3 count=533698 decodeMs=166.13
+09-18 00:47:57.169 13900 16317 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=4 count=536369 decodeMs=170.56
+09-18 00:47:57.177 13900 16318 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=5 count=529804 decodeMs=163.81
+09-18 00:47:57.344 13900 16320 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=7 count=529140 decodeMs=164.99
+09-18 00:47:57.348 13900 16319 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=6 count=528399 decodeMs=178.49
+09-18 00:47:57.514 13900 16321 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=8 count=543347 decodeMs=165.53
+09-18 00:47:57.540 13900 16322 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=9 count=527719 decodeMs=185.15
+09-18 00:47:57.713 13900 16326 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=11 count=524294 decodeMs=170.39
+09-18 00:47:57.720 13900 16325 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=10 count=528889 decodeMs=202.22
+09-18 00:47:57.897 13900 16328 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=12 count=530959 decodeMs=175.65
+09-18 00:47:57.906 13900 16329 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=13 count=525283 decodeMs=177.24
+09-18 00:47:58.067 13900 16331 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=14 count=530510 decodeMs=168.97
+09-18 00:47:58.075 13900 16332 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=15 count=524755 decodeMs=161.00
+09-18 00:47:58.240 13900 16333 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=16 count=525034 decodeMs=171.51
+09-18 00:47:58.252 13900 16334 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=17 count=524598 decodeMs=169.27
+09-18 00:47:58.374 13900 16336 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=18 count=524510 decodeMs=133.34
+09-18 00:47:58.397 13900 16337 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=19 count=524694 decodeMs=142.03
+09-18 00:47:58.488 13900 16342 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=20 count=524390 decodeMs=113.48
+09-18 00:47:58.529 13900 16344 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=21 count=524819 decodeMs=130.05
+09-18 00:47:58.618 13900 16345 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=22 count=526063 decodeMs=129.18
+09-18 00:47:58.664 13900 16346 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=23 count=524846 decodeMs=134.03
+09-18 00:47:58.753 13900 16348 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=24 count=525331 decodeMs=134.14
+09-18 00:47:58.832 13900 16350 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=26 count=187962 decodeMs=73.29
+09-18 00:47:58.835 13900 16349 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=25 count=537008 decodeMs=168.44
+09-18 00:47:58.883 13900 16353 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=27 count=109462 decodeMs=46.64
+09-18 00:47:58.962 13900 16354 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=28 count=360824 decodeMs=112.49
+09-18 00:47:58.987 13900 16358 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=30 count=23974 decodeMs=23.43
+09-18 00:47:59.024 13900 16356 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=18 file=29 count=524880 decodeMs=139.94
+09-18 00:47:59.256 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=18 prepareMs=2557.66 sortMs=205.80 decoded=31 pageHits=0
+09-18 00:47:59.817 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=18 uploadedBytes=67432448 elapsedMs=3175.11
+09-18 00:47:59.830 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=18 count=2000000 prepareMs=2557.66 sortMs=205.80 refineMs=3188.60 uploadedBytes=67432448 pageHits=0 frameMs=10.87
+09-18 00:47:59.840 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=12 cache=file budget=2000000 revision=18 target=17 elapsedMs=3215 refineMs=3188.60 uploadedBytes=67432448 networkBytes=0 count=2000000 coverage=1
+09-18 00:48:00.219 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=19 queueMs=52.11 files=31
+09-18 00:48:00.347 13900 16373 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=1 count=525060 decodeMs=127.32
+09-18 00:48:00.360 13900 16372 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=0 count=524433 decodeMs=140.57
+09-18 00:48:00.525 13900 16379 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=3 count=524598 decodeMs=160.83
+09-18 00:48:00.527 13900 16378 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=2 count=526334 decodeMs=165.95
+09-18 00:48:00.658 13900 16380 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=4 count=533698 decodeMs=130.70
+09-18 00:48:00.681 13900 16381 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=5 count=529804 decodeMs=150.53
+09-18 00:48:00.845 13900 16383 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=6 count=528399 decodeMs=186.22
+09-18 00:48:00.855 13900 16384 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=7 count=543347 decodeMs=172.53
+09-18 00:48:01.003 13900 16387 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=9 count=524294 decodeMs=146.17
+09-18 00:48:01.008 13900 16386 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=8 count=527719 decodeMs=161.10
+09-18 00:48:01.197 13900 16389 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=10 count=530959 decodeMs=187.76
+09-18 00:48:01.203 13900 16390 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=11 count=528889 decodeMs=179.62
+09-18 00:48:01.338 13900 16392 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=12 count=530510 decodeMs=140.25
+09-18 00:48:01.391 13900 16393 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=13 count=524755 decodeMs=172.79
+09-18 00:48:01.498 13900 16395 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=14 count=525283 decodeMs=158.25
+09-18 00:48:01.539 13900 16396 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=15 count=525034 decodeMs=145.13
+09-18 00:48:01.678 13900 16397 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=16 count=526519 decodeMs=179.35
+09-18 00:48:01.697 13900 16398 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=17 count=524510 decodeMs=155.33
+09-18 00:48:01.806 13900 16401 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=18 count=524694 decodeMs=126.51
+09-18 00:48:01.828 13900 16403 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=19 count=524390 decodeMs=128.57
+09-18 00:48:01.940 13900 16404 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=20 count=527594 decodeMs=133.00
+09-18 00:48:01.962 13900 16405 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=21 count=524819 decodeMs=132.16
+09-18 00:48:02.085 13900 16406 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=22 count=526063 decodeMs=143.99
+09-18 00:48:02.105 13900 16407 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=23 count=524846 decodeMs=141.26
+09-18 00:48:02.254 13900 16408 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=24 count=525331 decodeMs=166.66
+09-18 00:48:02.260 13900 16409 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=25 count=525847 decodeMs=152.50
+09-18 00:48:02.338 13900 16411 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=27 count=187962 decodeMs=64.06
+09-18 00:48:02.395 13900 16410 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=26 count=537008 decodeMs=137.74
+09-18 00:48:02.471 13900 16413 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=29 count=109462 decodeMs=66.73
+09-18 00:48:02.535 13900 16412 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=28 count=360824 decodeMs=130.78
+09-18 00:48:02.548 13900 16414 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=19 file=30 count=23974 decodeMs=11.07
+09-18 00:48:02.783 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=19 prepareMs=2563.80 sortMs=210.51 decoded=31 pageHits=0
+09-18 00:48:03.376 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=19 uploadedBytes=67350528 elapsedMs=3209.02
+09-18 00:48:03.392 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=19 count=2000000 prepareMs=2563.80 sortMs=210.51 refineMs=3225.50 uploadedBytes=67350528 pageHits=0 frameMs=13.90
+09-18 00:48:03.402 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=13 cache=file budget=2000000 revision=19 target=18 elapsedMs=3256 refineMs=3225.50 uploadedBytes=67350528 networkBytes=0 count=2000000 coverage=1
+09-18 00:48:03.805 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=20 queueMs=54.95 files=31
+09-18 00:48:03.945 13900 16420 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=0 count=525060 decodeMs=139.19
+09-18 00:48:03.957 13900 16421 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=1 count=524433 decodeMs=150.00
+09-18 00:48:04.099 13900 16431 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=3 count=533698 decodeMs=136.58
+09-18 00:48:04.112 13900 16427 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=2 count=526334 decodeMs=165.32
+09-18 00:48:04.304 13900 16432 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=4 count=536369 decodeMs=189.08
+09-18 00:48:04.305 13900 16433 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=5 count=529804 decodeMs=169.90
+09-18 00:48:04.448 13900 16434 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=6 count=528399 decodeMs=143.43
+09-18 00:48:04.449 13900 16435 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=7 count=529140 decodeMs=143.29
+09-18 00:48:04.595 13900 16437 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=8 count=543347 decodeMs=146.32
+09-18 00:48:04.615 13900 16438 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=9 count=527719 decodeMs=156.00
+09-18 00:48:04.729 13900 16441 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=10 count=528889 decodeMs=130.90
+09-18 00:48:04.761 13900 16442 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=11 count=524294 decodeMs=145.45
+09-18 00:48:04.862 13900 16443 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=12 count=530959 decodeMs=131.73
+09-18 00:48:04.935 13900 16444 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=13 count=525283 decodeMs=171.24
+09-18 00:48:05.051 13900 16445 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=14 count=530510 decodeMs=186.45
+09-18 00:48:05.084 13900 16446 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=15 count=524755 decodeMs=147.84
+09-18 00:48:05.190 13900 16450 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=16 count=525034 decodeMs=138.18
+09-18 00:48:05.219 13900 16451 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=17 count=524598 decodeMs=134.03
+09-18 00:48:05.322 13900 16452 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=18 count=524510 decodeMs=130.97
+09-18 00:48:05.357 13900 16453 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=19 count=524694 decodeMs=134.93
+09-18 00:48:05.500 13900 16459 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=20 count=524390 decodeMs=176.73
+09-18 00:48:05.513 13900 16460 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=21 count=524819 decodeMs=153.88
+09-18 00:48:05.626 13900 16461 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=22 count=526063 decodeMs=124.99
+09-18 00:48:05.659 13900 16462 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=23 count=524846 decodeMs=142.25
+09-18 00:48:05.803 13900 16464 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=24 count=525331 decodeMs=173.31
+09-18 00:48:05.832 13900 16465 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=25 count=537008 decodeMs=170.28
+09-18 00:48:05.862 13900 16467 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=26 count=187962 decodeMs=58.76
+09-18 00:48:05.869 13900 16468 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=27 count=109462 decodeMs=36.98
+09-18 00:48:06.008 13900 16469 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=28 count=360824 decodeMs=144.13
+09-18 00:48:06.033 13900 16471 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=30 count=23974 decodeMs=23.88
+09-18 00:48:06.040 13900 16470 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=20 file=29 count=524880 decodeMs=168.02
+09-18 00:48:06.281 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=20 prepareMs=2475.68 sortMs=220.41 decoded=31 pageHits=0
+09-18 00:48:06.905 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=20 uploadedBytes=67432448 elapsedMs=3154.79
+09-18 00:48:06.921 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=20 count=2000000 prepareMs=2475.68 sortMs=220.41 refineMs=3171.01 uploadedBytes=67432448 pageHits=0 frameMs=13.47
+09-18 00:48:06.931 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=14 cache=file budget=2000000 revision=20 target=19 elapsedMs=3200 refineMs=3171.01 uploadedBytes=67432448 networkBytes=0 count=2000000 coverage=1
+09-18 00:48:07.309 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=21 queueMs=51.21 files=31
+09-18 00:48:07.461 13900 16474 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=1 count=525060 decodeMs=151.07
+09-18 00:48:07.468 13900 16473 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=0 count=524433 decodeMs=158.43
+09-18 00:48:07.640 13900 16477 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=3 count=524598 decodeMs=164.87
+09-18 00:48:07.640 13900 16476 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=2 count=526334 decodeMs=170.25
+09-18 00:48:07.784 13900 16478 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=4 count=533698 decodeMs=140.53
+09-18 00:48:07.800 13900 16479 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=5 count=529804 decodeMs=151.17
+09-18 00:48:07.959 13900 16480 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=6 count=528399 decodeMs=174.72
+09-18 00:48:07.969 13900 16481 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=7 count=543347 decodeMs=167.92
+09-18 00:48:08.141 13900 16482 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=8 count=527719 decodeMs=180.97
+09-18 00:48:08.145 13900 16483 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=9 count=524294 decodeMs=173.72
+09-18 00:48:08.325 13900 16484 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=10 count=530959 decodeMs=182.76
+09-18 00:48:08.336 13900 16487 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=11 count=528889 decodeMs=164.93
+09-18 00:48:08.492 13900 16491 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=12 count=530510 decodeMs=166.47
+09-18 00:48:08.497 13900 16492 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=13 count=524755 decodeMs=154.07
+09-18 00:48:08.624 13900 16493 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=14 count=525283 decodeMs=130.42
+09-18 00:48:08.664 13900 16494 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=15 count=525034 decodeMs=148.21
+09-18 00:48:08.815 13900 16496 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=17 count=524510 decodeMs=147.69
+09-18 00:48:08.820 13900 16495 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=16 count=526519 decodeMs=193.62
+09-18 00:48:09.004 13900 16497 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=18 count=524694 decodeMs=183.19
+09-18 00:48:09.009 13900 16498 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=19 count=524390 decodeMs=176.24
+09-18 00:48:09.132 13900 16501 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=20 count=527594 decodeMs=126.00
+09-18 00:48:09.178 13900 16502 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=21 count=524819 decodeMs=158.12
+09-18 00:48:09.306 13900 16503 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=22 count=526063 decodeMs=172.41
+09-18 00:48:09.324 13900 16504 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=23 count=524846 decodeMs=144.95
+09-18 00:48:09.489 13900 16506 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=24 count=525331 decodeMs=179.04
+09-18 00:48:09.502 13900 16507 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=25 count=525847 decodeMs=173.50
+09-18 00:48:09.586 13900 16509 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=27 count=187962 decodeMs=79.28
+09-18 00:48:09.650 13900 16508 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=26 count=537008 decodeMs=157.48
+09-18 00:48:09.729 13900 16511 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=29 count=109462 decodeMs=63.33
+09-18 00:48:09.792 13900 16510 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=28 count=360824 decodeMs=125.67
+09-18 00:48:09.823 13900 16512 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=21 file=30 count=23974 decodeMs=30.59
+09-18 00:48:10.028 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=21 prepareMs=2719.06 sortMs=187.69 decoded=31 pageHits=0
+09-18 00:48:10.662 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=21 uploadedBytes=67350528 elapsedMs=3404.11
+09-18 00:48:10.685 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=21 count=2000000 prepareMs=2719.06 sortMs=187.69 refineMs=3427.69 uploadedBytes=67350528 pageHits=0 frameMs=20.82
+09-18 00:48:10.697 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=15 cache=file budget=2000000 revision=21 target=20 elapsedMs=3460 refineMs=3427.69 uploadedBytes=67350528 networkBytes=0 count=2000000 coverage=1
+09-18 00:48:11.087 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=22 queueMs=53.70 files=31
+09-18 00:48:11.222 13900 16530 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=0 count=525060 decodeMs=134.41
+09-18 00:48:11.245 13900 16531 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=1 count=524433 decodeMs=156.68
+09-18 00:48:11.404 13900 16532 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=2 count=526334 decodeMs=181.05
+09-18 00:48:11.423 13900 16533 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=3 count=533698 decodeMs=175.97
+09-18 00:48:11.588 13900 16534 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=4 count=536369 decodeMs=182.72
+09-18 00:48:11.601 13900 16535 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=5 count=529804 decodeMs=175.89
+09-18 00:48:11.723 13900 16539 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=6 count=528399 decodeMs=134.12
+09-18 00:48:11.736 13900 16540 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=7 count=529140 decodeMs=131.04
+09-18 00:48:11.875 13900 16541 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=8 count=543347 decodeMs=151.49
+09-18 00:48:11.881 13900 16542 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=9 count=527719 decodeMs=143.89
+09-18 00:48:12.016 13900 16543 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=10 count=528889 decodeMs=139.46
+09-18 00:48:12.049 13900 16544 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=11 count=524294 decodeMs=166.00
+09-18 00:48:12.160 13900 16545 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=12 count=530959 decodeMs=141.34
+09-18 00:48:12.226 13900 16546 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=13 count=525283 decodeMs=173.85
+09-18 00:48:12.345 13900 16547 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=14 count=530510 decodeMs=183.51
+09-18 00:48:12.402 13900 16548 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=15 count=524755 decodeMs=174.07
+09-18 00:48:12.531 13900 16549 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=16 count=525034 decodeMs=184.59
+09-18 00:48:12.548 13900 16550 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=17 count=524598 decodeMs=144.44
+09-18 00:48:12.666 13900 16551 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=18 count=524510 decodeMs=132.44
+09-18 00:48:12.753 13900 16552 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=19 count=524694 decodeMs=202.89
+09-18 00:48:12.804 13900 16553 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=20 count=524390 decodeMs=136.90
+09-18 00:48:12.940 13900 16554 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=21 count=524819 decodeMs=185.26
+09-18 00:48:12.954 13900 16555 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=22 count=526063 decodeMs=148.76
+09-18 00:48:13.129 13900 16557 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=24 count=525331 decodeMs=170.19
+09-18 00:48:13.159 13900 16556 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=23 count=524846 decodeMs=214.54
+09-18 00:48:13.253 13900 16566 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=26 count=187962 decodeMs=89.13
+09-18 00:48:13.343 13900 16565 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=25 count=537008 decodeMs=178.71
+09-18 00:48:13.409 13900 16569 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=27 count=109462 decodeMs=63.10
+09-18 00:48:13.466 13900 16570 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=28 count=360824 decodeMs=112.44
+09-18 00:48:13.503 13900 16573 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=30 count=23974 decodeMs=30.49
+09-18 00:48:13.568 13900 16572 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=22 file=29 count=524880 decodeMs=158.94
+09-18 00:48:13.786 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=22 prepareMs=2698.92 sortMs=195.27 decoded=31 pageHits=0
+09-18 00:48:14.352 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=22 uploadedBytes=67432448 elapsedMs=3318.85
+09-18 00:48:14.373 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=22 count=2000000 prepareMs=2698.92 sortMs=195.27 refineMs=3339.98 uploadedBytes=67432448 pageHits=0 frameMs=18.33
+09-18 00:48:14.389 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=16 cache=file budget=2000000 revision=22 target=21 elapsedMs=3376 refineMs=3339.98 uploadedBytes=67432448 networkBytes=0 count=2000000 coverage=1
+09-18 00:48:14.760 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=23 queueMs=47.64 files=31
+09-18 00:48:14.903 13900 16591 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=0 count=524433 decodeMs=142.54
+09-18 00:48:14.927 13900 16592 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=1 count=525060 decodeMs=165.47
+09-18 00:48:15.049 13900 16596 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=2 count=526334 decodeMs=144.88
+09-18 00:48:15.074 13900 16597 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=3 count=524598 decodeMs=146.44
+09-18 00:48:15.199 13900 16598 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=4 count=533698 decodeMs=149.38
+09-18 00:48:15.251 13900 16599 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=5 count=529804 decodeMs=176.90
+09-18 00:48:15.338 13900 16600 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=6 count=528399 decodeMs=137.53
+09-18 00:48:15.451 13900 16601 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=7 count=543347 decodeMs=193.01
+09-18 00:48:15.490 13900 16603 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=8 count=527719 decodeMs=149.10
+09-18 00:48:15.607 13900 16610 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=9 count=524294 decodeMs=150.35
+09-18 00:48:15.650 13900 16638 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=10 count=530959 decodeMs=159.16
+09-18 00:48:15.821 13900 16645 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=12 count=530510 decodeMs=168.96
+09-18 00:48:15.824 13900 16641 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=11 count=528889 decodeMs=209.65
+09-18 00:48:15.998 13900 16646 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=13 count=524755 decodeMs=168.75
+09-18 00:48:16.024 13900 16647 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=14 count=525283 decodeMs=194.38
+09-18 00:48:16.168 13900 16648 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=15 count=525034 decodeMs=166.74
+09-18 00:48:16.200 13900 16649 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=16 count=526519 decodeMs=170.62
+09-18 00:48:16.327 13900 16650 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=17 count=524510 decodeMs=156.50
+09-18 00:48:16.373 13900 16651 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=18 count=524694 decodeMs=167.02
+09-18 00:48:16.489 13900 16652 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=19 count=524390 decodeMs=159.59
+09-18 00:48:16.549 13900 16653 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=20 count=527594 decodeMs=174.95
+09-18 00:48:16.654 13900 16654 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=21 count=524819 decodeMs=162.91
+09-18 00:48:16.700 13900 16655 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=22 count=526063 decodeMs=149.27
+09-18 00:48:16.834 13900 16656 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=23 count=524846 decodeMs=177.79
+09-18 00:48:16.880 13900 16657 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=24 count=525331 decodeMs=176.31
+09-18 00:48:17.024 13900 16659 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=25 count=525847 decodeMs=184.44
+09-18 00:48:17.049 13900 16660 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=26 count=537008 decodeMs=165.44
+09-18 00:48:17.083 13900 16661 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=27 count=187962 decodeMs=54.31
+09-18 00:48:17.136 13900 16664 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=29 count=109462 decodeMs=41.93
+09-18 00:48:17.192 13900 16662 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=28 count=360824 decodeMs=130.94
+09-18 00:48:17.225 13900 16665 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=23 file=30 count=23974 decodeMs=30.70
+09-18 00:48:17.451 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=23 prepareMs=2690.69 sortMs=209.39 decoded=31 pageHits=0
+09-18 00:48:18.041 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=23 uploadedBytes=67350528 elapsedMs=3328.75
+09-18 00:48:18.061 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=23 count=2000000 prepareMs=2690.69 sortMs=209.39 refineMs=3348.60 uploadedBytes=67350528 pageHits=0 frameMs=17.13
+09-18 00:48:18.076 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=17 cache=file budget=2000000 revision=23 target=22 elapsedMs=3385 refineMs=3348.60 uploadedBytes=67350528 networkBytes=0 count=2000000 coverage=1
+09-18 00:48:18.457 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=24 queueMs=57.37 files=31
+09-18 00:48:18.607 13900 16672 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=0 count=525060 decodeMs=148.87
+09-18 00:48:18.634 13900 16673 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=1 count=524433 decodeMs=176.80
+09-18 00:48:18.784 13900 16674 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=2 count=526334 decodeMs=176.64
+09-18 00:48:18.802 13900 16675 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=3 count=533698 decodeMs=166.42
+09-18 00:48:18.917 13900 16677 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=4 count=536369 decodeMs=129.96
+09-18 00:48:18.985 13900 16679 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=5 count=529804 decodeMs=168.69
+09-18 00:48:19.056 13900 16682 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=6 count=528399 decodeMs=137.86
+09-18 00:48:19.146 13900 16683 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=7 count=529140 decodeMs=158.89
+09-18 00:48:19.205 13900 16684 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=8 count=543347 decodeMs=145.46
+09-18 00:48:19.346 13900 16685 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=9 count=527719 decodeMs=194.75
+09-18 00:48:19.366 13900 16686 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=10 count=528889 decodeMs=158.93
+09-18 00:48:19.511 13900 16706 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=12 count=530959 decodeMs=142.64
+09-18 00:48:19.546 13900 16705 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=11 count=524294 decodeMs=195.77
+09-18 00:48:19.723 13900 16707 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=13 count=525283 decodeMs=173.86
+09-18 00:48:19.765 13900 16708 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=14 count=530510 decodeMs=202.07
+09-18 00:48:19.908 13900 16709 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=15 count=524755 decodeMs=183.15
+09-18 00:48:19.942 13900 16710 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=16 count=525034 decodeMs=174.95
+09-18 00:48:20.082 13900 16712 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=17 count=524598 decodeMs=171.58
+09-18 00:48:20.097 13900 16713 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=18 count=524510 decodeMs=152.48
+09-18 00:48:20.217 13900 16714 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=19 count=524694 decodeMs=132.06
+09-18 00:48:20.301 13900 16715 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=20 count=524390 decodeMs=182.60
+09-18 00:48:20.391 13900 16717 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=21 count=524819 decodeMs=171.94
+09-18 00:48:20.474 13900 16720 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=22 count=526063 decodeMs=165.44
+09-18 00:48:20.543 13900 16721 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=23 count=524846 decodeMs=149.37
+09-18 00:48:20.648 13900 16722 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=24 count=525331 decodeMs=167.94
+09-18 00:48:20.695 13900 16725 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=25 count=537008 decodeMs=150.59
+09-18 00:48:20.744 13900 16730 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=27 count=109462 decodeMs=48.06
+09-18 00:48:20.759 13900 16729 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=26 count=187962 decodeMs=106.89
+09-18 00:48:20.919 13900 16731 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=28 count=360824 decodeMs=150.76
+09-18 00:48:20.947 13900 16734 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=30 count=23974 decodeMs=26.63
+09-18 00:48:20.987 13900 16732 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=24 file=29 count=524880 decodeMs=214.72
+09-18 00:48:21.204 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=24 prepareMs=2747.25 sortMs=194.09 decoded=31 pageHits=0
+09-18 00:48:21.762 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=24 uploadedBytes=67432448 elapsedMs=3362.10
+09-18 00:48:21.783 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=24 count=2000000 prepareMs=2747.25 sortMs=194.09 refineMs=3383.59 uploadedBytes=67432448 pageHits=0 frameMs=18.81
+09-18 00:48:21.796 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=18 cache=file budget=2000000 revision=24 target=23 elapsedMs=3418 refineMs=3383.59 uploadedBytes=67432448 networkBytes=0 count=2000000 coverage=1
+09-18 00:48:22.173 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=25 queueMs=53.41 files=31
+09-18 00:48:22.318 13900 16744 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=1 count=525060 decodeMs=144.37
+09-18 00:48:22.342 13900 16743 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=0 count=524433 decodeMs=167.93
+09-18 00:48:22.520 13900 16747 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=3 count=524598 decodeMs=172.06
+09-18 00:48:22.542 13900 16746 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=2 count=526334 decodeMs=195.13
+09-18 00:48:22.737 13900 16749 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=5 count=529804 decodeMs=185.68
+09-18 00:48:22.738 13900 16748 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=4 count=533698 decodeMs=191.13
+09-18 00:48:22.910 13900 16750 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=6 count=528399 decodeMs=169.40
+09-18 00:48:22.919 13900 16751 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=7 count=543347 decodeMs=177.32
+09-18 00:48:23.089 13900 16753 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=9 count=524294 decodeMs=167.71
+09-18 00:48:23.125 13900 16752 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=8 count=527719 decodeMs=212.70
+09-18 00:48:23.319 13900 16754 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=10 count=530959 decodeMs=189.78
+09-18 00:48:23.329 13900 16755 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=11 count=528889 decodeMs=173.67
+09-18 00:48:23.512 13900 16757 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=13 count=524755 decodeMs=175.20
+09-18 00:48:23.529 13900 16756 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=12 count=530510 decodeMs=204.10
+09-18 00:48:23.697 13900 16760 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=15 count=525034 decodeMs=149.63
+09-18 00:48:23.724 13900 16759 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=14 count=525283 decodeMs=189.99
+09-18 00:48:23.907 13900 16765 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=17 count=524510 decodeMs=171.88
+09-18 00:48:23.924 13900 16764 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=16 count=526519 decodeMs=194.07
+09-18 00:48:24.094 13900 16767 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=19 count=524390 decodeMs=153.97
+09-18 00:48:24.126 13900 16766 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=18 count=524694 decodeMs=196.86
+09-18 00:48:24.313 13900 16771 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=21 count=524819 decodeMs=174.46
+09-18 00:48:24.348 13900 16769 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=20 count=527594 decodeMs=216.01
+09-18 00:48:24.537 13900 16780 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=22 count=526063 decodeMs=182.20
+09-18 00:48:24.550 13900 16781 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=23 count=524846 decodeMs=192.68
+09-18 00:48:24.719 13900 16784 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=25 count=525847 decodeMs=168.45
+09-18 00:48:24.733 13900 16783 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=24 count=525331 decodeMs=191.33
+09-18 00:48:24.839 13900 16791 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=27 count=187962 decodeMs=84.63
+09-18 00:48:24.965 13900 16790 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=26 count=537008 decodeMs=228.34
+09-18 00:48:25.020 13900 16796 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=29 count=109462 decodeMs=42.15
+09-18 00:48:25.085 13900 16795 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=28 count=360824 decodeMs=115.06
+09-18 00:48:25.106 13900 16797 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=25 file=30 count=23974 decodeMs=17.94
+09-18 00:48:25.308 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=25 prepareMs=3134.87 sortMs=184.95 decoded=31 pageHits=0
+09-18 00:48:25.892 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=25 uploadedBytes=67350528 elapsedMs=3771.49
+09-18 00:48:25.912 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=25 count=2000000 prepareMs=3134.87 sortMs=184.95 refineMs=3791.96 uploadedBytes=67350528 pageHits=0 frameMs=17.89
+09-18 00:48:25.958 13900 13900 I A03D00/com.nextnews.splatviewer/JSAPP: StreamTrial trial=19 cache=file budget=2000000 revision=25 target=24 elapsedMs=3861 refineMs=3791.96 uploadedBytes=67350528 networkBytes=0 count=2000000 coverage=1
+09-18 00:48:26.335 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PagePrepare revision=26 queueMs=0.31 files=32
+09-18 00:48:26.516 13900 16803 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=26 file=0 count=525060 decodeMs=179.49
+09-18 00:48:26.537 13900 16804 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=26 file=1 count=524433 decodeMs=201.34
+09-18 00:48:26.712 13900 16805 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=26 file=2 count=526334 decodeMs=189.03
+09-18 00:48:26.717 13900 16806 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=26 file=3 count=533698 decodeMs=178.84
+09-18 00:48:26.853 13900 16807 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=26 file=4 count=536369 decodeMs=130.15
+09-18 00:48:26.914 13900 16808 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=26 file=5 count=529804 decodeMs=177.87
+09-18 00:48:27.057 13900 16810 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=26 file=7 count=528399 decodeMs=141.27
+09-18 00:48:27.070 13900 16809 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDecode revision=26 file=6 count=524598 decodeMs=201.84
+09-18 00:48:27.335 13900 14579 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageSorted revision=26 prepareMs=999.86 sortMs=164.12 decoded=8 pageHits=6025
+09-18 00:48:27.494 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageGpuReady revision=26 uploadedBytes=18059264 elapsedMs=1159.50
+09-18 00:48:27.505 13900 14581 I A0D003/com.nextnews.splatviewer/NextNewsPages: PageDisplay revision=26 count=2000000 prepareMs=999.86 sortMs=164.12 refineMs=1170.58 uploadedBytes=18059264 pageHits=6025 frameMs=9.03

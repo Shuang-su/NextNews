@@ -1,0 +1,17 @@
+{
+  "metaflow": {
+    "revision": "a871786dffdb195399f3e7427987d8db70296491",
+    "engine": "2.21.3",
+    "source": "git cat-file of fixed metaflow-viewer subtree + metadata/version-history.json + analytics/tracking-plan.json",
+    "instrumentation": "Only copied src/index.ts resize accepts window.nextnewsResolution; benchmark injected into copied HTML; source repository unchanged",
+    "bundleSha256": "f3d64a7fe0f155dc0538f278ae2a0c64e6bdad696e45a9f24ec7b3515d8bb711",
+    "port": 8784
+  },
+  "official": {
+    "revision": "96f62515b99a28a20579041a656f7b1911c2964c",
+    "port": 8768
+  },
+  "harnessSha256": "2324f474a36f676f1702d4ae856f5eaa6444c9e99700a95c95f1120bb308d30f",
+  "sharedSettings": "web-settings.json, SH0 source, tone none, effects off, fixed 1320x2623, FOV75",
+  "invalidAttempt": "web-metaflow-2m was cached official content; excluded; explicit backend port and fresh page request added"
+}

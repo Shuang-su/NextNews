@@ -1,0 +1,15 @@
+{
+  "texture": "sog-codes",
+  "cache": "file",
+  "budget": 2000000,
+  "trials": 20,
+  "endToEndP50Ms": 3211.0,
+  "endToEndP95Ms": 3460.0,
+  "nativeSubmitToSwapP95Ms": 3427.69,
+  "allUploadsZero": false,
+  "fileOnlyFreshTargetPages": true,
+  "fullCoverage": true,
+  "frameTimeGateTested": false,
+  "allNetworkPayloadsZero": true,
+  "failure": []
+}

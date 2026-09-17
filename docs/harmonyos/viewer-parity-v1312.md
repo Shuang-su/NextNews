@@ -1,5 +1,10 @@
 # MetaFlow 优先的 Viewer 接续矩阵
 
+2026-09-18 最新用户决定：停止研究 Spatial Recon。华为实现和已取得证据仅作历史记录，不再纳入后续开发与验收；后续范围为 C++ / OpenGL 对齐 MetaFlow / SuperSplat。
+
+
+当前验收入口：[2026-09-18 SH0 真机验收](acceptance-20260918.md)。以下历史实现矩阵保留来源，不代替最新实测；完整发布验收未通过。
+
 2026-09-18 用户决策：OpenGL 固定 SH0，高阶 SH 入口及运行时数据已停用；后文 SH1/2/3 记录仅为历史实验。实机祖先像 SH0 固定轨迹 64.2 fps，见 [恢复记录](ancestor-sh-performance-20260917.md)。
 
 主基准：MetaFlow `a871786dffdb195399f3e7427987d8db70296491` / PlayCanvas 2.21.3。

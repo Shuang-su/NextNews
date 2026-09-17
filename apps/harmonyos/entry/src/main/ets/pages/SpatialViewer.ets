@@ -53,7 +53,7 @@ struct SpatialViewer {
   private generation: number = 0;
   private selectedIndex: number = 1;
   private visible: boolean = true;
-  private bounds: SampleBounds = SAMPLE_BOUNDS[0];
+  private bounds: SampleBounds = SAMPLE_BOUNDS.find((sample: SampleBounds) => sample.file === 'public.ply')!;
   private yaw: number = 0;
   private pitch: number = 0;
   private zoom: number = 1;
@@ -146,17 +146,20 @@ struct SpatialViewer {
       pending = await Scene.load();
       console.info(`SpatialViewer sceneCreated elapsedMs=${Date.now() - start}`);
       stage = '加载 3DGS 模型';
+      // Fixture insertion must not shift the menu's semantic model IDs.
+      const sampleFile = index === 0 ? 'tripo.ply' : index === 1 ? 'public.ply' : 'converted.ply';
+      const source = SAMPLE_BOUNDS.find((sample: SampleBounds) => sample.file === sampleFile);
+      if (!source) { throw new Error(`缺少样例范围：${sampleFile}`); }
       let asset: ComparisonAsset | undefined = undefined;
       if (index === 4 || index === 5) { asset = await comparisonSog(this.getUIContext().getHostContext() as common.UIAbilityContext, index === 5); }
       if (index !== 3) {
         const model = await spatialRender.GSPlugin.loadGSNode(pending,
-          { uri: asset ? `file://${asset.path}` : `OhosRawFile://models/${SAMPLE_BOUNDS[index].file}` }, pending.root ?? undefined);
+          { uri: asset ? `file://${asset.path}` : `OhosRawFile://models/${source.file}` }, pending.root ?? undefined);
         model.rotation = { x: 0, y: 0, z: 1, w: 0 }; this.gsNode = model;
       }
       stage = '创建相机';
       const camera = await pending.getResourceFactory().createCamera({ name: 'comparisonCamera' });
       if (!this.visible || request !== this.generation) { return; }
-      const source = SAMPLE_BOUNDS[index >= 3 ? 2 : index];
       this.bounds = { file: source.file, center: [-source.center[0], -source.center[1], source.center[2]], radius: source.radius };
       if (asset) { this.bounds = { file: index === 5 ? 'comparison-sh0.ply' : 'chunk-0008.sog', center: asset.bounds.slice(0, 3), radius: asset.bounds[3] }; }
       camera.fov = Math.PI / 4; camera.nearPlane = this.bounds.radius * 0.001;
