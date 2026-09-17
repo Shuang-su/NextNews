@@ -1,3 +1,7 @@
+import { currentLoadFailure } from './ViewerLoadFailure';
+import { gamepadFrame } from './ViewerGamepad';
+import { ViewerSound } from './ViewerSound';
+import { ViewerLoading } from './ViewerLoading';
 import { HotspotPosition, ViewerHotspot } from './ViewerHotspot';
 import { ViewerNavCursor } from './ViewerNavCursor';
 import { ViewerCatalog, CatalogProject, CatalogAsset } from './ViewerCatalog';
@@ -57,14 +61,25 @@ struct ViewerTool {
 @Entry
 @Component
 struct Index {
+  @State shEnabled: boolean = true;
+  @State soundMuted: boolean = false;
+  @State soundVolume: number = 1;
+  @State soundMessage: string = '';
+  private sound: ViewerSound = new ViewerSound((message: string) => { this.soundMessage = message; });
   private catalog: ViewerCatalog = new ViewerCatalog();
   private catalogRevision: number = 0;
   private catalogLoading: boolean = false;
   private streamAsset: CatalogAsset | undefined = undefined;
+  @State loadingPoster: string = '';
+  @State loadProgress: number = -1;
   @State catalogVisible: boolean = false;
   @State catalogRows: CatalogProject[] = [];
   @State catalogPage: number = 1;
   @State catalogTotal: number = 0;
+  @State playerAddress: string = '';
+  private sourceEnvironment: string = '';
+  private sourceCount: number = 0;
+  @State environmentMessage: string = '';
   @State catalogSearch: string = '';
   @State catalogMessage: string = '';
   @State catalogBusy: boolean = false;
@@ -79,15 +94,24 @@ struct Index {
   }
   private cancelCatalog(): void {
     this.catalog.cancel(); this.catalog = new ViewerCatalog(); this.catalogRevision++; this.generation++; this.catalogBusy = false; this.busy = false;
-    if (this.catalogLoading) { this.stopStream(); } this.catalogLoading = false; this.catalogMessage = '已取消加载';
+    if (this.catalogLoading) { this.stopStream(); } this.catalogLoading = false; this.catalogMessage = '已取消加载'; this.opening = false; nativeRender.intro(false, false);
   }
-  private async openCatalog(id: string): Promise<void> {
+  private async openCatalog(id: string, player: boolean = false): Promise<void> {
+    this.sound.gesture();
     if (this.busy) { return; }
-    const revision = ++this.generation; this.busy = true; this.catalogLoading = true; this.localError = ''; this.catalogMessage = '正在读取项目配置';
+    const revision = ++this.generation; this.modelsVisible = false; this.settingsVisible = false; this.busy = true; this.catalogLoading = true; this.localError = ''; this.catalogMessage = '正在读取项目配置';
     this.stopStream(); this.clearProfile();
     try {
-      const asset = await this.catalog.detail(id);
+      const asset = player ? await this.catalog.player(id) : await this.catalog.detail(id);
       if (revision !== this.generation || !this.visible) { return; }
+      this.loadingPoster = asset.poster;
+      if (asset.player) {
+        this.fullLoad = asset.player.fullLoad; this.toolsVisible = !asset.player.noui;
+        if (asset.player.budget !== undefined) {
+          this.quality = asset.player.budget;
+          if (this.quality > 4000000) { this.paged = true; this.encoded = true; }
+        }
+      }
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       if (asset.project.modelType === 'lod') {
         if (this.backendName !== 'OpenGL') { throw new Error('线上整场流式请切换 OpenGL；华为瓦片尚未通过验证'); }
@@ -96,23 +120,55 @@ struct Index {
         if (revision !== this.generation || !this.visible || !this.stream?.manifest) { return; }
       } else {
         this.catalogMessage = '正在下载单体 SOG';
-        const path = await this.catalog.model(asset, context.cacheDir);
+        const path = await this.catalog.model(asset, context.cacheDir, (percent: number) => {
+          if (revision === this.generation && this.visible && this.opening) { this.loadProgress = percent; }
+        });
         if (revision !== this.generation || !this.visible) { return; }
-        const bounds = await nativeRender.inspectModel(path);
+        this.loadProgress = -1; this.catalogMessage = '正在解码并准备 GPU 资源';
+        const info = await nativeRender.inspectModel(path, true);
+        const bounds = info.slice(0, 4); this.sourceCount = info[4];
         if (revision !== this.generation || !this.visible) { return; }
         this.viewer.bounds = bounds; this.sourcePath = path; this.title = asset.project.modelTitle;
         this.awaitingModelCamera = this.backendName === 'OpenGL'; await this.backend.load({ path, bounds });
         this.applyCatalogSettings(asset);
       }
+      if (asset.player?.environment) { this.loadEnvironment(asset.player.environment, revision); }
       this.catalogMessage = '项目已提交，正在显示'; this.modelsVisible = false;
     } catch (error) { if (revision === this.generation) { this.localError = String(error); this.catalogMessage = String(error); } }
     finally { if (revision === this.generation) { this.busy = false; this.catalogLoading = false; } }
   }
+  private async loadEnvironment(address: string, revision: number): Promise<void> {
+    this.environmentMessage = '环境加载中';
+    const backend = this.backend, session = this.stream, subject = this.sourcePath;
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
+      const path = await this.catalog.resource(address, context.cacheDir);
+      if (revision !== this.generation || !this.visible) { return; }
+      const info = await nativeRender.inspectModel(path, true);
+      if (revision !== this.generation || !this.visible || backend !== this.backend || session !== this.stream) { return; }
+      if (session) { session.attachEnvironment(path, info[4]); }
+      else {
+        if (this.sourceCount + info[4] > 4000000) { throw new Error('主体与环境超过当前单体 400 万上限，保留主体'); }
+        await backend.environment(path, subject, this.viewer.bounds);
+      }
+      if (revision !== this.generation || backend !== this.backend) { return; }
+      this.sourceEnvironment = path; this.environmentMessage = '环境已就绪'; this.updateCamera();
+    } catch (error) {
+      if (revision === this.generation) { this.environmentMessage = `环境未加载：${String(error)}`; }
+    }
+  }
   private applyCatalogSettings(asset: CatalogAsset): void {
-    this.viewer.configure(asset.settings); this.viewer.initial(); this.flyMode = this.controls.fly;
+    this.effectsRevision++; this.collisionSpace = asset.player?.voxelCoordinateSpace ?? 'auto';
+    this.firstAnimationExitOrbit = asset.player?.animationFirstExitMode === 'orbit';
+    this.viewer.configure(asset.settings, asset.player); this.viewer.initial(); this.flyMode = this.controls.fly;
     this.duration = this.viewer.profile!.animation.duration; this.timeline = 0;
-    this.profilePlaying = asset.settings.startMode === 'animTrack'; this.animationMode = this.profilePlaying;
-    if (asset.collision) { this.collisionUrl = asset.collision; this.loadCollision(); }
+    const mode = this.viewer.profile!.initialMode;
+    if (mode === 'orbit' || mode === 'fly') { this.viewer.apply(this.viewer.pose(), mode === 'fly'); this.flyMode = this.controls.fly; }
+    this.profilePlaying = asset.player ? mode === 'anim' : asset.settings.startMode === 'animTrack'; this.animationMode = this.profilePlaying;
+    if (asset.collision) {
+      this.collisionUrl = asset.collision; const revision = this.generation;
+      this.loadCollision().then(() => { if (revision === this.generation && this.visible && this.active && asset.player?.mode === 'walk' && !this.profilePlaying) { this.enterWalk(); } });
+    }
     this.updateCamera();
   }
   @State collisionDebug: boolean = false;
@@ -174,12 +230,13 @@ struct Index {
   private walkRun: number = 1;
   private walkProgress: number = 0;
   private walkBlockedTime: number = 0;
+  private collisionSpace: string = 'auto';
   private async loadCollision(): Promise<void> {
     if (this.stream && !this.stream.manifest) { this.localError = '请先完成流式场景加载，再接入对应碰撞数据'; return; }
     this.stopCollision();
     const session = new ViewerCollision((message: string) => { if (this.collision === session) { this.collisionMessage = message; } });
     this.collision = session; this.collisionMessage = '正在读取碰撞数据';
-    try { await session.open(this.collisionUrl, (this.getUIContext().getHostContext() as common.UIAbilityContext).cacheDir, this.viewer.pose().position); }
+    try { await session.open(this.collisionUrl, (this.getUIContext().getHostContext() as common.UIAbilityContext).cacheDir, this.viewer.pose().position, this.collisionSpace); }
     catch (error) { if (this.collision === session) { this.collisionMessage = ((error as BusinessError).message || String(error)); } }
   }
   private leaveWalk(): void { this.walkMode = false; this.walkPending = false; this.walkDestination = undefined; this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; nativeRender.collisionPause(); }
@@ -195,12 +252,31 @@ struct Index {
       this.walkMode = true; this.flyMode = true; this.localError = ''; this.modelsVisible = false; this.settingsVisible = false; this.updateCamera();
     } catch (error) { this.localError = `步行出生点：${((error as BusinessError).message || String(error))}`; } finally { this.walkPending = false; }
   }
+  private padAxes: number[] = [0, 0, 0, 0];
+  private gamepadEnabled: boolean = false;
+  private gamepadInput(ms: number): void {
+    this.padAxes = this.gamepadEnabled ? nativeRender.gamepad() : [0, 0, 0, 0];
+    if (this.opening || this.busy || this.modelsVisible || this.settingsVisible || this.helpVisible) { this.padAxes = [0, 0, 0, 0]; return; }
+    const frame = gamepadFrame(this.padAxes, ms / 1000, this.controls.fly || this.walkMode, this.controls.fov);
+    if (!frame.active) { return; }
+    this.sound.gesture(); this.viewer.interrupt(); this.stopAnimation(); this.autoOrbit = false; this.clearNav();
+    this.controls.target[0] += frame.yaw;
+    this.controls.target[1] = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.controls.target[1] + frame.pitch));
+    if (this.walkMode) { return; }
+    if (this.controls.fly) { this.controls.moveWorld(frame.right, 0, frame.forward); }
+    else {
+      const distance = 3 * this.controls.target[2], yaw = this.controls.target[0];
+      this.controls.target[3] += Math.cos(yaw) * frame.right * distance;
+      this.controls.target[5] -= Math.sin(yaw) * frame.right * distance;
+      this.controls.zoom(1 + frame.forward);
+    }
+  }
   private walkFrame(ms: number): void {
     const session = this.collision; if (!session) { this.leaveWalk(); return; }
     const before = this.controls.current.slice();
     const dt = Math.max(0, Math.min(ms / 1000, .064));
-    let right = this.joyX + Number(this.walkKeys.has('d')) - Number(this.walkKeys.has('a'));
-    let forward = -this.joyY + Number(this.walkKeys.has('w')) - Number(this.walkKeys.has('s'));
+    let right = this.joyX + this.padAxes[0] + Number(this.walkKeys.has('d')) - Number(this.walkKeys.has('a'));
+    let forward = -this.joyY - this.padAxes[1] + Number(this.walkKeys.has('w')) - Number(this.walkKeys.has('s'));
     let multiplier = this.walkKeys.has('shift') ? 2 : this.walkKeys.has('ctrl') ? .5 : 1;
     if (right || forward) { this.walkDestination = undefined; }
     if (this.walkDestination) {
@@ -265,6 +341,7 @@ struct Index {
   @State @Watch('syncAnnotationStyle') showAnnotations: boolean = true;
   @State @Watch('syncAnnotationStyle') gaming: boolean = false;
   @State annotationDepth: number = 0;
+  @State introEnabled: boolean = true;
   @State @Watch('syncAnnotations') gpuAnnotations: boolean = true;
   @State hoveredAnnotation: number = -1;
   @State popupVisible: boolean = false;
@@ -304,7 +381,58 @@ struct Index {
   @State profilePlaying: boolean = false;
   @State @Watch('syncAnnotationStyle') animationMode: boolean = false;
   private scrubResume: boolean = false;
-  private stopAnimation(): void { this.animationMode = false; this.profilePlaying = false; this.scrubResume = false; }
+  @State skyMessage: string = '';
+  private skyAddress: string = '';
+  private skyRevision: number = 0;
+  private async updateSkybox(address: string): Promise<void> {
+    if (this.backendName !== 'OpenGL') {
+      if (this.skyAddress) { this.skyAddress = ''; this.skyRevision++; nativeRender.skybox('').catch(() => {}); }
+      this.skyMessage = address ? '华为天空盒等价性尚未验证' : ''; return;
+    }
+    if (address === this.skyAddress) { return; }
+    this.skyAddress = address; const revision = ++this.skyRevision;
+    await nativeRender.skybox('').catch(() => {});
+    if (revision !== this.skyRevision || !this.visible) { return; }
+    this.skyMessage = address ? '天空盒加载中' : '';
+    if (!address) { return; }
+    let path = '';
+    try {
+      path = await this.catalog.image(address, (this.getUIContext().getHostContext() as common.UIAbilityContext).cacheDir);
+      if (revision !== this.skyRevision || !this.visible || this.backendName !== 'OpenGL') { return; }
+      await nativeRender.skybox(path);
+      if (revision === this.skyRevision && this.visible) { this.skyMessage = '天空盒已解码，正在提交 GPU'; }
+    } catch (error) {
+      if (revision === this.skyRevision && this.visible) { this.skyMessage = `天空盒：${(error as BusinessError).message || String(error)} (${(error as BusinessError).code ?? 0})`; if (path) { try { await fs.unlink(path); } catch (_) {} } }
+    } finally { if (path) { this.catalog.releaseImage(path); } }
+  }
+  @State effectError: string = '';
+  @State effectsEnabled: boolean = true;
+  @State effectsRevision: number = 0;
+  private toggleEffect(index: number): void {
+    if (!this.viewer.profile) { this.viewer.configure(createSettings(this.viewer.pose())); }
+    const settings = this.viewer.profile!.settings, fx = settings.postEffectSettings;
+    if (index === 0) { fx.sharpness.enabled = !fx.sharpness.enabled; if (!fx.sharpness.amount) { fx.sharpness.amount = .5; } }
+    else if (index === 1) { fx.bloom.enabled = !fx.bloom.enabled; if (fx.bloom.enabled) { settings.highPrecisionRendering = true; } }
+    else if (index === 2) { fx.grading.enabled = !fx.grading.enabled; }
+    else if (index === 3) { fx.vignette.enabled = !fx.vignette.enabled; }
+    else if (index === 4) { fx.fringing.enabled = !fx.fringing.enabled; }
+    else if (index === 5) { settings.highPrecisionRendering = !settings.highPrecisionRendering; }
+    else { const modes = ['none', 'linear', 'filmic', 'hejl', 'aces', 'aces2', 'neutral']; settings.tonemapping = modes[(modes.indexOf(settings.tonemapping) + 1) % modes.length]; }
+    this.effectsRevision++; this.updateCamera();
+  }
+  private effectLabel(index: number, _revision: number): string {
+    const settings = this.viewer.profile?.settings, fx = settings?.postEffectSettings;
+    const names = ['锐化', '泛光', '调色', '暗角', '色散', '高精度'];
+    if (index === 6) { return '色调映射：' + (settings?.tonemapping ?? 'none'); }
+    const values = [fx?.sharpness.enabled, fx?.bloom.enabled, fx?.grading.enabled, fx?.vignette.enabled, fx?.fringing.enabled, settings?.highPrecisionRendering];
+    return names[index] + (values[index] ? '：开' : '：关');
+  }
+  private firstAnimationExitOrbit: boolean = false;
+  private stopAnimation(): void {
+    if (this.profilePlaying && this.firstAnimationExitOrbit) {
+      this.firstAnimationExitOrbit = false; this.viewer.apply(this.viewer.pose(), false); this.flyMode = false;
+    }
+    this.animationMode = false; this.profilePlaying = false; this.scrubResume = false; }
   private scrubAnimation(phase: string): void {
     if (phase === 'begin') {
       if (!this.animationMode) { return; }
@@ -376,7 +504,7 @@ struct Index {
     try {
       previous.active(false);
       this.backend = next; this.backendName = next === this.gl ? 'OpenGL' : 'Huawei';
-      this.awaitingModelCamera = next === this.gl; await next.load({ path: this.sourcePath, bounds: this.viewer.bounds });
+      this.awaitingModelCamera = next === this.gl; await next.load({ path: this.sourcePath, bounds: this.viewer.bounds, environment: this.sourceEnvironment || undefined });
       this.viewer.apply(snapshot.pose, snapshot.fly); this.flyMode = snapshot.fly; next.active(this.active); this.updateCamera();
       previous.dispose(); this.profilePlaying = snapshot.playing;
     } catch (error) {
@@ -401,7 +529,15 @@ struct Index {
   @State graphics: string = '';
   @State busy: boolean = false;
   @State loading: boolean = false;
+  @State drawableCount: number = 0;
+  @State streamWorking: boolean = false;
+  @State opening: boolean = false;
+  private openingRequest: number = 0;
+  private introAwaitingVisible: boolean = false;
+  @State loadStage: string = '准备场景';
+  @State streamFailure: string = '';
   @State localError: string = '';
+  @State nativeFailure: string = '';
   @State title: string = 'NextNews · 3DGS';
   @State panMode: boolean = false;
   @State flyMode: boolean = false;
@@ -450,27 +586,32 @@ struct Index {
   private benchmarkStart: number = 0;
   private benchmarkFrames: number = 0;
   private benchmarkCount: number = 0;
-  private active: boolean = true;
+  @State active: boolean = true;
 
   private foregroundChanged(): void {
     this.scrubResume = false; this.clearDebug();
+    this.sound.active(this.foreground);
+    this.gamepadEnabled = this.foreground && nativeRender.gamepadActive(true); if (!this.foreground) { nativeRender.gamepadActive(false); this.padAxes = [0, 0, 0, 0]; }
     this.active = this.foreground; this.motionTime = Date.now(); this.pickGeneration++; this.resetJoystick(); this.controls.cancel(); this.pointers.cancel();
     this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.collision?.pause(!this.foreground);
     this.backend.active(this.foreground); if (this.stream) { this.stream.active = this.foreground; }
+    if(this.foreground){setTimeout(() => { this.resumeOpening(); }, 0);}
     if (this.foreground && this.backendName === 'Huawei' && this.sourcePath && !this.busy) { this.restoreHuawei(); }
   }
   private async restoreHuawei(): Promise<void> {
     const snapshot = this.viewer.snapshot(this.profilePlaying); this.busy = true;
     try {
-      await this.huawei.load({ path: this.sourcePath, bounds: this.viewer.bounds });
+      await this.huawei.load({ path: this.sourcePath, bounds: this.viewer.bounds, environment: this.sourceEnvironment || undefined });
       if (this.visible && this.backendName === 'Huawei') { this.viewer.apply(snapshot.pose, snapshot.fly); this.updateCamera(); }
     } catch (error) { this.localError = ((error as BusinessError).message || String(error)); } finally { this.busy = false; }
   }
   aboutToAppear(): void {
-    this.visible = true;
+    this.visible = true; this.gamepadEnabled = nativeRender.gamepadActive(true);
+    nativeRender.onPresented((request: number) => { this.presented(request); });
     this.motionTime = Date.now();
     this.motionTimer = setInterval(() => {
       const now = Date.now(); const dt = now - this.motionTime; this.motionTime = now;
+      if (this.active) { this.gamepadInput(dt); }
       if (this.active && now - this.streamTime >= 50) {
         this.streamTime = now;
         this.stream?.tick(this.controls.current, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
@@ -478,7 +619,7 @@ struct Index {
       if (this.active && !this.busy) { this.collision?.tick(this.viewer.pose().position); }
       if (this.active && !this.busy && now - this.debugAt >= 500) { this.debugAt = now; this.refreshDebug(); }
       if (this.active && !this.busy && this.walkMode) { this.walkFrame(dt);
-      } else if (this.active && this.profilePlaying && this.viewer.profile) {
+      } else if (this.active && !this.opening && this.profilePlaying && this.viewer.profile) {
         this.applyProfilePose(this.viewer.profile.advance(dt / 1000));
         if (now - this.timelineUpdated >= 100) { this.timelineUpdated = now; this.timeline = this.viewer.profile.animation.cursor(this.viewer.profile.time); }
         if (this.viewer.profile.ended) { this.profilePlaying = false; }
@@ -499,13 +640,23 @@ struct Index {
     }, 16);
     this.timer = setInterval(() => {
       if (this.backendName !== 'OpenGL') {
-        this.loading = false; this.message = this.backend.capabilities.note;
+        this.nativeFailure = ''; this.loading = false; this.streamWorking = false; if(!this.busy && this.spatialScene && !this.localError){this.opening=false;this.sound.shown(true);} this.message = this.backend.capabilities.note;
         this.graphics = 'SpatialReconKit / ArkGraphics3D';
         this.details = '华为渲染帧率和显存需使用系统工具采集。当前接口未提供等价的 GPU/排序统计。';
         return;
       }
       const state = nativeRender.status();
+      this.nativeFailure = currentLoadFailure(state.state, state.message, state.errorRequest, this.openingRequest);
+      if (state.skyError) { this.skyMessage = state.skyError; }
+      else if (state.skyReady && this.skyAddress) { this.skyMessage = `天空盒已就绪 · ${(state.skyBytes / 1048576).toFixed(1)} MiB`; }
+      this.effectError = state.postError;
       this.annotationDepth = state.annotationDepth;
+      this.drawableCount = state.count;
+      this.streamWorking = this.stream?.loadingVisible ?? false;
+      this.streamFailure = this.stream && !this.stream.active ? this.streamMessage : '';
+      this.loadStage = this.streamWorking ?
+        (this.stream?.manifest ? '[流式加载] 加载场景分块 · 渐进细化' : '[清单] 正在读取场景清单') : this.catalogLoading ? `[资源] ${this.catalogMessage}` :
+        state.state === 'loading' ? '[准备] 解码模型并准备 GPU 资源' : '[准备] 正在准备模型';
       if (state.state === 'ready' && !this.stream && state.count > 0) { this.viewer.bounds = state.bounds; if (this.awaitingModelCamera) { this.awaitingModelCamera = false; this.updateCamera(); } }
       this.loading = state.state === 'loading';
       if (this.stream) { console.info(`StreamFrame state=${state.state} frames=${state.frames} count=${state.count} loadMs=${state.loadMs.toFixed(0)} frameMs=${state.frameMs.toFixed(1)} uploadMs=${state.uploadMs.toFixed(1)} uploadedRows=${state.uploadedRows} reusedRows=${state.reusedRows} decodedFiles=${state.decodedFiles} subsetHits=${state.subsetHits} request=${state.requestRevision} display=${state.displayRevision} prepareMs=${state.prepareMs.toFixed(1)} refineMs=${state.refineMs.toFixed(1)} uploadedBytes=${state.uploadedBytes} pageHits=${state.pageHits}`); }
@@ -513,10 +664,14 @@ struct Index {
         this.message = state.state === 'ready' ? '官方导航 · 环绕聚焦 / 飞行前往 · 双击聚焦' : state.message;
       }
       this.graphics = state.graphics;
-      this.details = `${state.count.toLocaleString()} 个高斯 · SH0\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\n单帧 ${state.frameMs.toFixed(1)} ms · 渲染耗时折算 ${state.fps.toFixed(1)} fps\n最近上传批次 ${state.uploadMs.toFixed(1)} ms · 上传/复用 ${state.uploadedRows}/${state.reusedRows} 行\n高斯 GPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
+      this.details = `${state.count.toLocaleString()} 个高斯 · SH${state.shActive}（源 SH${state.shSource}）\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\nCPU 提交 ${state.frameMs.toFixed(1)} ms（非屏幕帧率）\n最近上传批次 ${state.uploadMs.toFixed(1)} ms · 上传/复用 ${state.uploadedRows}/${state.reusedRows} 行\n渲染 GPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n后处理 ${state.postActive ? '开启' : '关闭'} · 缓冲 ${(state.postBytes / 1048576).toFixed(1)} MiB\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
     }, 500);
   }
   aboutToDisappear(): void {
+    nativeRender.gamepadActive(false); this.gamepadEnabled = false; this.padAxes = [0, 0, 0, 0];
+    this.skyRevision++; this.skyAddress = ''; nativeRender.skybox('').catch(() => {});
+    this.sound.clear();
+    nativeRender.onPresented(null);
     this.visible = false; this.catalog.cancel(); this.catalogRevision++; this.stopStream(); this.stopCollision();
     this.generation++;
     if (this.timer !== -1) { clearInterval(this.timer); this.timer = -1; }
@@ -524,10 +679,14 @@ struct Index {
     this.controls.cancel(); this.pointers.cancel(); this.resetJoystick();
     this.backend.dispose();
   }
-  onPageShow(): void { this.collision?.pause(false); this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); this.backend.active(true); }
-  onPageHide(): void { this.clearNav(); this.scrubResume = false; this.clearDebug(); this.collision?.pause(true); this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); this.backend.active(false); }
+  onPageShow(): void { this.gamepadEnabled = nativeRender.gamepadActive(true); this.sound.active(true); this.collision?.pause(false); this.active = true; if (this.stream) { this.stream.active = true; } this.motionTime = Date.now(); this.backend.active(true); setTimeout(() => { this.resumeOpening(); }, 0); }
+  onPageHide(): void { nativeRender.gamepadActive(false); this.gamepadEnabled = false; this.padAxes = [0, 0, 0, 0]; this.sound.active(false); this.clearNav(); this.scrubResume = false; this.clearDebug(); this.collision?.pause(true); this.walkKeys.clear(); this.jumpHeld = false; this.jumpQueued = false; this.jumpOwner = -1; this.pickGeneration++; this.benchmarkStart = 0; this.active = false; this.resetJoystick(); if (this.stream) { this.stream.active = false; } this.controls.cancel(); this.pointers.cancel(); this.backend.active(false); }
   private updateCamera(): void {
+    this.sound.configure(this.viewer.profile?.settings.soundUrl ?? '');
+    this.sound.shown(!this.opening);
     this.backend.background(this.viewer.profile?.settings.background.color ?? [0, 0, 0]);
+    this.backend.effects(this.effectsEnabled ? this.viewer.profile?.settings : undefined);
+    this.updateSkybox(this.viewer.profile?.settings.background.skyboxUrl ?? '');
     this.backend.camera(this.viewer.pose(), this.viewer.bounds); this.refreshAnnotations(); this.drawDebug(); this.drawNav();
   }
 
@@ -615,8 +774,29 @@ struct Index {
     else { this.controls.reset(); this.controls.fov = 85; this.viewer.apply(framePose(this.viewer.bounds), false); }
     this.flyMode = this.controls.fly; this.timeline = 0; this.updateCamera();
   }
-  private clearProfile(): void { this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.syncAnnotations(); }
+  private presented(request: number): void {
+    if(!this.visible || !this.active || this.backendName !== 'OpenGL' || request !== this.openingRequest || request <= 0){return;}
+    if (!this.opening) { this.beginVisibleIntro(); return; }
+    this.opening = false; this.sound.shown(true);
+  }
+  private resumeOpening(): void {
+    // A frame may have completed just as the app entered the background. Replay
+    // its acknowledgement once on resume; ordinary loading is event-driven.
+    this.presented(nativeRender.status().openingPresented);
+    this.beginVisibleIntro();
+  }
+  private beginVisibleIntro(replay: boolean = false): void {
+    if((!this.introAwaitingVisible && !replay) || this.opening || !this.active || this.backendName !== 'OpenGL' || this.openingRequest === 0){return;}
+    if(nativeRender.status().openingPresented !== this.openingRequest){return;}
+    const focus = this.viewer.pose().target;
+    const settings = this.viewer.profile?.settings;
+    if (settings?.revealEffect === 'none') { this.introAwaitingVisible = false; nativeRender.intro(false, false); return; }
+    const profile = !this.stream && settings?.experienceType === 'character' ? 1 : settings?.voxelManifestUrl ? 2 : 0;
+    if (nativeRender.beginIntro(this.openingRequest, focus[0], focus[1], focus[2], this.stream?.manifest?.aabb ?? [], profile)) { this.introAwaitingVisible = false; }
+  }
+  private clearProfile(): void { this.nativeFailure = ''; this.skyAddress = ''; this.skyRevision++; nativeRender.skybox('').catch(() => {}); this.skyMessage = '';  this.collisionSpace = 'auto'; this.effectsRevision++; this.firstAnimationExitOrbit = false; this.sourceEnvironment = ''; this.sourceCount = 0; this.environmentMessage = ''; this.sound.clear(); this.loadingPoster = ''; this.loadProgress = -1; nativeRender.intro(this.introEnabled && this.backendName === 'OpenGL', true); this.openingRequest = nativeRender.status().openingRequest; this.introAwaitingVisible = true; this.opening = true; this.clearNav(); this.stopCollision(); this.stopAnimation(); this.viewer.profile = undefined; this.profileReady = false; this.viewer.selected = -1; this.annotationCount = 0; this.markers = []; this.annotationIndex = -1; this.timeline = 0; this.popupVisible = false; this.backend.background([0, 0, 0]); this.backend.effects(); this.syncAnnotations(); }
   private touch(event: TouchEvent): void {
+    if (event.type === TouchType.Down) { this.sound.gesture(); }
     if (event.source === SourceType.Mouse) { return; }
     if (event.type === TouchType.Down) { this.clearNav(); this.pickGeneration++; }
     if (event.type === TouchType.Down && this.viewer.selected >= 0) { this.closeAnnotation(); }
@@ -662,6 +842,7 @@ struct Index {
     }
   }
   private handleKey(event: KeyEvent): boolean {
+    this.sound.gesture();
     let key = event.keyText.toLowerCase();
     switch (event.keyCode) {
       case KeyCode.KEYCODE_W: key = 'w'; break;
@@ -704,17 +885,17 @@ struct Index {
   }
   private stopStream(): void {
     const old = this.stream; this.stream = undefined; old?.stop();
-    if (old) { nativeRender.chunks([], [0, 0, 0, 1]); }
+    if (old) { nativeRender.chunks([], [0, 0, 0, 1]); this.opening = false; nativeRender.intro(false, false); }
     if (old) { setTimeout(() => { old.dispose(); }, 1000); }
-    this.streamMessage = '';
+    this.streamMessage = ''; this.streamWorking = false; this.streamFailure = '';
   }
   private async startStream(asset?: CatalogAsset): Promise<void> {
     const selected = asset ?? (this.streamAsset?.content === this.streamUrl ? this.streamAsset : undefined);
     this.streamAsset = selected;
     if (this.backendName !== 'OpenGL') { this.localError = '华为原生瓦片请使用独立实验入口'; return; }
-    this.stopStream(); this.clearProfile(); this.localError = ''; this.title = '流式场景'; this.reset();
+    this.stopStream(); this.clearProfile(); this.loadingPoster = selected?.poster ?? ''; this.localError = ''; this.title = '流式场景'; this.reset();
     const session = new StreamSession((message: string) => { if (this.stream === session) { this.streamMessage = message; } });
-    this.stream = session; session.budget = this.quality; session.paged = this.paged; session.encoded = this.encoded;
+    this.stream = session; this.streamWorking = true; this.loadStage = '正在读取场景清单'; session.budget = this.quality; session.paged = this.paged; session.encoded = this.encoded;
     try {
       const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
       await session.open(this.streamUrl, context.cacheDir, this.fullLoad);
@@ -724,10 +905,11 @@ struct Index {
         else if (this.streamUrl === 'http://127.0.0.1:8768/scene.json') { await this.profileCamera(false); }
         session.tick(this.controls.current, this.controls.fly, this.controls.fov, this.controls.width / Math.max(1, this.controls.height));
       }
-    } catch (error) { if (this.stream === session) { this.streamMessage = `流式失败：${((error as BusinessError).message || String(error))}`; } }
+    } catch (error) { if (this.stream === session) { this.streamWorking = false; session.active = false; this.localError = String(error); this.streamMessage = `流式失败：${((error as BusinessError).message || String(error))}`; } }
   }
   private async sample(name: string, label: string): Promise<void> {
     if (this.busy) { return; }
+    this.modelsVisible = false; this.settingsVisible = false;
     this.stopStream();
     this.localError = '';
     const request = ++this.generation;
@@ -770,7 +952,8 @@ struct Index {
     this.viewer.initial(); this.flyMode = this.controls.fly; this.diagnosticsVisible = false; this.updateCamera();
   }
   private async loadComparison(): Promise<void> {
-    if (this.busy) { return; } this.busy = true; this.stopStream(); this.localError = '';
+    if (this.busy) { return; }
+    this.modelsVisible = false; this.settingsVisible = false; this.busy = true; this.stopStream(); this.localError = '';
     const request = ++this.generation;
     try {
       const asset = await comparisonSog(this.getUIContext().getHostContext() as common.UIAbilityContext);
@@ -801,6 +984,7 @@ struct Index {
       if (this.visible && request === this.generation) {
         const bounds = await nativeRender.inspectModel(destination);
         if (!this.visible || request !== this.generation) { return; }
+        this.modelsVisible = false; this.settingsVisible = false;
         this.title = '本地模型'; this.sourcePath = destination; this.viewer.bounds = bounds; this.clearProfile(); this.reset(); this.loading = true; this.awaitingModelCamera = this.backendName === 'OpenGL'; await this.backend.load({ path: destination, bounds }); this.updateCamera();
       }
     } catch (error) {
@@ -855,6 +1039,19 @@ struct Index {
             hover: (value: boolean) => { this.hoveredAnnotation = value ? marker.index : this.hoveredAnnotation === marker.index ? -1 : this.hoveredAnnotation; this.syncAnnotationStyle(); } })
         }, (marker: HotspotPosition) => marker.index.toString())
       }
+      if (this.active && this.opening) {
+        if (this.loadingPoster) {
+          Image(this.loadingPoster).width('100%').height('100%').objectFit(ImageFit.Cover)
+            .blur(this.loadProgress >= 0 ? Math.floor((100 - this.loadProgress) * .4) : 0)
+            .hitTestBehavior(HitTestMode.None).id('MetaFlow场景海报')
+        }
+        Column() {
+          Blank()
+          ViewerLoading({ progress: this.loadProgress, stage: this.localError || this.nativeFailure || this.streamFailure || this.loadStage, failed: this.localError.length > 0 || this.nativeFailure.length > 0 || this.streamFailure.length > 0,
+            onHidden: () => { this.beginVisibleIntro(); } })
+        }.width('100%').height('100%').padding({ left: 16, right: 16, bottom: 120 })
+          .hitTestBehavior(HitTestMode.None)
+      }
       Column({ space: 6 }) {
         Row() {
           Column({ space: 3 }) {
@@ -864,15 +1061,7 @@ struct Index {
           Button('模型列表').fontSize(13).height(40).backgroundColor('#CC243247').fontColor('#FFFFFF').id('模型列表').onClick(() => { this.toolsVisible = true; this.modelsVisible = true; this.settingsVisible = this.helpVisible = this.diagnosticsVisible = false; this.catalogList(); })
           ViewerTool({ icon: this.toolsVisible ? $r('app.media.viewer_expand') : $r('app.media.viewer_collapse'), label: this.toolsVisible ? '隐藏工具' : '显示工具', selected: !this.toolsVisible, action: () => { this.toolsVisible = !this.toolsVisible; }, onHoverChange: (label: string) => { this.hint = label; }, onKey: (event: KeyEvent) => this.handleKey(event) })
         }.width('100%')
-        if (this.loading || this.busy || this.localError) {
-          Row({ space: 8 }) {
-            if (this.loading || this.busy) { LoadingProgress().width(18).height(18).color('#90B7FF') }
-            Text(this.localError || this.message).fontSize(12).fontColor('#E7C78C').layoutWeight(1)
-          }.padding(8).backgroundColor('#D9162233').borderRadius(8)
-        }
-        if (this.streamMessage && this.toolsVisible) {
-          Text(this.streamMessage).fontSize(10).fontColor('#B7C9DE').maxLines(2).width('100%')
-        }
+        if (!this.opening && (this.localError || this.nativeFailure)) { Text(this.localError || this.nativeFailure).fontSize(12).fontColor('#FF9090').maxLines(3) }
         if (this.collisionDebug && this.collisionDebugMessage) {
           Text(this.collisionDebugMessage).fontSize(10).fontColor('#66F3DB').width('100%').backgroundColor('#99000000')
         }
@@ -930,6 +1119,9 @@ struct Index {
                     Text(this.collisionMessage).fontSize(12).fontColor('#BBD0E4')
                     Button(this.collisionDebug ? '关闭碰撞显示' : '显示碰撞边线').fontSize(12).onClick(() => { this.collisionDebug = !this.collisionDebug; this.clearDebug(); this.refreshDebug(); })
                   }
+                  TextInput({ text: this.playerAddress, placeholder: 'MetaFlow 页面链接（支持 content / settings 参数）' }).fontSize(12)
+                    .id('metaflow-address').onChange((value: string) => { this.playerAddress = value; })
+                  Button('打开 MetaFlow 场景').fontSize(12).enabled(!this.busy && this.playerAddress.length > 0).onClick(() => { this.openCatalog(this.playerAddress, true); })
                   Button('导入 viewer-settings.json').fontSize(12).onClick(() => { this.importSettings(); })
                   Button('同源 SOG 对照').enabled(!this.busy).onClick(() => { this.loadComparison(); })
                   Button('打开本地 PLY / SOG').fontSize(13).width('100%').enabled(!this.busy).onClick(() => { this.importModel(); })
@@ -946,7 +1138,31 @@ struct Index {
                   }
                 }
                 if (this.settingsVisible) {
+                  Button(this.shEnabled ? '方向颜色：按源文件' : '方向颜色：SH0 对照').id('方向颜色').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.shEnabled = !this.shEnabled; nativeRender.shDegree(this.shEnabled ? 3 : 0); })
                   Text('设置').fontSize(16).fontColor('#FFFFFF').width('100%')
+                  Button(this.effectsEnabled ? '画质效果：开' : '画质效果：关').id('画质效果').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.effectsEnabled = !this.effectsEnabled; this.updateCamera(); })
+                  if (this.skyMessage) {
+                    Text(this.skyMessage).fontSize(12).fontColor('#AFC6D8')
+                    Button('重试天空盒').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { const address = this.skyAddress; this.skyAddress = ''; this.updateSkybox(address); })
+                  }
+                  if (this.effectError) { Text('效果未启用：' + this.effectError).fontSize(12).fontColor('#FF9090') }
+                  if (this.backendName === 'OpenGL') {
+                    ForEach([0, 1, 2, 3, 4, 5, 6], (index: number) => {
+                      Button(this.effectLabel(index, this.effectsRevision)).id('画质效果' + index).fontSize(12).onClick(() => { this.toggleEffect(index); })
+                    })
+                  } else { Text('华为后处理等价性尚未通过').fontSize(12).fontColor('#AFC6D8') }
+
+                  Button(this.introEnabled ? '粒子开场：开' : '粒子开场：关').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.introEnabled = !this.introEnabled; nativeRender.intro(this.introEnabled, false); if(this.introEnabled){this.beginVisibleIntro(true);} })
+                  Button('重播粒子开场').fontSize(12).enabled(this.backendName === 'OpenGL' && this.introEnabled && !this.loading).onClick(() => { nativeRender.intro(true, false); this.beginVisibleIntro(true); this.settingsVisible = false; })
+                  if (this.viewer.profile?.settings.soundUrl) {
+                    Button(this.soundMuted ? '声音：静音' : '声音：开启').fontSize(12).onClick(() => {
+                      this.sound.gesture(); this.soundMuted = !this.soundMuted; this.sound.level(this.soundVolume, this.soundMuted);
+                    })
+                    Slider({ value: this.soundVolume, min: 0, max: 1, step: .05 }).id('背景音量').onChange((value: number) => {
+                      this.sound.gesture(); this.soundVolume = value; this.sound.level(value, this.soundMuted);
+                    })
+                    if (this.soundMessage) { Text(this.soundMessage).fontSize(12).fontColor('#FF9090') }
+                  }
                   Button(this.gaming ? '游戏控制：开' : '游戏控制：关').fontSize(12).onClick(() => { this.gaming = !this.gaming; this.viewer.gaming = this.gaming; this.resetJoystick(); })
                   Button(this.showAnnotations ? '标注：显示' : '标注：隐藏').fontSize(12).onClick(() => { this.showAnnotations = !this.showAnnotations; })
                   Button(this.gpuAnnotations ? '深度标注：开' : '深度标注：关').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.gpuAnnotations = !this.gpuAnnotations; })
@@ -990,6 +1206,8 @@ struct Index {
                   Button('文件缓存测量 20 次').fontSize(12).enabled(this.paged && !this.streamMeasuring).onClick(() => { this.measureStream(true); })
                   Button('测量 10 秒').fontSize(12).enabled(this.benchmarkStart === 0).onClick(() => { this.benchmark(); })
                   if (this.benchmarkResult) { Text(this.benchmarkResult).fontSize(11).fontColor('#EBC478') }
+                  if (this.streamMessage) { Text(this.streamMessage).fontSize(11).fontColor('#B7C9DE').width('100%') }
+                  if (this.environmentMessage) { Text(this.environmentMessage).fontSize(11).fontColor('#B7C9DE') }
                   Text(this.details).fontSize(11).fontColor('#99B1C4').width('100%')
                   Text(this.graphics).fontSize(10).fontColor('#6F899F').width('100%')
                 }

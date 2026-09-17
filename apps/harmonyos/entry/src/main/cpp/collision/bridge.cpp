@@ -27,13 +27,16 @@ napi_value Async(napi_env env,const char *label,std::function<std::vector<double
 }
 napi_value Clear(napi_env e,napi_callback_info){std::lock_guard<std::mutex> lock(stateMutex);cache=CollisionCache();walker=Walker();spawnRevision++;return Number(e,++generation);}
 napi_value LoadResource(napi_env e,napi_callback_info info,bool mesh){try{
-    auto a=Args(e,info,mesh?3:4);const auto g=Double(e,a[0]);auto id=String(e,a[1]),meta=String(e,a[2]),bin=mesh?std::string():String(e,a[3]);
-    return Async(e,"LoadViewerCollision",[g,id,meta,bin,mesh](){
+    std::vector<napi_value> a(5);size_t count=5;napi_get_cb_info(e,info,&count,a.data(),nullptr,nullptr);
+    if((mesh&&count!=3)||(!mesh&&count!=4&&count!=5))throw std::runtime_error("Invalid collision argument count");
+    int space=-1;if(!mesh&&count==5){const double n=Double(e,a[4]);if(n!=std::floor(n)||n<-1||n>1)throw std::runtime_error("Invalid voxel coordinate space");space=int(n);}
+    const auto g=Double(e,a[0]);auto id=String(e,a[1]),meta=String(e,a[2]),bin=mesh?std::string():String(e,a[3]);
+    return Async(e,"LoadViewerCollision",[g,id,meta,bin,mesh,space](){
         if(pendingLoads.fetch_add(1)>=2){pendingLoads--;throw std::runtime_error("Two collision loaders already active");}
         struct Done{~Done(){pendingLoads--;}}done;
         {std::lock_guard<std::mutex> lock(stateMutex);if(g!=generation)throw std::runtime_error("Stale collision scene");}
         std::shared_ptr<const CollisionResource> tile;
-        if(mesh)tile=Mesh::Load(meta);else tile=Voxel::Load(meta,bin);auto b=tile->Bounds();
+        if(mesh)tile=Mesh::Load(meta);else tile=Voxel::Load(meta,bin,space);auto b=tile->Bounds();
         std::lock_guard<std::mutex> lock(stateMutex);if(g!=generation)throw std::runtime_error("Stale collision scene");
         if(!cache.Insert(id,tile))throw std::runtime_error("Collision cache is pinned or exceeds 128 MiB");
         return std::vector<double>{double(tile->Bytes()),b.min.x,b.min.y,b.min.z,b.max.x,b.max.y,b.max.z};

@@ -4,6 +4,11 @@
 #include "scene_cache.h"
 #include "page_atlas.h"
 #include "hotspots.h"
+#include "intro.h"
+#include "post_process.h"
+#include "skybox.h"
+#include "sh_texture.h"
+#include "sh_pages.h"
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
 #include <condition_variable>
@@ -11,13 +16,21 @@
 #include <map>
 #include <memory>
 #include <thread>
+#include <functional>
 
 namespace splat {
 struct Status {
     std::string state = "waiting", message = "Waiting for render surface", graphics;
     size_t count = 0, bytes = 0, frames = 0;
     int width = 1, height = 1;
+    std::string skyError;size_t skyBytes=0;bool skyReady=false;
+    std::string postError;
+    size_t postBytes = 0;
+    int shSource = 0, shActive = 0;
+    size_t shBytes = 0;
+    int postActive = 0;
     int annotationDepth = 0;
+    uint64_t openingRequest = 0, openingPresented = 0, errorRequest = 0;
     std::array<float,4> bounds{0,0,0,1};
     double gpuMs = -1, uploadMs = 0;
     size_t uploadedRows = 0, reusedRows = 0, decodedFiles = 0, subsetHits = 0;
@@ -33,6 +46,15 @@ public:
     void Resize(int width, int height);
     void Load(std::string path);
     void SetCamera(Camera camera);
+    void SetIntro(bool enabled, bool waitForModel);
+    bool IsPresented(uint64_t request,uint64_t surface);
+    void OnPresented(std::function<void(uint64_t,uint64_t)> callback);
+    bool BeginIntro(uint64_t request, std::array<float,3> focus, const std::vector<float>& box={}, int profile=0);
+    uint64_t BeginSkybox();
+    bool SkyboxCurrent(uint64_t request);
+    bool SetSkybox(uint64_t request,std::shared_ptr<const SkyImage> image);
+    void SetEffects(Effects settings);
+    void SetShDegree(int degree);
     void SetBackground(std::array<float,3> color);
     void SetChunks(std::vector<std::string> paths, std::array<float,4> bounds, std::vector<uint32_t> ranges = {},bool paged=false,uint64_t revision=0,bool encoded=false);
     void SetActive(bool active);
@@ -44,6 +66,7 @@ public:
     Status GetStatus();
     std::vector<float> Pick(float x,float y);
 private:
+    void ExtendOpening();
     void Loop(void *window);
     void SortLoop();
     void LoadLoop();
@@ -62,11 +85,18 @@ private:
         std::vector<PageKey> books;
         std::vector<uint32_t> bookSlots;
         std::vector<uint32_t> uploadOrder;
+        std::vector<PageKey> shKeys;
+        std::map<uint64_t,std::shared_ptr<const SogHarmonics>> shSources;
+        std::map<uint32_t,std::array<uint32_t,ShSourcePages>> shRows;
+        size_t shCursor=0;
     };
     void PreparePages(const std::vector<std::string>& paths,const std::array<float,4>& bounds,const std::vector<uint32_t>& ranges,uint64_t generation,uint64_t revision,double requestAt,bool encoded);
     void AdvancePages();
     std::shared_ptr<PageLoad> preparedPage_,stagingPage_;
-    PageAtlas atlas_,encodedAtlas_,bookAtlas_;
+    PageAtlas atlas_,encodedAtlas_,bookAtlas_,shAtlas_;
+    GLuint shCentroidAtlas_=0,shMapping_=0;
+    std::vector<PageKey> activeShPages_;
+    std::map<uint32_t,std::array<uint32_t,ShSourcePages>> shMappingRows_;
     GLuint encodedCenters_=0,encodedCodes_=0,codebookTexture_=0;
     std::vector<PageKey> activeEncodedPages_,activeBooks_;
     std::vector<uint32_t> encodedBookSlots_;
@@ -107,7 +137,7 @@ private:
     size_t stagingRow_ = 0;
     uint64_t stagingGeneration_ = 0;
     bool stagingResetCamera_ = false, preuploaded_ = false;
-    uint64_t loadGeneration_ = 0;
+    uint64_t loadGeneration_ = 0, loadOpeningRequest_ = 0;
     std::atomic<size_t> cacheBytes_{0};
     std::vector<std::vector<float>> retiredPixels_;
     std::vector<std::shared_ptr<Scene>> retiredScenes_;
@@ -131,6 +161,21 @@ private:
     bool chunksDirty_ = false;
     Camera camera_;
     std::array<float,3> background_{0,0,0};
+    std::function<void(uint64_t,uint64_t)> presentedCallback_;
+    Intro intro_;
+    Effects effects_{};
+    int shDegree_ = 3;
+    bool effectsFailed_ = false;
+    PostProcess post_;
+    ShTexture shTexture_,stagingShTexture_;
+    Skybox sky_;
+    std::shared_ptr<const SkyImage> skyImage_;
+    uint64_t skyRequest_=0;
+    bool skyFailed_=false;
+    bool openingCommitted_ = false;
+    uint64_t surfaceGeneration_ = 0, presentedSurface_ = 0;
+    uint64_t openingMinGeneration_ = 0;
+    std::array<float,4> introBounds_{0,0,0,1};
     Status status_;
     std::shared_ptr<Scene> scene_ = std::make_shared<Scene>();
     bool uploadDirty_ = true;

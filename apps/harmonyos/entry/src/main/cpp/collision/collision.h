@@ -47,7 +47,7 @@ public:
 };
 class Voxel final:public CollisionResource {
 public:
-    static std::shared_ptr<Voxel> Load(const std::string &metadata,const std::string &binary);
+    static std::shared_ptr<Voxel> Load(const std::string &metadata,const std::string &binary,int coordinateSpace=-1);
     Voxel(Box grid,double resolution,int depth,bool flip,std::vector<uint32_t> nodes,std::vector<uint32_t> leaves);
     bool Solid(int x,int y,int z)const;
     bool Free(V3 point)const override;

@@ -32,6 +32,13 @@ fixtures={'analytic':('analytic',model(v)), 'truncated':('invalid',model(v)[:-1]
           'duplicate':('invalid',model(v+[0],FIELDS+['x'])),
           'extra_payload':('invalid',model(v)+b'extra'),
           'wrong_format':('invalid',model(v).replace(b'binary_little_endian',b'binary_big_endian'))}
+for degree,n in [(1,9),(2,24),(3,45)]:
+    fields=FIELDS+['f_rest_'+str(i) for i in range(n)]
+    values=v+list(range(1,n+1))
+    fixtures['sh'+str(degree)]=('sh'+str(degree),model(values,fields))
+    fixtures['sh_reordered'+str(degree)]=('sh'+str(degree),model(list(reversed(values)),list(reversed(fields))))
+    fixtures['sh_gap'+str(degree)]=('invalid',model(values,fields[:-1]+['f_rest_'+str(n)]))
+    fixtures['sh_nan'+str(degree)]=('invalid',model(values[:-1]+[float('nan')],fields))
 with tempfile.TemporaryDirectory(prefix='nextnews-tests-') as folder:
     for name,(mode,data) in fixtures.items():
         path=Path(folder)/(name+'.ply');path.write_bytes(data)

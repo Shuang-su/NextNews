@@ -7,8 +7,8 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[2];CORE=ROOT/'apps/harmonyos/entry/src/main/cpp';OUT=ROOT/'artifacts/harmonyos/collision-test';OUT.parent.mkdir(parents=True,exist_ok=True)
 subprocess.run([os.environ.get('CXX','clang++'),'-std=c++17','-Wall','-Wextra','-Werror','-fsanitize=address,undefined','-g','-I',str(CORE),str(CORE/'collision/collision.cpp'),str(ROOT/'apps/harmonyos/tests/collision_test.cpp'),'-o',str(OUT)],check=True)
 subprocess.run([str(OUT)],check=True)
-def run(meta,binary,queries,valid=True):
- r=subprocess.run([str(OUT),str(meta),str(binary)],input=json.dumps(queries),text=True,capture_output=True,timeout=45)
+def run(meta,binary,queries,valid=True,space=-1):
+ r=subprocess.run([str(OUT),str(meta),str(binary),str(space)],input=json.dumps(queries),text=True,capture_output=True,timeout=45)
  if valid:
   assert r.returncode==0,r.stderr
   return json.loads(r.stdout)
@@ -65,5 +65,10 @@ with tempfile.TemporaryDirectory(prefix='nextnews-collision-') as folder:
  binary.write_bytes(raw[:-1]);run(meta,binary,[],False)
  binary.write_bytes(raw);legacy=dict(data,version='1.0');meta.write_text(json.dumps(legacy))
  legacyHit=run(meta,binary,[{'op':'ray','p':[0,-1.5,0],'d':[0,1,0],'distance':3}])[0];assert abs(legacyHit[1])<1e-7
+ worldHit=run(meta,binary,[{'op':'ray','p':[0,1.5,0],'d':[0,-1,0],'distance':3}],space=0)[0];assert abs(worldHit[1])<1e-7
+ meta.write_text(json.dumps(data))
+ flippedHit=run(meta,binary,[{'op':'ray','p':[0,-1.5,0],'d':[0,1,0],'distance':3}],space=1)[0];assert abs(flippedHit[1])<1e-7
+ run(meta,binary,[],False,space=2)
+ print('PASS explicit world overrides legacy auto-flip; explicit Rz180 overrides v1.1, invalid space rejected')
  meta.write_text(json.dumps(dict(data,nodeCount=0,leafDataCount=0)));binary.write_bytes(b'');assert run(meta,binary,[{'op':'free','p':[0,1,0]}])==[False]
 print('PASS native collision: stable floor, wall, jump/release latch, unknown boundary stop, reset, legacy transform and malformed data (ASan + UBSan)')

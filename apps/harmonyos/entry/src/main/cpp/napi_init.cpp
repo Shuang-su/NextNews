@@ -2,6 +2,7 @@
 #include "lod_selection.h"
 #include <cstring>
 #include "renderer.h"
+#include "gamepad.h"
 #include <ace/xcomponent/native_interface_xcomponent.h>
 #include <napi/native_api.h>
 #include <cmath>
@@ -17,6 +18,56 @@ void Changed(OH_NativeXComponent *component,void *window) {
 void Destroyed(OH_NativeXComponent *,void *) {splat::Renderer::Get().Stop();}
 OH_NativeXComponent_Callback callbacks={Created,Changed,Destroyed,nullptr};
 napi_value Undefined(napi_env env){napi_value result;napi_get_undefined(env,&result);return result;}
+// Renderer never enters ArkTS directly. Subscription replacement aborts queued
+// notifications, and environment teardown disconnects without joining the UI thread.
+struct PresentedEvent { uint64_t request,surface; };
+struct PresentedSubscription { std::atomic<bool> active{true}; };
+struct PresentedBridge {
+    std::mutex mutex;
+    napi_threadsafe_function function=nullptr;
+    PresentedSubscription *subscription=nullptr;
+    void Clear() {
+        if(subscription)subscription->active=false;
+        subscription=nullptr;
+        if(function)napi_release_threadsafe_function(function,napi_tsfn_abort);
+        function=nullptr;
+    }
+};
+using PresentedOwner=std::shared_ptr<PresentedBridge>;
+void PresentedJs(napi_env env,napi_value callback,void *context,void *data) {
+    std::unique_ptr<PresentedEvent> event(static_cast<PresentedEvent*>(data));
+    if(!env||!callback||!static_cast<PresentedSubscription*>(context)->active||!splat::Renderer::Get().IsPresented(event->request,event->surface))return;
+    napi_value value,receiver,result;napi_create_double(env,double(event->request),&value);
+    napi_get_undefined(env,&receiver);napi_call_function(env,receiver,callback,1,&value,&result);
+}
+napi_value OnPresented(napi_env env,napi_callback_info info) {
+    napi_value arg;size_t argc=1;void *data=nullptr;
+    napi_get_cb_info(env,info,&argc,&arg,nullptr,&data);napi_valuetype type=napi_undefined;
+    if(argc==1)napi_typeof(env,arg,&type);
+    if(argc!=1||(type!=napi_function&&type!=napi_null)){napi_throw_type_error(env,nullptr,"Expected callback or null");return Undefined(env);}
+    auto bridge=*static_cast<PresentedOwner*>(data);
+    napi_threadsafe_function next=nullptr;PresentedSubscription *subscription=nullptr;
+    if(type==napi_function){
+        napi_value name;napi_create_string_utf8(env,"NextNewsFirstFrame",NAPI_AUTO_LENGTH,&name);
+        subscription=new PresentedSubscription;
+        const auto status=napi_create_threadsafe_function(env,arg,nullptr,name,0,1,subscription,
+            [](napi_env,void *p,void*){delete static_cast<PresentedSubscription*>(p);},
+            subscription,PresentedJs,&next);
+        if(status!=napi_ok){delete subscription;napi_throw_error(env,nullptr,"Cannot create first-frame event");return Undefined(env);}
+        napi_unref_threadsafe_function(env,next);
+    }
+    {std::lock_guard<std::mutex> lock(bridge->mutex);bridge->Clear();bridge->function=next;bridge->subscription=subscription;}
+    if(next){
+        std::weak_ptr<PresentedBridge> weak=bridge;
+        splat::Renderer::Get().OnPresented([weak](uint64_t request,uint64_t surface){
+            auto bridge=weak.lock();if(!bridge)return;
+            std::lock_guard<std::mutex> lock(bridge->mutex);if(!bridge->function)return;
+            auto event=new PresentedEvent{request,surface};
+            if(napi_call_threadsafe_function(bridge->function,event,napi_tsfn_nonblocking)!=napi_ok)delete event;
+        });
+    }
+    return Undefined(env);
+}
 napi_value Load(napi_env env,napi_callback_info info) {
     napi_value arg;size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
     size_t length=0;
@@ -31,6 +82,64 @@ napi_value Camera(napi_env env,napi_callback_info info) {
     for(size_t i=0;i<argc;++i)if(napi_get_value_double(env,args[i],&v[i])!=napi_ok||!std::isfinite(v[i])||std::abs(v[i])>1e4){napi_throw_range_error(env,nullptr,"Invalid camera value");return Undefined(env);}
     if(v[7]<=1||v[7]>=179){napi_throw_range_error(env,nullptr,"Invalid FOV");return Undefined(env);}
     splat::Renderer::Get().SetCamera({float(v[0]),float(v[1]),float(v[2]),float(v[3]),float(v[4]),float(v[5]),float(v[6]),float(v[7])});return Undefined(env);
+}
+napi_value Intro(napi_env env,napi_callback_info info) {
+    napi_value args[2];size_t argc=2;bool enabled=false,wait=false;
+    napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+    if(argc!=2||napi_get_value_bool(env,args[0],&enabled)!=napi_ok||napi_get_value_bool(env,args[1],&wait)!=napi_ok){napi_throw_type_error(env,nullptr,"Expected enabled and waitForModel booleans");return Undefined(env);}
+    splat::Renderer::Get().SetIntro(enabled,wait);return Undefined(env);
+}
+napi_value BeginIntro(napi_env env,napi_callback_info info) {
+    napi_value args[6];size_t argc=6;double v[4]{};napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+    if(argc!=4&&argc!=6){napi_throw_type_error(env,nullptr,"Expected request and focus coordinates");return Undefined(env);}
+    for(size_t i=0;i<4;++i)if(napi_get_value_double(env,args[i],&v[i])!=napi_ok||!std::isfinite(v[i])){napi_throw_range_error(env,nullptr,"Invalid opening values");return Undefined(env);}
+    if(v[0]<1||v[0]>9007199254740991.0||std::floor(v[0])!=v[0]||std::abs(v[1])>1e6||std::abs(v[2])>1e6||std::abs(v[3])>1e6){napi_throw_range_error(env,nullptr,"Invalid opening request or focus");return Undefined(env);}
+    std::vector<float> box;double profile=0;
+    if(argc==6){
+        bool array=false;uint32_t length=0;napi_is_array(env,args[4],&array);
+        if(!array||napi_get_array_length(env,args[4],&length)!=napi_ok||(length!=0&&length!=6)||napi_get_value_double(env,args[5],&profile)!=napi_ok||!std::isfinite(profile)||profile<0||profile>2||std::floor(profile)!=profile){napi_throw_type_error(env,nullptr,"Invalid reveal bounds or profile");return Undefined(env);}
+        for(uint32_t i=0;i<length;++i){napi_value item;double number;napi_get_element(env,args[4],i,&item);
+            if(napi_get_value_double(env,item,&number)!=napi_ok||!std::isfinite(number)||std::abs(number)>1e6){napi_throw_range_error(env,nullptr,"Invalid reveal bound");return Undefined(env);}box.push_back(float(number));}
+        for(size_t i=0;i<box.size()/2;++i)if(box[i]>box[i+3]){napi_throw_range_error(env,nullptr,"Inverted reveal bounds");return Undefined(env);}
+    }
+    const bool accepted=splat::Renderer::Get().BeginIntro(static_cast<uint64_t>(v[0]),{float(v[1]),float(v[2]),float(v[3])},box,int(profile));napi_value result;napi_get_boolean(env,accepted,&result);return result;
+}
+std::mutex skyDecodeMutex;
+struct SkyWork {napi_async_work work; napi_deferred deferred;std::string path,error;uint64_t request;};
+napi_value Skybox(napi_env env,napi_callback_info info){
+    napi_value arg{};size_t argc=1,length=0;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
+    if(argc!=1||napi_get_value_string_utf8(env,arg,nullptr,0,&length)!=napi_ok||length>4096){napi_throw_type_error(env,nullptr,"Invalid skybox path");return Undefined(env);}
+    std::vector<char> path(length+1);napi_get_value_string_utf8(env,arg,path.data(),path.size(),&length);
+    if(std::string(path.data()).size()!=length){napi_throw_type_error(env,nullptr,"Invalid skybox path");return Undefined(env);}
+    auto* job=new SkyWork{};job->path.assign(path.data(),length);job->request=splat::Renderer::Get().BeginSkybox();
+    napi_value promise,label;napi_create_promise(env,&job->deferred,&promise);
+    if(length==0){napi_resolve_deferred(env,job->deferred,Undefined(env));delete job;return promise;}
+    napi_create_string_utf8(env,"SkyboxDecode",NAPI_AUTO_LENGTH,&label);
+    napi_create_async_work(env,nullptr,label,[](napi_env,void* data){auto* j=static_cast<SkyWork*>(data);try{std::lock_guard<std::mutex> serial(skyDecodeMutex);if(!splat::Renderer::Get().SkyboxCurrent(j->request)){j->error="Skybox load superseded";return;}auto image=splat::ReadSkyImage(j->path);if(!splat::Renderer::Get().SetSkybox(j->request,image))j->error="Skybox load superseded";}catch(const std::exception& error){j->error=error.what();}},
+      [](napi_env e,napi_status status,void* data){auto* j=static_cast<SkyWork*>(data);if(status==napi_ok&&j->error.empty())napi_resolve_deferred(e,j->deferred,Undefined(e));else{napi_value text,error;napi_create_string_utf8(e,j->error.empty()?"Skybox cancelled":j->error.c_str(),NAPI_AUTO_LENGTH,&text);napi_create_error(e,nullptr,text,&error);napi_reject_deferred(e,j->deferred,error);}napi_delete_async_work(e,j->work);delete j;},job,&job->work);
+    napi_queue_async_work(env,job->work);return promise;
+}
+napi_value GamepadActive(napi_env env,napi_callback_info info){
+ napi_value arg,result;size_t argc=1;bool enabled=false;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
+ if(argc!=1||napi_get_value_bool(env,arg,&enabled)!=napi_ok){napi_throw_type_error(env,nullptr,"Expected gamepad enabled boolean");return Undefined(env);}
+ napi_get_boolean(env,splat::EnableGamepad(enabled),&result);return result;
+}
+napi_value Gamepad(napi_env env,napi_callback_info){
+ auto axes=splat::ReadGamepad();napi_value result;napi_create_array_with_length(env,4,&result);
+ for(uint32_t i=0;i<4;i++){napi_value value;napi_create_double(env,axes[i],&value);napi_set_element(env,result,i,value);}return result;
+}
+napi_value ShDegree(napi_env env,napi_callback_info info){
+ napi_value arg;size_t argc=1;double degree=-1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
+ if(argc!=1||napi_get_value_double(env,arg,&degree)!=napi_ok||!std::isfinite(degree)||degree<0||degree>3||degree!=std::floor(degree)){napi_throw_range_error(env,nullptr,"Expected SH degree 0..3");return Undefined(env);}
+ splat::Renderer::Get().SetShDegree(int(degree));return Undefined(env);
+}
+napi_value Effects(napi_env env,napi_callback_info info) {
+    napi_value arg{};size_t argc=1;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);bool array=false;uint32_t length=0;
+    if(argc!=1||napi_is_array(env,arg,&array)!=napi_ok||!array||napi_get_array_length(env,arg,&length)!=napi_ok||length!=22){napi_throw_type_error(env,nullptr,"Expected 22 effect parameters");return Undefined(env);}
+    splat::Effects values{};
+    for(uint32_t i=0;i<22;i++){napi_value item;double value;napi_get_element(env,arg,i,&item);if(napi_get_value_double(env,item,&value)!=napi_ok||!std::isfinite(value)||std::abs(value)>10000){napi_throw_range_error(env,nullptr,"Invalid effect parameter");return Undefined(env);}values[i]=float(value);}
+    if(values[0]<0||values[0]>6||values[6]<1||values[6]>16||values[17]<=0||values[16]<=values[15]){napi_throw_range_error(env,nullptr,"Invalid effect range");return Undefined(env);}
+    splat::Renderer::Get().SetEffects(values);return Undefined(env);
 }
 napi_value Background(napi_env env,napi_callback_info info) {
     napi_value args[3];size_t argc=3;double values[3];napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
@@ -138,24 +247,30 @@ napi_value Status(napi_env env,napi_callback_info) {
     const auto s=splat::Renderer::Get().GetStatus();napi_value result;napi_create_object(env,&result);
     napi_value bounds; napi_create_array_with_length(env,4,&bounds); for(uint32_t i=0;i<4;i++){napi_value v;napi_create_double(env,s.bounds[i],&v);napi_set_element(env,bounds,i,v);} napi_set_named_property(env,result,"bounds",bounds);
     String(env,result,"state",s.state);String(env,result,"message",s.message);String(env,result,"graphics",s.graphics);
-    Number(env,result,"annotationDepth",s.annotationDepth);
+    String(env,result,"skyError",s.skyError);Number(env,result,"skyBytes",s.skyBytes);Number(env,result,"skyReady",s.skyReady?1:0);
+    String(env,result,"postError",s.postError);
+    Number(env,result,"shSource",s.shSource);Number(env,result,"shActive",s.shActive);Number(env,result,"shBytes",s.shBytes);
+    Number(env,result,"postBytes",s.postBytes);Number(env,result,"postActive",s.postActive);
+    Number(env,result,"annotationDepth",s.annotationDepth);Number(env,result,"openingRequest",s.openingRequest);Number(env,result,"openingPresented",s.openingPresented);Number(env,result,"errorRequest",s.errorRequest);
     Number(env,result,"width",s.width);Number(env,result,"height",s.height);Number(env,result,"frames",s.frames);Number(env,result,"count",s.count);Number(env,result,"bytes",s.bytes);Number(env,result,"loadMs",s.loadMs);Number(env,result,"sortMs",s.sortMs);Number(env,result,"gpuMs",s.gpuMs);Number(env,result,"uploadMs",s.uploadMs);Number(env,result,"uploadedRows",s.uploadedRows);Number(env,result,"reusedRows",s.reusedRows);Number(env,result,"decodedFiles",s.decodedFiles);Number(env,result,"subsetHits",s.subsetHits);Number(env,result,"frameMs",s.frameMs);Number(env,result,"fps",s.fps);Number(env,result,"requestRevision",s.requestRevision);Number(env,result,"displayRevision",s.displayRevision);Number(env,result,"prepareMs",s.prepareMs);Number(env,result,"refineMs",s.refineMs);Number(env,result,"uploadedBytes",s.uploadedBytes);Number(env,result,"pageHits",s.pageHits);return result;
 }
 struct PickWork { napi_async_work work; napi_deferred deferred; float x,y;std::vector<float> point;std::string error; };
-struct InspectWork { napi_async_work work; napi_deferred deferred; std::string path,error;std::array<float,4> bounds{}; };
+struct InspectWork { napi_async_work work; napi_deferred deferred; std::string path,error;bool details=false;std::vector<double> bounds; };
 napi_value InspectModel(napi_env env,napi_callback_info info) {
-    napi_value arg;size_t argc=1,length=0;napi_get_cb_info(env,info,&argc,&arg,nullptr,nullptr);
-    if(argc!=1||napi_get_value_string_utf8(env,arg,nullptr,0,&length)!=napi_ok||!length||length>4096){napi_throw_type_error(env,nullptr,"Invalid model path");return Undefined(env);}
+    napi_value args[2]{};size_t argc=2,length=0;napi_get_cb_info(env,info,&argc,args,nullptr,nullptr);
+    const napi_value arg=args[0];bool details=false;
+    if((argc!=1&&argc!=2)||napi_get_value_string_utf8(env,arg,nullptr,0,&length)!=napi_ok||!length||length>4096){napi_throw_type_error(env,nullptr,"Invalid model path");return Undefined(env);}
+    if(argc==2&&napi_get_value_bool(env,args[1],&details)!=napi_ok){napi_throw_type_error(env,nullptr,"Invalid inspection option");return Undefined(env);}
     std::vector<char> path(length+1);napi_get_value_string_utf8(env,arg,path.data(),path.size(),&length);
     if(std::strlen(path.data())!=length){napi_throw_type_error(env,nullptr,"Invalid model path");return Undefined(env);}
-    auto *job=new InspectWork{};job->path.assign(path.data(),length);napi_value promise,name;
+    auto *job=new InspectWork{};job->path.assign(path.data(),length);job->details=details;napi_value promise,name;
     napi_create_promise(env,&job->deferred,&promise);napi_create_string_utf8(env,"InspectGaussianBounds",NAPI_AUTO_LENGTH,&name);
     napi_create_async_work(env,nullptr,name,[](napi_env,void *p){auto *j=static_cast<InspectWork*>(p);
-        try {j->bounds=splat::InspectModel(j->path);}
+        try {const auto scene=splat::ReadModel(j->path);j->bounds={scene.center[0],scene.center[1],scene.center[2],scene.radius};if(j->details){j->bounds.push_back(scene.Count());for(auto v:scene.worldBox)j->bounds.push_back(v);}}
         catch(const std::exception &e){j->error=e.what();}},
         [](napi_env e,napi_status status,void *p){auto *j=static_cast<InspectWork*>(p);napi_value result;
             if(status!=napi_ok||!j->error.empty()){napi_value text;napi_create_string_utf8(e,j->error.empty()?"Model inspection cancelled":j->error.c_str(),NAPI_AUTO_LENGTH,&text);napi_create_error(e,nullptr,text,&result);napi_reject_deferred(e,j->deferred,result);}
-            else{napi_create_array_with_length(e,4,&result);for(uint32_t i=0;i<4;i++){napi_value v;napi_create_double(e,j->bounds[i],&v);napi_set_element(e,result,i,v);}napi_resolve_deferred(e,j->deferred,result);}
+            else{napi_create_array_with_length(e,j->bounds.size(),&result);for(uint32_t i=0;i<j->bounds.size();i++){napi_value v;napi_create_double(e,j->bounds[i],&v);napi_set_element(e,result,i,v);}napi_resolve_deferred(e,j->deferred,result);}
             napi_delete_async_work(e,j->work);delete j;},job,&job->work);
     napi_queue_async_work(env,job->work);return promise;
 }
@@ -174,7 +289,17 @@ napi_value Pick(napi_env env,napi_callback_info info) {
 }
 napi_value Init(napi_env env,napi_value exports) {
     RegisterCollision(env,exports);
+    auto owner=new PresentedOwner(std::make_shared<PresentedBridge>());
+    napi_add_env_cleanup_hook(env,[](void *p){
+        auto *owner=static_cast<PresentedOwner*>(p);
+        {std::lock_guard<std::mutex> lock((*owner)->mutex);(*owner)->Clear();}
+        delete owner;
+    },owner);
+    // Registration can occur again for an XComponent. Install the renderer bridge
+    // only when ArkTS subscribes, not while another module instance initializes.
+
     napi_property_descriptor methods[]={
+        {"onPresented",nullptr,OnPresented,nullptr,nullptr,nullptr,napi_default,owner},
         {"annotations",nullptr,Annotations,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"annotationStyle",nullptr,AnnotationStyle,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"inspectModel",nullptr,InspectModel,nullptr,nullptr,nullptr,napi_default,nullptr},
@@ -187,6 +312,13 @@ napi_value Init(napi_env env,napi_value exports) {
         {"load",nullptr,Load,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"chunks",nullptr,Chunks,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"optimize",nullptr,Optimize,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"beginIntro",nullptr,BeginIntro,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"intro",nullptr,Intro,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"gamepadActive",nullptr,GamepadActive,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"gamepad",nullptr,Gamepad,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"skybox",nullptr,Skybox,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"shDegree",nullptr,ShDegree,nullptr,nullptr,nullptr,napi_default,nullptr},
+        {"effects",nullptr,Effects,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"background",nullptr,Background,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"camera",nullptr,Camera,nullptr,nullptr,nullptr,napi_default,nullptr},
         {"setActive",nullptr,Active,nullptr,nullptr,nullptr,napi_default,nullptr},

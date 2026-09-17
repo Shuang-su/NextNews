@@ -3,7 +3,18 @@ export interface RenderStatus {
   bounds: number[];
   message: string;
   graphics: string;
+  skyError: string;
+  skyBytes: number; skyReady: number;
+  postError: string;
+  postBytes: number;
+  shSource: number;
+  shActive: number;
+  shBytes: number;
+  postActive: number;
   annotationDepth: number;
+  openingRequest: number;
+  openingPresented: number;
+  errorRequest: number;
   count: number;
   frames: number;
   width: number;
@@ -28,7 +39,7 @@ export interface RenderStatus {
 }
 export const background: (r: number, g: number, b: number) => void;
 export const load: (path: string) => void;
-export const inspectModel: (path: string) => Promise<number[]>;
+export const inspectModel: (path: string, details?: boolean) => Promise<number[]>;
 export const camera: (yaw: number, pitch: number, zoom: number, panX: number, panY: number, panZ: number, fly: number, fov?: number) => void;
 export const setActive: (active: boolean) => void;
 export const status: () => RenderStatus;
@@ -52,7 +63,7 @@ export const traceFrames: (enabled: boolean) => void;
 
 export interface CollisionStatus { ids: string[]; bytes: number; }
 export const collisionClear: () => number;
-export const collisionLoadVoxel: (generation: number, id: string, metadata: string, binary: string) => Promise<number[]>;
+export const collisionLoadVoxel: (generation: number, id: string, metadata: string, binary: string, coordinateSpace?: number) => Promise<number[]>;
 export const collisionLoadMesh: (generation: number, id: string, path: string) => Promise<number[]>;
 export const collisionSelect: (generation: number, ids: string[]) => void;
 export const collisionEnter: (generation: number, x: number, y: number, z: number) => Promise<number[]>;
@@ -61,3 +72,18 @@ export const collisionPause: () => void;
 export const collisionReset: () => number[];
 export const collisionStatus: () => CollisionStatus;
 export const collisionDebug: (generation: number, x: number, y: number, z: number) => Promise<number[]>;
+
+export const intro: (enabled: boolean, waitForModel: boolean) => void;
+
+export const beginIntro: (request: number, x: number, y: number, z: number, bounds?: number[], profile?: number) => boolean;
+
+export const onPresented: (callback: ((request: number) => void) | null) => void;
+
+export const effects: (settings: number[]) => void;
+
+export const skybox: (path: string) => Promise<void>;
+
+export const gamepadActive: (enabled: boolean) => boolean;
+export const gamepad: () => number[];
+
+export const shDegree: (degree: number) => void;

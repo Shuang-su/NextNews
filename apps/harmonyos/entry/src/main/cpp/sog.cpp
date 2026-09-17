@@ -51,7 +51,7 @@ std::map<std::string,Bytes> Unzip(const std::string &path) {
 }
 // Unbundled SuperSplat SOG uses the same decoder and GPU tables as ZIP SOG.
 // Open relative to a directory descriptor: metadata cannot escape the cache.
-std::map<std::string,Bytes> Unbundled(const std::string &path) {
+std::map<std::string,Bytes> Unbundled(const std::string &path,bool preserveSH) {
     const auto slash=path.find_last_of('/');
     if(slash==std::string::npos||path.substr(slash+1)!="meta.json")throw std::runtime_error("Invalid SOG metadata path");
     struct Handle { int fd; ~Handle(){if(fd>=0)close(fd);} } dir{open(path.substr(0,slash).c_str(),O_RDONLY|O_DIRECTORY|O_NOFOLLOW)};
@@ -73,6 +73,11 @@ std::map<std::string,Bytes> Unbundled(const std::string &path) {
         if(names.size()!=(std::string(field)=="means"?2u:1u))throw std::runtime_error("SOG component count");
         for(const auto &name:names){if(name=="meta.json"||files.count(name))throw std::runtime_error("Duplicate SOG component");files.emplace(name,read(name,32*1024*1024));}
     }
+    if(preserveSH&&meta.contains("shN")){
+        const auto names=meta.at("shN").at("files").get<std::vector<std::string>>();
+        if(names.size()!=2)throw std::runtime_error("SOG SH files");
+        for(const auto &name:names){if(name=="meta.json"||files.count(name))throw std::runtime_error("Duplicate SOG SH component");files.emplace(name,read(name,32*1024*1024));}
+    }
     return files;
 }
 Bytes Pixels(const std::map<std::string,Bytes> &files,const std::string &name,size_t count,int &width,int &height) {
@@ -84,8 +89,8 @@ Bytes Pixels(const std::map<std::string,Bytes> &files,const std::string &name,si
     return out;
 }
 }
-Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel,bool encoded) {
-    const auto files=path.size()>=10&&path.substr(path.size()-10)=="/meta.json"?Unbundled(path):Unzip(path);const auto &mb=files.at("meta.json");
+Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel,bool encoded,bool preserveSH) {
+    const auto files=path.size()>=10&&path.substr(path.size()-10)=="/meta.json"?Unbundled(path,preserveSH):Unzip(path);const auto &mb=files.at("meta.json");
     if(mb.size()>1024*1024)throw std::runtime_error("SOG metadata too large");
     auto m=nlohmann::json::parse(mb.begin(),mb.end(),[](int depth,nlohmann::json::parse_event_t,nlohmann::json &){if(depth>32)throw std::runtime_error("SOG metadata nesting limit");return true;});
     if(m.at("version")!=2)throw std::runtime_error("SOG v2 required");
@@ -104,6 +109,25 @@ Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel,bool encod
     auto color=Pixels(files,m.at("sh0").at("files").at(0).get<std::string>(),count,width,height);
     Scene scene;auto tables=std::make_shared<SogTables>();std::copy_n(sc.begin(),256,tables->scale.begin());std::copy_n(sh.begin(),256,tables->color.begin());
     if(encoded){scene.tables=tables;scene.positions.resize(count);scene.codes.resize(count);}else scene.points.resize(count);
+    if(preserveSH&&m.contains("shN")){
+        const auto &meta=m.at("shN");auto book=meta.at("codebook").get<std::vector<float>>();
+        if(book.size()!=256)throw std::runtime_error("SOG SH codebook size");
+        for(float v:book)if(!std::isfinite(v)||std::abs(v)>1e6)throw std::runtime_error("SOG SH codebook range");
+        auto names=meta.at("files").get<std::vector<std::string>>();if(names.size()!=2||names[0]==names[1])throw std::runtime_error("SOG SH files");
+        auto data=std::make_shared<SogHarmonics>();
+        data->centroids=Pixels(files,names[0],1,data->width,data->height);
+        data->degree=data->width==192?1:data->width==512?2:data->width==960?3:0;
+        if(!data->degree||data->height>1024)throw std::runtime_error("SOG SH centroid dimensions");
+        auto labels=Pixels(files,names[1],count,width,height);
+        for(int i=0;i<256;i++)data->books[i]={sh[i],book[i]};
+        scene.shDegree=data->degree;scene.sogHarmonics=data;scene.shLabels.resize(count);
+        for(int i=0;i<count;i++){
+            if(cancel&&cancel->load())throw std::runtime_error("Load cancelled");
+            const uint32_t label=labels[i*4]+(uint32_t(labels[i*4+1])<<8);
+            if(label>=uint32_t(64*data->height))throw std::runtime_error("SOG SH label out of range");
+            scene.shLabels[i]={label,U32(color,i*4)};
+        }
+    }
     // Quantized means have only 65,536 distinct values per axis. Preserve the
     // exact double interpolation/expm1 formula, then reuse its float result.
     std::array<std::vector<float>,3> means;
@@ -124,10 +148,11 @@ Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel,bool encod
         else scene.points[i]=DecodeSog(position,codes,*tables);
     }
     double radius2=0;for(int k=0;k<3;++k){scene.center[k]=(mins[k]+maxs[k])*.5f;radius2+=double(maxs[k]-mins[k])*(maxs[k]-mins[k])*.25;}
-    scene.radius=std::max(.001f,float(std::sqrt(radius2)));return scene;
+    scene.radius=std::max(.001f,float(std::sqrt(radius2)));
+    for(int k=0;k<3;++k){scene.worldBox[k]=mins[k];scene.worldBox[k+3]=maxs[k];}scene.hasWorldBox=true;return scene;
 }
-Scene ReadModel(const std::string &path,const std::atomic<bool> *cancel,bool encoded) {
-    auto scene=(path.size()>=4&&path.substr(path.size()-4)==".sog")||(path.size()>=10&&path.substr(path.size()-10)=="/meta.json")?ReadSog(path,cancel,encoded):ReadPly(path,cancel);
+Scene ReadModel(const std::string &path,const std::atomic<bool> *cancel,bool encoded,bool preserveSH) {
+    auto scene=(path.size()>=4&&path.substr(path.size()-4)==".sog")||(path.size()>=10&&path.substr(path.size()-10)=="/meta.json")?ReadSog(path,cancel,encoded,preserveSH):ReadPly(path,cancel);
     ApplyViewerTransform(scene);return scene;
 }
 std::array<float,4> InspectModel(const std::string &path) {

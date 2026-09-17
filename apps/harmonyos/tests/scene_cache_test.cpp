@@ -27,5 +27,14 @@ int main(){
     assert(pages.Get(1)==p&&pages.Get(2)==q);
     pages.Put(3,encoded());assert(!pages.Get(1)&&pages.Get(2)==q);assert(pages.Bytes()==sizeof(SogTables)+2*256*24);
     pages.Clear();assert(pages.Bytes()==0);assert(p->Count()==256&&p->tables==book);
+    auto sh=std::make_shared<SogHarmonics>();sh->centroids.resize(65536);
+    auto withSh=[&](){auto s=encoded();s->sogHarmonics=sh;s->shLabels.resize(256);return s;};
+    const size_t pageBytes=256*32,sharedBytes=sizeof(SogTables)+sh->Bytes();
+    SceneCache<int> shPages(sharedBytes+pageBytes*2);
+    auto first=withSh();shPages.Put(1,first);shPages.Put(2,withSh());
+    assert(shPages.Bytes()==sharedBytes+pageBytes*2);
+    shPages.Put(3,withSh());assert(!shPages.Get(1)&&shPages.Get(2));
+    assert(shPages.Bytes()==sharedBytes+pageBytes*2&&first->sogHarmonics==sh);
+    shPages.Clear();assert(shPages.Bytes()==0);
     std::cout<<"PASS weighted LRU, touches, live eviction, replacement, limit, range-key history\n";
 }

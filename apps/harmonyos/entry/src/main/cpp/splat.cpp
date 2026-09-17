@@ -77,8 +77,16 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
         if (p == properties.end() || (p->type != "float" && p->type != "float32")) throw std::runtime_error("Missing float Gaussian field: " + fields[i]);
         offsets[i] = p->offset;
     }
-    for (const auto &p : properties) if (p.name.rfind("f_rest_", 0) == 0) throw std::runtime_error("Convert to SH0 before importing");
-    Scene scene; scene.points.reserve(count);
+    size_t restCount=0;for(const auto &p:properties)if(p.name.rfind("f_rest_",0)==0)++restCount;
+    if(restCount!=0&&restCount!=9&&restCount!=24&&restCount!=45)throw std::runtime_error("Incomplete or unsupported SH degree");
+    std::vector<size_t> shOffsets;
+    for(size_t i=0;i<restCount;++i){
+        const auto name="f_rest_"+std::to_string(i);auto p=std::find_if(properties.begin(),properties.end(),[&](const auto &v){return v.name==name;});
+        if(p==properties.end()||(p->type!="float"&&p->type!="float32"))throw std::runtime_error("Missing float SH coefficient: "+name);
+        shOffsets.push_back(p->offset);
+    }
+    Scene scene; scene.points.reserve(count);scene.shDegree=restCount==9?1:restCount==24?2:restCount==45?3:0;
+    if(restCount)scene.harmonics.reserve(count);
     std::array<float, 3> lo = {INFINITY, INFINITY, INFINITY}, hi = {-INFINITY, -INFINITY, -INFINITY};
     std::vector<char> row(stride);
     for (size_t i = 0; i < count; ++i) {
@@ -96,6 +104,17 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
             g.color[k] = std::clamp(.5f + .28209479177387814f * v[3 + k], 0.f, 1.f);
             if (v[7 + k] < -30 || v[7 + k] > 14) throw std::runtime_error("Gaussian log-scale exceeds supported range");
         }
+        if(restCount){
+            std::array<float,48> sh{};
+            for(int c=0;c<3;c++)sh[c]=.5f+.28209479177387814f*v[3+c];
+            const size_t coefficients=restCount/3;
+            for(size_t c=0;c<3;c++)for(size_t k=0;k<coefficients;k++){
+                const float value=FloatLE(row.data()+shOffsets[c*coefficients+k]);
+                if(!std::isfinite(value)||std::abs(value)>1e6f)throw std::runtime_error("Invalid SH coefficient");
+                sh[3+k*3+c]=value;
+            }
+            scene.harmonics.push_back(sh);
+        }
         g.color[3] = Sigmoid(v[6]);
         double length = 0; for (int k = 10; k < 14; ++k) length += double(v[k]) * v[k];
         if (length < 1e-12) throw std::runtime_error("Zero Gaussian quaternion");
@@ -111,13 +130,47 @@ Scene ReadPly(const std::string &path, const std::atomic<bool> *cancel) {
     double radius2 = 0;
     for (int k = 0; k < 3; ++k) { scene.center[k] = (lo[k] + hi[k]) * .5f; radius2 += double(hi[k]-lo[k]) * (hi[k]-lo[k]) * .25; }
     scene.radius = std::max(float(std::sqrt(radius2)), .001f);
+    for(int k=0;k<3;++k){scene.worldBox[k]=lo[k];scene.worldBox[k+3]=hi[k];}scene.hasWorldBox=true;
     return scene;
 }
 
+std::array<float,48> HarmonicsAt(const Scene &scene,size_t index){
+    if(!scene.harmonics.empty())return scene.harmonics.at(index);
+    std::array<float,48> result{};
+    if(scene.sogHarmonics){
+        const auto &h=*scene.sogHarmonics;const auto code=scene.shLabels.at(index);
+        const int n=h.degree==1?3:h.degree==2?8:15;
+        const size_t x=(code[0]%64)*n,y=code[0]/64;
+        for(int c=0;c<3;c++)result[c]=.5f+.28209479177387814f*h.books[(code[1]>>(c*8))&255][0];
+        for(int k=0;k<n;k++)for(int c=0;c<3;c++)result[3+k*3+c]=h.books[h.centroids.at((y*h.width+x+k)*4+c)][1];
+    }else{const auto g=scene.At(index);std::copy_n(g.color,3,result.begin());}
+    return result;
+}
+void AppendRange(Scene &target,const Scene &source,size_t offset,size_t count,const std::atomic<bool> *cancel){
+    if(target.paged||target.tables||offset>source.Count()||count>source.Count()-offset||target.Count()+count>MaxGaussians)throw std::runtime_error("Invalid merged scene range");
+    if(source.shDegree||target.shDegree){
+        // Legacy full-float fallback is deliberately bounded; never silently drops SH.
+        if(target.Count()+count>MaxFileBytes/sizeof(std::array<float,48>))throw std::runtime_error("Merged SH exceeds 128 MiB coefficient budget");
+        if(source.shDegree&&target.shDegree&&source.shTransform!=target.shTransform)throw std::runtime_error("Mixed SH coordinate frames");
+        if(!target.shDegree){
+            target.harmonics.reserve(target.Count()+count);
+            for(size_t i=0;i<target.Count();i++){std::array<float,48> sh{};std::copy_n(target.points[i].color,3,sh.begin());target.harmonics.push_back(sh);}
+        }
+        if(source.shDegree){target.shDegree=std::max(target.shDegree,source.shDegree);target.shTransform=source.shTransform;}
+    }
+    for(size_t i=0;i<count;i++){
+        if(cancel&&cancel->load())throw std::runtime_error("Load cancelled");
+        if(target.shDegree)target.harmonics.push_back(HarmonicsAt(source,offset+i));
+        target.points.push_back(source.At(offset+i));
+    }
+}
+
 void ApplyViewerTransform(Scene &scene) {
+    scene.shTransform=!scene.shTransform;
     if(scene.tables){for(auto &p:scene.positions){p[0]=-p[0];p[1]=-p[1];}scene.tables->viewerTransform=!scene.tables->viewerTransform;}
     // SuperSplat viewer's import entity: setLocalEulerAngles(0, 0, 180).
     for(auto &g:scene.points) {g.position[0]=-g.position[0];g.position[1]=-g.position[1];g.covariance[2]=-g.covariance[2];g.covariance[4]=-g.covariance[4];}
+    if(scene.hasWorldBox)for(int k=0;k<2;++k){const float lo=scene.worldBox[k];scene.worldBox[k]=-scene.worldBox[k+3];scene.worldBox[k+3]=-lo;}
     scene.center[0]=-scene.center[0];scene.center[1]=-scene.center[1];
 }
 View MakeView(const Scene &scene, const Camera &camera) {
@@ -133,8 +186,9 @@ View MakeView(const Scene &scene, const Camera &camera) {
     for(int k=0;k<3;++k) { m[12]-=right[k]*eye[k]; m[13]-=up[k]*eye[k]; m[14]-=back[k]*eye[k]; }
     m[15]=1; v.tanHalfFov=std::tan(std::clamp(camera.fov, 1.01f, 178.99f)*.00872664626f); const float centerDepth=-(m[2]*scene.center[0]+m[6]*scene.center[1]+m[10]*scene.center[2]+m[14]);
     // Keep boundary centers inside despite float rounding at the fitted far plane.
-    v.farPlane=std::nextafter(std::max(centerDepth+scene.radius, .01f), INFINITY);
-    v.nearPlane=std::min(1.f,std::max(centerDepth-scene.radius,v.farPlane/16384.f)); return v;
+    const float clippingRadius=std::max(scene.radius,scene.clippingRadius);
+    v.farPlane=std::nextafter(std::max(centerDepth+clippingRadius, .01f), INFINITY);
+    v.nearPlane=std::min(1.f,std::max(centerDepth-clippingRadius,v.farPlane/16384.f)); return v;
 }
 std::vector<float> Pick(const Scene &scene,const View &view,float x,float y,int width,int height) {
     struct Hit { float depth,alpha; size_t index; }; std::vector<Hit> hits;

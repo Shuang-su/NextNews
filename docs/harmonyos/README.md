@@ -1,8 +1,17 @@
 # HarmonyOS native 3DGS development
 
-Latest installed Viewer: [world-speed flight and held elevation](flight-input-20260916.md).
+Latest implementation batch: [annotation tone mapping and corrected reference interpretation](annotation-tone-20260917.md).
+
+Previous implementation batch: [compressed SH in stable GPU pages](sh-pages-20260917.md).
+
+Previous implementation batch: [compressed SOG directional color and merge preservation](sog-sh-20260917.md), following [PLY SH1–3](sh-20260917.md).
+
+Previous implementation batches: [scene/audio/environment](metaflow-scene-20260916.md), [native post effects](metaflow-postfx-20260916.md), [panorama skybox](metaflow-skybox-20260916.md), and [gamepad/cache isolation](gamepad-20260916.md).
+The current [parity matrix](viewer-parity-v1312.md) supersedes historical implementation/status descriptions below; full Viewer and performance acceptance remains incomplete.
+
+Previous installed Viewer: [first-open-only loading and reveal handoff](firstframe-20260916.md), including the background and displacement candidates below.
 [OpenGL depth annotations](depth-enabled-20260916.md) are now enabled and phone-verified for the recorded cases; Huawei remains a 2D fallback.
-Latest uninstalled candidate: [configured background color](background-20260916.md), including [world-space wheel/pinch displacement](displacement-input-20260916.md).
+Included preceding changes: [configured background color](background-20260916.md), including [world-space wheel/pinch displacement](displacement-input-20260916.md).
 The [v1.31.2 parity matrix](viewer-parity-v1312.md) distinguishes preview checks from unfinished acceptance.
 
 ## Architecture

@@ -17,6 +17,7 @@ export interface Vignette { enabled: boolean; intensity: number; inner: number; 
 export interface Fringing { enabled: boolean; intensity: number; }
 export interface ViewerEffects { sharpness: Sharpness; bloom: Bloom; grading: Grading; vignette: Vignette; fringing: Fringing; }
 export interface ViewerSettings {
+  revealEffect?: string; experienceType?: string;
   version: number; cameras: ViewerCamera[]; animTracks: ViewerTrack[]; startMode: string;
   annotations: ViewerAnnotation[]; background: ViewerBackground; tonemapping: string;
   highPrecisionRendering: boolean; postEffectSettings: ViewerEffects; soundUrl?: string; collisionUrl?: string; voxelUrl?: string; voxelManifestUrl?: string;
@@ -42,8 +43,33 @@ export function validatePose(p: ViewerPose): void {
 function finite(values: number[]): void {
   if (!values.every((v: number) => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 1e8)) { throw new Error('Viewer 效果参数无效'); }
 }
+// Accept authored MetaFlow JSONC without altering comment-like text inside strings.
+export function settingsJson(text: string): string {
+  let output = '', quoted = false, escaped = false, line = false, block = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i], next = text[i + 1];
+    if (line) { if (c === '\n' || c === '\r') { line = false; output += c; } continue; }
+    if (block) { if (c === '*' && next === '/') { block = false; i++; } else if (c === '\n' || c === '\r') { output += c; } continue; }
+    if (quoted) { output += c; if (escaped) { escaped = false; } else if (c === '\\') { escaped = true; } else if (c === '"') { quoted = false; } continue; }
+    if (c === '"') { quoted = true; output += c; }
+    else if (c === '/' && next === '/') { line = true; output += ' '; i++; }
+    else if (c === '/' && next === '*') { block = true; output += ' '; i++; }
+    else { output += c; }
+  }
+  if (block) { throw new Error('Viewer 配置注释未结束'); }
+  let clean = ''; quoted = false; escaped = false;
+  for (let i = 0; i < output.length; i++) {
+    const c = output[i];
+    if (quoted) { clean += c; if (escaped) { escaped = false; } else if (c === '\\') { escaped = true; } else if (c === '"') { quoted = false; } continue; }
+    if (c === '"') { quoted = true; }
+    if (c === ',') { let j = i + 1; while (j < output.length && /\s/.test(output[j])) { j++; } if (output[j] === '}' || output[j] === ']') { continue; } }
+    clean += c;
+  }
+  return clean;
+}
 export function parseViewerSettings(text: string): ViewerSettings {
   if (text.length > 4 * 1024 * 1024) { throw new Error('Viewer 配置超过 4 MiB'); }
+  text = settingsJson(text);
   let settings = JSON.parse(text) as ViewerSettings;
   if (!settings || typeof settings !== 'object') { throw new Error('Viewer 配置无效'); }
   if (settings.version === undefined) {
@@ -67,6 +93,8 @@ export function parseViewerSettings(text: string): ViewerSettings {
     !Array.isArray(settings.animTracks) || settings.animTracks.length > 64 || !['default', 'animTrack', 'annotation'].includes(settings.startMode)) {
     throw new Error('需要有效的 Viewer v1 / v2 配置');
   }
+  if ((settings.revealEffect !== undefined && !['radial', 'none'].includes(settings.revealEffect)) ||
+    (settings.experienceType !== undefined && !['character', 'scene'].includes(settings.experienceType))) { throw new Error('MetaFlow 揭示配置无效'); }
   settings.annotations = settings.annotations ?? []; settings.background = settings.background ?? { color: [0, 0, 0] };
   settings.tonemapping = settings.tonemapping ?? 'linear'; settings.highPrecisionRendering = settings.highPrecisionRendering ?? false;
   settings.postEffectSettings = settings.postEffectSettings ?? defaultEffects();
@@ -79,6 +107,7 @@ export function parseViewerSettings(text: string): ViewerSettings {
     !vector(fx.grading.tint, 3)) { throw new Error('Viewer 效果配置无效'); }
   finite([fx.sharpness.amount, fx.bloom.intensity, fx.bloom.blurLevel, fx.grading.brightness, fx.grading.contrast,
     fx.grading.saturation, fx.vignette.intensity, fx.vignette.inner, fx.vignette.outer, fx.vignette.curvature, fx.fringing.intensity]);
+  if (fx.vignette.curvature <= 0 || fx.vignette.outer <= fx.vignette.inner) { throw new Error('暗角曲率必须为正，外缘必须大于内缘'); }
   if ((settings.soundUrl !== undefined && typeof settings.soundUrl !== 'string') ||
     (settings.background.skyboxUrl !== undefined && typeof settings.background.skyboxUrl !== 'string')) { throw new Error('Viewer 资源地址无效'); }
   for (const address of [settings.collisionUrl, settings.voxelUrl, settings.voxelManifestUrl]) { if (address !== undefined && (typeof address !== 'string' || address.length > 4096)) { throw new Error('Viewer 碰撞地址无效'); } }

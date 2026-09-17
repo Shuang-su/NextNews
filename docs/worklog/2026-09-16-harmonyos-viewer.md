@@ -69,3 +69,62 @@ HAP/签名构建、标注与原交互单测、原生 ASan/UBSan 通过。
 ## 自动接续：背景色
 
 将 background.color 从仅解析接入共用后端和实际 OpenGL/Huawei 相机清屏颜色，保留重建状态，切换模型清除旧配置。主机与构建签名通过。安装时未发现设备，候选未装；详见 background-20260916.md，后续不能将模拟后端测试当作画面通过。
+
+## Particle opening after main merge
+
+Continued from PR #2 merge on `codex/viewer-parity-next`. Added GPU opacity/size stagger, first-selection start, no LOD replay, pause/resume timeline and UI enable/replay controls. Built, signed and installed on Mate 80 Pro Max; inspected early/middle/final public-sample captures. Host timeline sanitizer and existing viewer/input/background regressions pass. See [report](../harmonyos/intro-20260916.md) for evidence and outstanding encoded-stream/Huawei/performance checks. No visionOS files changed.
+
+## MetaFlow correction: loading panel and two range waves
+
+User clarified that the opening must advance spatially, and loading must follow
+MetaFlow. Located the actual local MetaFlow source (a871786), replaced random
+stagger with dot/lift radial waves and the generic spinner with cyan sweep,
+stage/elapsed and stopped red failure presentation. Phone-tested CDN loading and
+panel removal; native/stream/input/runtime regressions and HAP builds pass.
+[Detailed report and remaining differences](../harmonyos/metaflow-opening-20260916.md).
+
+## First-open-only loading correction
+
+Separated opening from recurring LOD activity, added per-request presented-frame acknowledgement and loading-component disappearance handoff, protected old upload generations and background/resume. Reveal origin now follows the camera target, frozen across LOD commits. Final HAP phone-tested with six alternating turns and Home/resume; all checks retained loading-panel dismissal. Native sanitizer, page handoff, viewer/input/stream regressions and both builds pass. [Evidence and remaining gaps](../harmonyos/firstframe-20260916.md).
+
+## MetaFlow-first implementation: loading events and reveal profiles
+
+Continued from `3434e53` in PR #5. Implemented native first-presentation events,
+request/surface/subscription invalidation, CDN posters and real byte-based SOG
+progress, config-relative resource resolution, exact supplied world AABB reveal
+range, three motion profiles and GPU oscillation. Normal view no longer shows LOD
+cache diagnostics. Configured animation is held behind initial loading.
+
+See [implementation, checks and unfinished scope](../harmonyos/metaflow-loading-events-20260916.md).
+This is the opening/configuration batch only; the full approved plan is not yet
+complete. Signed HAP and device images remain local ignored artifacts.
+
+
+## MetaFlow 场景入口与声音/环境接续
+
+见 [阶段记录](../harmonyos/metaflow-scene-20260916.md)。配套构建与手机首开/六次转向回归通过；主机验证配置、声音生命周期、动画、环境选择和揭示连续性。双资源视觉、声音真机、后处理及整体性能仍待验收。
+
+## 独立后处理和显式体素坐标
+
+见 [后处理阶段记录](../harmonyos/metaflow-postfx-20260916.md)。原生 GLES 五效果、高精度/色调映射及关闭释放已有手机证据；体素 world/Rz180 优先级已有主机差分验证。完整视觉、物理真机及性能对照未完成。
+
+## 全景天空盒
+
+新增 HDR/RGBP 全景解码、分帧 GPU 上传、相机方向投影、请求隔离和重试。
+发现并修正普通图片 RGBP 解码及后处理重复色调映射差异。
+手机外网下载失败，使用调试缓存完成真实全景显示和转向检查；不计作网络验收。
+[实现、来源与证据](../harmonyos/metaflow-skybox-20260916.md)。
+
+## 手柄和缓存并发
+
+接入 SDK GameControllerKit 双杆监听与 MetaFlow 原始轴数学，前后台及设备变化清零。
+没有物理手柄，本批仅记构建与逻辑回归通过，硬件映射未验收。
+缓存原子写入改为每请求独立临时副本，避免快速切换/重试相同资源相互截断。
+详见 [手柄接续](../harmonyos/gamepad-20260916.md)。
+
+## 音频焦点、天空盒 LRU 和模型列表退场
+
+音频接入系统中断：暂停/停止时禁止前台或手势自动抢回播放，恢复通知后再按原意图播放；
+系统静音与降低音量独立于用户音量。状态机回归通过，真实来电/可听验收未完成。
+天空盒新增 256 MiB 独立磁盘字节 LRU 和解码引用计数，测试覆盖双引用、淘汰和原文件保留。
+内置/同源模型和本地导入成功后收起模型菜单，避免遮住粒子开场；取消选择不关闭菜单。

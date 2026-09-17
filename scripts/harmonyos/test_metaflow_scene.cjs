@@ -1,0 +1,13 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const ts=require('/Applications/DevEco-Studio.app/Contents/tools/ohpm/node_modules/typescript');
+const root='apps/harmonyos/entry/src/main/ets/pages/',cache={};
+function load(name){if(cache[name])return cache[name];const box={exports:{},require:n=>n.startsWith('./')?load(n.slice(2)):n==='@kit.ArkTS'?{url:{URL}}:{}};cache[name]=box.exports;vm.runInNewContext(ts.transpileModule(fs.readFileSync(root+name+'.ets','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,box);return box.exports;}
+const {resolveMetaFlow}=load('MetaFlowScene');
+const index={resources:[{id:'test',title:'Scene',route:'/test',aliases:['/别名'],experienceType:'character',files:{model:'fallback.ply',settings:'scene/viewer-settings.json',environment:'env.sog',thumbnail:'poster.jpg',lod:[{level:1,file:'one/lod-meta.json'},{level:2,file:'two/lod-meta.json'}]},fileSize:{recommended:'lod2'},viewer:{defaultCameraMode:'fly',syntheticAnimation:'figure8',animationFirstExitMode:'orbit'}}]};
+const before=JSON.stringify(index),result=resolveMetaFlow('https://viewer.test/test/?budget=4&noanim&noreveal&fullload',before);
+assert.equal(result.content,'https://viewer.test/data/two/lod-meta.json');assert.equal(result.settings,'https://viewer.test/data/scene/viewer-settings.json');assert.equal(result.environment,'https://viewer.test/data/env.sog');assert.equal(result.mode,'fly');assert.equal(result.budget,4000000);assert.equal(result.noanim,true);assert.equal(result.reveal,false);assert.equal(result.fullLoad,true);assert.equal(JSON.stringify(index),before);
+assert.equal(resolveMetaFlow('https://viewer.test/%E5%88%AB%E5%90%8D/',before).title,'Scene');
+const explicit=resolveMetaFlow('https://viewer.test/foo/?content=../model.sog&settings=cfg.json&poster=/p.jpg&nofx&noui&hpr');
+assert.equal(explicit.content,'https://viewer.test/model.sog');assert.equal(explicit.settings,'https://viewer.test/foo/cfg.json');assert.equal(explicit.poster,'https://viewer.test/p.jpg');assert.equal(explicit.nofx,true);assert.equal(explicit.noui,true);assert.equal(explicit.highPrecision,true);
+for(const address of ['https://viewer.test/absent','https://viewer.test/test?budget=9','https://viewer.test/test?budget=-1','https://viewer.test/test?content=file:///private','https://viewer.test/test?content=https://user:secret@cdn.test/a.sog'])assert.throws(()=>resolveMetaFlow(address,before));
+console.log('PASS MetaFlow route/alias, recommended LOD, relative resources, query precedence, flags, budget, malformed/unsafe inputs, immutable index');

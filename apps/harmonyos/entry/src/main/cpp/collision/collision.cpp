@@ -56,7 +56,8 @@ Voxel::Voxel(Box grid,double res,int depth,bool flip,std::vector<uint32_t> nodes
         }
     }
 }
-std::shared_ptr<Voxel> Voxel::Load(const std::string &metaPath,const std::string &binPath){
+std::shared_ptr<Voxel> Voxel::Load(const std::string &metaPath,const std::string &binPath,int coordinateSpace){
+    Require(coordinateSpace>=-1&&coordinateSpace<=1,"Invalid voxel coordinate space");
     auto data=Read(metaPath,1024*1024);auto m=nlohmann::json::parse(data);
     Require(m.value("leafSize",0)==4,"Unsupported voxel leaf size");
     std::string version=m.value("version",std::string("1.0"));Require(version=="1.0"||version=="1.1","Unsupported voxel version");
@@ -70,7 +71,7 @@ std::shared_ptr<Voxel> Voxel::Load(const std::string &metaPath,const std::string
         if(i<size_t(nc))nodes[i]=v;else leaves[i-nc]=v;
     }
     Box grid{Vector(m.at("gridBounds").at("min")),Vector(m.at("gridBounds").at("max"))};
-    return std::make_shared<Voxel>(grid,m.at("voxelResolution").get<double>(),m.at("treeDepth").get<int>(),version=="1.0",std::move(nodes),std::move(leaves));
+    return std::make_shared<Voxel>(grid,m.at("voxelResolution").get<double>(),m.at("treeDepth").get<int>(),(coordinateSpace<0?version=="1.0":coordinateSpace==1),std::move(nodes),std::move(leaves));
 }
 bool Voxel::Solid(int x,int y,int z)const {
     if(nodes_.empty()||!Inside(x,y,z))return false;
