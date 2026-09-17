@@ -44,3 +44,10 @@
 - 证据保存在 `evidence/ancestor-sh-20260917/`。
 - 仍需进一步优化 SH3 工作缓冲和绘制成本；不能宣称已恢复约 60 fps，或与手机 Web Viewer 完全持平。
 - 稳定分页 SH3、400/800 万档和 20 次完整缓存性能门槛未在本批重验。华为原生未改动。
+
+## 本批交付
+
+实现提交 `cea7841`；草稿 PR [#6](https://github.com/Shuang-su/NextNews/pull/6)，未合并。
+调试包：`artifacts/harmonyos/NextNews-metaflow-viewer.hap`，SHA-256：
+`dfb98d8abe8828466021db6205c5d68a90388c5baa95ccfc7a57162e410b086b`。
+已安装回同一实机并重新打开祖先像，保持“按源文件”SH3。
