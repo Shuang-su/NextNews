@@ -1,5 +1,7 @@
 # HarmonyOS native 3DGS development
 
+Current performance investigation: [祖先像 SH3 regression](ancestor-sh-performance-20260917.md) — improvement is partial; performance acceptance is not complete.
+
 Latest implementation batch: [annotation tone mapping and corrected reference interpretation](annotation-tone-20260917.md).
 
 Previous implementation batch: [compressed SH in stable GPU pages](sh-pages-20260917.md).

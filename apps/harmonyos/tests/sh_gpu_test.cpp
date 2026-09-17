@@ -43,7 +43,7 @@ int main(){try{
  GLuint fs=shader(GL_FRAGMENT_SHADER,fragment),program=glCreateProgram();glAttachShader(program,vs);glAttachShader(program,fs);glLinkProgram(program);
  GLint ok;glGetProgramiv(program,GL_LINK_STATUS,&ok);if(!ok)throw std::runtime_error("Shader link failed");glUseProgram(program);
  auto uni=[&](const char* name,int value){glUniform1i(glGetUniformLocation(program,name),value);};
- uni("encodedCodes",1);uni("codebooks",2);uni("shData",3);uni("shLabels",6);uni("shCentroids",7);uni("shBooks",8);
+ uni("encodedCodes",1);uni("codebooks",2);uni("shData",3);uni("shLabels",6);uni("shCentroids",7);uni("shBooks",8);uni("shDecoded",10);
  GLuint vao,fbo;glGenVertexArrays(1,&vao);glBindVertexArray(vao);glGenFramebuffers(1,&fbo);glBindFramebuffer(GL_FRAMEBUFFER,fbo);
  GLuint output=texture(0,GL_RGBA32F,1,1,GL_RGBA,GL_FLOAT,nullptr);glFramebufferTexture2D(GL_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_TEXTURE_2D,output,0);
  if(glCheckFramebufferStatus(GL_FRAMEBUFFER)!=GL_FRAMEBUFFER_COMPLETE)throw std::runtime_error("Test framebuffer incomplete");glViewport(0,0,1,1);
@@ -64,7 +64,10 @@ int main(){try{
    GLuint sb=texture(8,GL_RG32F,256,1,GL_RG,GL_FLOAT,singleBooks.data());
    for(int mode=0;mode<3;mode++){
     uni("shPaged",mode==2);uni("shCompressed",mode==1);uni("shSourceBands",degree);
-    GLuint ct=texture(7,GL_RGBA8UI,mode==2?4096:64*n,mode==2?256:1024,GL_RGBA_INTEGER,GL_UNSIGNED_BYTE,mode==2?paged.data():centroids.data());
+    std::vector<float> decoded(centroids.size());
+    for(size_t i=0;i<decoded.size();i++)decoded[i]=book(centroids[i],source);
+    GLuint ct=mode==2?texture(7,GL_RGBA8UI,4096,256,GL_RGBA_INTEGER,GL_UNSIGNED_BYTE,paged.data()):
+      texture(10,GL_RGBA32F,64*n,1024,GL_RGBA,GL_FLOAT,decoded.data());
     for(int label:labels){
      // Draw index is unrelated to centroid identity, modelling reordered addresses.
      const uint32_t index=(label*31+79)%4096;glUniform1ui(glGetUniformLocation(program,"splatIndex"),index);

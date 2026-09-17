@@ -35,16 +35,27 @@ bool ShTexture::PrepareCompressed(size_t budget){
   rows_=(scene_->Count()+4095)/4096;GLint limit=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&limit);
   if(rows_>size_t(limit))throw std::runtime_error("SOG SH texture exceeds GPU dimensions");
   glGenTextures(3,compressed_.data());
-  const GLenum formats[]={GL_RG32UI,GL_RGBA8UI,GL_RG32F};
+  const GLenum formats[]={GL_RG32UI,GL_RGBA32F,GL_RG32F};
   const int widths[]={4096,sh.width,256},heights[]={int(rows_),sh.height,1};
   for(int i=0;i<3;i++){glActiveTexture(GL_TEXTURE6+i);glBindTexture(GL_TEXTURE_2D,compressed_[i]);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST);glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST);glTexStorage2D(GL_TEXTURE_2D,1,formats[i],widths[i],heights[i]);}
   glTexSubImage2D(GL_TEXTURE_2D,0,0,0,256,1,GL_RG,GL_FLOAT,sh.books.data());
   budget=budget>sizeof(sh.books)?budget-sizeof(sh.books):0;
-  compressedBytes_=rows_*4096*8+size_t(sh.width)*sh.height*4+sizeof(sh.books);
+  compressedBytes_=rows_*4096*8+size_t(sh.width)*sh.height*16+sizeof(sh.books);
  }
- const size_t stride=size_t(sh.width)*4;
+ const size_t stride=size_t(sh.width)*16;
  const size_t centroids=std::min(size_t(sh.height)-centroidRow_,budget/stride);
- if(centroids){glActiveTexture(GL_TEXTURE7);glBindTexture(GL_TEXTURE_2D,compressed_[1]);glTexSubImage2D(GL_TEXTURE_2D,0,0,centroidRow_,sh.width,centroids,GL_RGBA_INTEGER,GL_UNSIGNED_BYTE,sh.centroids.data()+centroidRow_*stride);centroidRow_+=centroids;budget-=centroids*stride;}
+ if(centroids){
+  // Decode the shared centroid table once, not three dependent book fetches
+  // per coefficient, per vertex, per frame. Keep exact float32 values and
+  // float texture sampling; paged sources retain their separate integer atlas.
+  std::vector<float> decoded(centroids*size_t(sh.width)*4,0.0f);
+  const size_t start=centroidRow_*size_t(sh.width)*4;
+  for(size_t i=0;i<decoded.size();i+=4)
+   for(size_t c=0;c<3;c++)decoded[i+c]=sh.books[sh.centroids[start+i+c]][1];
+  glActiveTexture(GL_TEXTURE7);glBindTexture(GL_TEXTURE_2D,compressed_[1]);
+  glTexSubImage2D(GL_TEXTURE_2D,0,0,centroidRow_,sh.width,centroids,GL_RGBA,GL_FLOAT,decoded.data());
+  centroidRow_+=centroids;budget-=centroids*stride;
+ }
  const size_t upload=std::min(rows_-row_,budget/(4096*8));
  if(upload){
   glActiveTexture(GL_TEXTURE6);glBindTexture(GL_TEXTURE_2D,compressed_[0]);
@@ -59,7 +70,8 @@ bool ShTexture::PrepareCompressed(size_t budget){
 void ShTexture::Bind(GLuint program,int degree)const{
  const bool ready=(texture_||compressed_[0])&&row_==rows_&&(!scene_->sogHarmonics||centroidRow_==size_t(scene_->sogHarmonics->height));
  glUniform1i(glGetUniformLocation(program,"shCompressed"),ready&&compressed_[0]);
- for(int i=0;i<3;i++){glActiveTexture(GL_TEXTURE6+i);glBindTexture(GL_TEXTURE_2D,compressed_[i]);}
+ for(int i=0;i<3;i++){glActiveTexture(i==1?GL_TEXTURE10:GL_TEXTURE6+i);glBindTexture(GL_TEXTURE_2D,compressed_[i]);}
+ glUniform1i(glGetUniformLocation(program,"shDecoded"),10);
  glUniform1i(glGetUniformLocation(program,"shLabels"),6);glUniform1i(glGetUniformLocation(program,"shCentroids"),7);glUniform1i(glGetUniformLocation(program,"shBooks"),8);
  glUniform1i(glGetUniformLocation(program,"shSourceBands"),ready?scene_->shDegree:0);
  glUniform1i(glGetUniformLocation(program,"shBands"),ready?std::min(degree,scene_->shDegree):0);
