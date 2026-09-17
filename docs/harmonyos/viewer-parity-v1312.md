@@ -1,5 +1,7 @@
 # MetaFlow 优先的 Viewer 接续矩阵
 
+2026-09-18 用户决策：OpenGL 固定 SH0，高阶 SH 入口及运行时数据已停用；后文 SH1/2/3 记录仅为历史实验。实机祖先像 SH0 固定轨迹 64.2 fps，见 [恢复记录](ancestor-sh-performance-20260917.md)。
+
 主基准：MetaFlow `a871786dffdb195399f3e7427987d8db70296491` / PlayCanvas 2.21.3。
 通用对照：SuperSplat Viewer v1.31.2 `96f62515b99a28a20579041a656f7b1911c2964c`。
 参考工程只读。下面是 2026-09-16 的当前状态，后文保留历史交付记录。

@@ -165,7 +165,7 @@ private:
     std::function<void(uint64_t,uint64_t)> presentedCallback_;
     Intro intro_;
     Effects effects_{};
-    int shDegree_ = 3;
+    int shDegree_ = 0;
     bool effectsFailed_ = false;
     PostProcess post_;
     ShTexture shTexture_,stagingShTexture_;

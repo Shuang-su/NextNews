@@ -169,7 +169,8 @@ GLuint Compile(GLenum type,const char *source) {
 uint64_t Renderer::BeginSkybox(){std::lock_guard<std::mutex> lock(mutex_);skyImage_.reset();skyFailed_=false;status_.skyError.clear();status_.skyReady=false;dirty_=true;changed_.notify_one();return ++skyRequest_;}
 bool Renderer::SkyboxCurrent(uint64_t request){std::lock_guard<std::mutex> lock(mutex_);return request==skyRequest_;}
 bool Renderer::SetSkybox(uint64_t request,std::shared_ptr<const SkyImage> image){std::lock_guard<std::mutex> lock(mutex_);if(request!=skyRequest_)return false;skyImage_=std::move(image);skyFailed_=false;dirty_=true;changed_.notify_one();return true;}
-void Renderer::SetShDegree(int degree){std::lock_guard<std::mutex> lock(mutex_);shDegree_=degree;dirty_=true;changed_.notify_one();}
+// Keep the existing bridge ABI, but higher-order shading is disabled by product policy.
+void Renderer::SetShDegree(int){std::lock_guard<std::mutex> lock(mutex_);shDegree_=0;dirty_=true;changed_.notify_one();}
 void Renderer::SetEffects(Effects settings){std::lock_guard<std::mutex> lock(mutex_);if(effects_!=settings){effects_=settings;effectsFailed_=false;status_.postError.clear();dirty_=true;changed_.notify_one();}}
 Renderer &Renderer::Get() { static Renderer renderer; return renderer; }
 Renderer::~Renderer() { Stop(); }
@@ -566,7 +567,7 @@ void Renderer::LoadLoop() {
             if(!path.empty()) {
                 const auto start=Clock::now();
                 try {
-                    decoded_.Clear();selected_.Clear();auto loaded=ReadModel(path,&cancel_);
+                    decoded_.Clear();selected_.Clear();auto loaded=ReadModel(path,&cancel_,false,false);
                     const uint32_t count=loaded.points.size();
                     publish(std::make_shared<Scene>(std::move(loaded)),false,Ms(start),{{nextSourceId_++,0,count}});
                 } catch(const std::exception &e) {
@@ -593,7 +594,7 @@ void Renderer::LoadLoop() {
                         if(subset)++subsetHits;
                         else {
                             auto part=decoded_.Get(chunks[file]);
-                            if(!part){part=std::make_shared<Scene>(ReadModel(chunks[file],&cancel_));decoded_.Put(chunks[file],part);++decodedFiles;}
+                            if(!part){part=std::make_shared<Scene>(ReadModel(chunks[file],&cancel_,false,false));decoded_.Put(chunks[file],part);++decodedFiles;}
                             subset=std::make_shared<Scene>();
                             for(size_t i=0;i<selection.size();i+=2){
                                 const size_t offset=selection[i],count=selection[i+1]?selection[i+1]:part->points.size();

@@ -1,6 +1,8 @@
 # HarmonyOS native 3DGS development
 
-Current performance investigation: [祖先像 SH3 regression](ancestor-sh-performance-20260917.md) — improvement is partial; performance acceptance is not complete.
+Current policy (2026-09-18): OpenGL uses fixed SH0 at the user’s request. The higher-order color toggle is removed; single and streamed models omit higher-order runtime data. Original assets are unchanged.
+
+Historical performance investigation: [祖先像 SH3 regression](ancestor-sh-performance-20260917.md) — improvement is partial; performance acceptance is not complete.
 
 Latest implementation batch: [annotation tone mapping and corrected reference interpretation](annotation-tone-20260917.md).
 
