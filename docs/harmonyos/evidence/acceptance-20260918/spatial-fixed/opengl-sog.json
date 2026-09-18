@@ -1,0 +1,310 @@
+[
+  {
+    "bounds": [
+      0,
+      0,
+      1320,
+      2848
+    ],
+    "children": [
+      {
+        "id": "viewer-surface",
+        "type": "Button",
+        "bounds": [
+          0,
+          132,
+          1320,
+          2754
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "navigation-target",
+        "type": "Canvas",
+        "bounds": [
+          0,
+          132,
+          1320,
+          2754
+        ],
+        "hitTestBehavior": "None",
+        "children": []
+      },
+      {
+        "id": "annotation-0",
+        "type": "Button",
+        "bounds": [
+          704,
+          1334,
+          853,
+          1483
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "annotation-1",
+        "type": "Button",
+        "bounds": [
+          284,
+          1606,
+          433,
+          1755
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "annotation-4",
+        "type": "Button",
+        "bounds": [
+          388,
+          1165,
+          537,
+          1314
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "annotation-5",
+        "type": "Button",
+        "bounds": [
+          1038,
+          1485,
+          1187,
+          1634
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "annotation-6",
+        "type": "Button",
+        "bounds": [
+          646,
+          984,
+          795,
+          1133
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "annotation-8",
+        "type": "Button",
+        "bounds": [
+          819,
+          987,
+          968,
+          1136
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Text",
+        "text": "NEXTNEWS",
+        "bounds": [
+          54,
+          207,
+          834,
+          247
+        ],
+        "children": []
+      },
+      {
+        "type": "Text",
+        "text": "同源 SOG",
+        "bounds": [
+          54,
+          257,
+          834,
+          312
+        ],
+        "children": []
+      },
+      {
+        "id": "模型列表",
+        "type": "Button",
+        "text": "模型列表",
+        "bounds": [
+          834,
+          192,
+          1118,
+          327
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "隐藏工具",
+        "type": "Button",
+        "bounds": [
+          1118,
+          185,
+          1267,
+          334
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "上一个标注",
+        "type": "Button",
+        "bounds": [
+          74,
+          2336,
+          223,
+          2485
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "type": "Text",
+        "text": "标注 · 10",
+        "bounds": [
+          250,
+          2387,
+          1071,
+          2434
+        ],
+        "children": []
+      },
+      {
+        "id": "下一个标注",
+        "type": "Button",
+        "bounds": [
+          1098,
+          2336,
+          1247,
+          2485
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "播放动画",
+        "type": "Button",
+        "bounds": [
+          74,
+          2532,
+          223,
+          2681
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "环绕",
+        "type": "Button",
+        "bounds": [
+          223,
+          2532,
+          372,
+          2681
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "飞行",
+        "type": "Button",
+        "bounds": [
+          371,
+          2532,
+          520,
+          2681
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "步行",
+        "type": "Button",
+        "bounds": [
+          520,
+          2532,
+          669,
+          2681
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "帮助",
+        "type": "Button",
+        "bounds": [
+          668,
+          2532,
+          817,
+          2681
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "设置",
+        "type": "Button",
+        "bounds": [
+          817,
+          2532,
+          966,
+          2681
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "模型",
+        "type": "Button",
+        "bounds": [
+          965,
+          2532,
+          1114,
+          2681
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "沉浸显示",
+        "type": "Button",
+        "bounds": [
+          1114,
+          2532,
+          1263,
+          2681
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "放大",
+        "type": "Button",
+        "bounds": [
+          1117,
+          1281,
+          1266,
+          1430
+        ],
+        "clickable": true,
+        "children": []
+      },
+      {
+        "id": "缩小",
+        "type": "Button",
+        "bounds": [
+          1117,
+          1457,
+          1266,
+          1606
+        ],
+        "clickable": true,
+        "children": []
+      }
+    ]
+  }
+]

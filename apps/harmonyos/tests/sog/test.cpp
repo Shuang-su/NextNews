@@ -10,6 +10,11 @@ int main(int argc,char**argv){if(argc<2)return 2;
  for(int k=0;k<3;k++)if(std::abs(bounds[k]-(k<2?-a.center[k]:a.center[k]))>1e-6)throw std::runtime_error("Inspection frame mismatch");
  if(bounds[3]!=a.radius)throw std::runtime_error("Inspection radius mismatch");
  std::cout<<"PASS imported model bounds in Viewer world coordinates\n";
+ for(bool encodedOnly:{false,true}){
+  const auto dc=splat::ReadModel(argv[1],nullptr,encodedOnly,false);
+  if(dc.Count()!=a.Count()||dc.shDegree||dc.sogHarmonics||!dc.shLabels.empty()||!dc.harmonics.empty())throw std::runtime_error("SH0 policy retained higher-order data");
+  for(size_t i=0;i<a.Count();i++){const auto g=dc.At(i);for(int c=0;c<4;c++)if(std::abs(g.color[c]-a.points[i].color[c])>1e-6)throw std::runtime_error("SH0 policy changed base color");}
+ }
  auto encoded=splat::ReadSog(argv[1],nullptr,true);
  if(encoded.Count()!=a.Count()||!encoded.points.empty()||encoded.codes.size()!=a.Count())throw std::runtime_error("encoded shape mismatch");
  if(a.shDegree){

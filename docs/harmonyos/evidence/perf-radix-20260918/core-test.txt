@@ -1,0 +1,58 @@
+analytic
+PASS analytic count=1 radius=0.001 bytes=52
+truncated
+PASS rejected: Truncated or unexpected PLY payload
+missing
+PASS rejected: Missing float Gaussian field: rot_3
+pointcloud
+PASS rejected: Missing float Gaussian field: f_dc_0
+zero_quaternion
+PASS rejected: Zero Gaussian quaternion
+nan
+PASS rejected: Non-finite Gaussian value
+inf
+PASS rejected: Non-finite Gaussian value
+scale_overflow
+PASS rejected: Gaussian log-scale exceeds supported range
+too_many
+PASS rejected: Invalid vertex count (limit 4000000)
+negative_count
+PASS rejected: Invalid element count
+high_order_sh
+PASS rejected: Incomplete or unsupported SH degree
+duplicate
+PASS rejected: Duplicate PLY property
+extra_payload
+PASS rejected: Truncated or unexpected PLY payload
+wrong_format
+PASS rejected: Convert to binary little-endian 3DGS PLY first
+sh1
+PASS sh1 count=1 radius=0.001 bytes=52
+sh_reordered1
+PASS sh1 count=1 radius=0.001 bytes=52
+sh_gap1
+PASS rejected: Missing float SH coefficient: f_rest_8
+sh_nan1
+PASS rejected: Invalid SH coefficient
+sh2
+PASS sh2 count=1 radius=0.001 bytes=52
+sh_reordered2
+PASS sh2 count=1 radius=0.001 bytes=52
+sh_gap2
+PASS rejected: Missing float SH coefficient: f_rest_23
+sh_nan2
+PASS rejected: Invalid SH coefficient
+sh3
+PASS sh3 count=1 radius=0.001 bytes=52
+sh_reordered3
+PASS sh3 count=1 radius=0.001 bytes=52
+sh_gap3
+PASS rejected: Missing float SH coefficient: f_rest_44
+sh_nan3
+PASS rejected: Invalid SH coefficient
+PASS rejected: Model exceeds 128 MiB limit
+PASS valid count=80000 radius=1.76553 bytes=4160000
+PASS valid count=3 radius=0.943398 bytes=156
+PASS valid count=32768 radius=0.873271 bytes=1703936
+PASS valid count=80000 radius=315.47 bytes=4160000
+All native core fixtures and staged models passed with ASan + UBSan.

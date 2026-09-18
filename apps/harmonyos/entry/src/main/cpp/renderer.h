@@ -8,6 +8,7 @@
 #include "post_process.h"
 #include "skybox.h"
 #include "sh_texture.h"
+#include "sh_workbuffer.h"
 #include "sh_pages.h"
 #include <EGL/egl.h>
 #include <GLES3/gl3.h>
@@ -164,7 +165,7 @@ private:
     std::function<void(uint64_t,uint64_t)> presentedCallback_;
     Intro intro_;
     Effects effects_{};
-    int shDegree_ = 3;
+    int shDegree_ = 0;
     bool effectsFailed_ = false;
     PostProcess post_;
     ShTexture shTexture_,stagingShTexture_;
@@ -193,6 +194,8 @@ private:
     bool timerPending_[4]{}, timerInvalid_[4]{};
     int timerSlot_ = 0;
     GLint viewLocation_=-1, viewportLocation_=-1, nearLocation_=-1, farLocation_=-1, dataLocation_=-1, optimizedLocation_=-1;
+    ShWorkbuffer shWorkbuffer_;
+    GLuint fullProgram_=0,cachedProgram_=0;
     GLuint program_ = 0, vao_ = 0, buffer_ = 0, dataTexture_ = 0;
     void *window_ = nullptr;
     int bufferWidth_ = 0, bufferHeight_ = 0;

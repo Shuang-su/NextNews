@@ -6,6 +6,7 @@ These are upstream readiness results, not NextNews target-coverage gates.
 import argparse,json,subprocess,time
 from pathlib import Path
 p=argparse.ArgumentParser(description=__doc__)
+p.add_argument('--reference',choices=['SuperSplat','MetaFlow'],default='SuperSplat')
 p.add_argument('--budget',type=int,choices=[2,4,8],default=2)
 p.add_argument('--device');p.add_argument('--out',type=Path,required=True)
 a=p.parse_args();a.out.mkdir(parents=True,exist_ok=False)
@@ -25,12 +26,17 @@ def nodes(ns):
   yield n
   yield from nodes(n.get('children',[]))
 def click(text):
- tree=json.loads(ui('layout','--format','json'))
- n=next(n for n in nodes(tree) if n.get('text')==text)
- x,y,X,Y=n['bounds'];ui('click',str((x+X)//2),str((y+Y)//2))
+ for _ in range(8):
+  tree=json.loads(ui('layout','--format','json'))
+  n=next((n for n in nodes(tree) if n.get('text')==text and n['bounds'][2]>n['bounds'][0] and n['bounds'][3]>n['bounds'][1]),None)
+  if n:
+   x,y,X,Y=n['bounds'];ui('click',str((x+X)//2),str((y+Y)//2));return
+  ui('swipe','1000','2220','1000','1500','--speed','1000')
+ raise RuntimeError('Missing visible control: '+text)
 shell('aa force-stop com.nextnews.splatviewer');shell('aa start -b com.nextnews.splatviewer -a EntryAbility');time.sleep(2)
 pid=shell('pidof com.nextnews.splatviewer').strip().split()[0]
 ui('click','--id','模型');click('SuperSplat Web 对照');time.sleep(3)
+if a.reference=='MetaFlow':click('SuperSplat');time.sleep(3)
 if a.budget>=4:click('200 万 Web')
 if a.budget>=8:click('400 万 Web')
 time.sleep(8);click('Web 测量')
@@ -47,6 +53,6 @@ results=[json.loads(l.split('WebBenchmark ',1)[1]) for l in lines if 'WebBenchma
 trials=[json.loads(l.split('WebTrial ',1)[1]) for l in lines if 'WebTrial {' in l]
 (a.out/'trials.json').write_text(json.dumps(trials,indent=2))
 if not results:raise SystemExit('Web benchmark incomplete; inspect hilog.txt')
-result=results[-1];result['cacheCondition']='two warm-up poses; upstream browser/CPU/GPU caches not separated'
+result=results[-1];result['reference']=a.reference;result['cacheCondition']='two warm-up poses; upstream browser/CPU/GPU caches not separated'
 (a.out/'result.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2),flush=True)
 if result['trials']!=20 or sum(r['trial']>=0 for r in trials)!=20 or result['width']!=1320 or result['height']!=2623:raise SystemExit('Web comparison conditions or individual trial records not met')

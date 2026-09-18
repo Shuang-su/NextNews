@@ -1,0 +1,175 @@
+{
+  "arktsSuites": [
+    {
+      "test": "test_cdn_cache.cjs",
+      "exit": 0,
+      "seconds": 0.39
+    },
+    {
+      "test": "test_cdn_catalog.cjs",
+      "exit": 0,
+      "seconds": 0.32
+    },
+    {
+      "test": "test_cdn_manifest.cjs",
+      "exit": 0,
+      "seconds": 1.4
+    },
+    {
+      "test": "test_collision_lifecycle.cjs",
+      "exit": 0,
+      "seconds": 0.24
+    },
+    {
+      "test": "test_collision_resources.cjs",
+      "exit": 0,
+      "seconds": 0.21
+    },
+    {
+      "test": "test_gamepad.cjs",
+      "exit": 0,
+      "seconds": 0.14
+    },
+    {
+      "test": "test_load_failure.cjs",
+      "exit": 0,
+      "seconds": 0.14
+    },
+    {
+      "test": "test_lod_parity.cjs",
+      "exit": 0,
+      "seconds": 0.11,
+      "note": "Re-run with required real scene manifest and compiled comparator; lod-corrected.log"
+    },
+    {
+      "test": "test_metaflow_scene.cjs",
+      "exit": 0,
+      "seconds": 0.17
+    },
+    {
+      "test": "test_nav_cursor.cjs",
+      "exit": 0,
+      "seconds": 0.16
+    },
+    {
+      "test": "test_opening_handoff.cjs",
+      "exit": 0,
+      "seconds": 0.15
+    },
+    {
+      "test": "test_orbit.cjs",
+      "exit": 0,
+      "seconds": 0.18,
+      "note": "Corrected obsolete scene-relative zoom clamp assertions; orbit-corrected.log"
+    },
+    {
+      "test": "test_pointer_input.cjs",
+      "exit": 0,
+      "seconds": 0.16
+    },
+    {
+      "test": "test_sky_cache.cjs",
+      "exit": 0,
+      "seconds": 0.16
+    },
+    {
+      "test": "test_skybox.cjs",
+      "exit": 0,
+      "seconds": 0.16
+    },
+    {
+      "test": "test_spatial_stream.cjs",
+      "exit": 0,
+      "seconds": 0.17
+    },
+    {
+      "test": "test_stream.cjs",
+      "exit": 0,
+      "seconds": 0.31
+    },
+    {
+      "test": "test_viewer_annotations.cjs",
+      "exit": 0,
+      "seconds": 0.26
+    },
+    {
+      "test": "test_viewer_background.cjs",
+      "exit": 0,
+      "seconds": 0.25
+    },
+    {
+      "test": "test_viewer_effects.cjs",
+      "exit": 0,
+      "seconds": 0.23
+    },
+    {
+      "test": "test_viewer_projection.cjs",
+      "exit": 0,
+      "seconds": 0.16
+    },
+    {
+      "test": "test_viewer_runtime.cjs",
+      "exit": 0,
+      "seconds": 0.27
+    },
+    {
+      "test": "test_viewer_scene.cjs",
+      "exit": 0,
+      "seconds": 0.28
+    },
+    {
+      "test": "test_viewer_settings.cjs",
+      "exit": 0,
+      "seconds": 0.22
+    },
+    {
+      "test": "test_viewer_sound.cjs",
+      "exit": 0,
+      "seconds": 0.16
+    }
+  ],
+  "nativeSuites": [
+    {
+      "test": "core",
+      "exit": 0,
+      "seconds": 5.14
+    },
+    {
+      "test": "collision",
+      "exit": 0,
+      "seconds": 4.63
+    },
+    {
+      "test": "mesh_collision",
+      "exit": 0,
+      "seconds": 5.66
+    },
+    {
+      "test": "stream_cache",
+      "exit": 0,
+      "seconds": 7.17
+    },
+    {
+      "test": "sky_image",
+      "exit": 0,
+      "seconds": 1.42
+    },
+    {
+      "test": "hotspots_gpu",
+      "exit": 0,
+      "seconds": 1.07
+    },
+    {
+      "test": "viewer_debug",
+      "exit": 0,
+      "seconds": 3.9
+    },
+    {
+      "test": "sog",
+      "exit": 0,
+      "seconds": 0.09,
+      "note": "Required same-source SOG and PLY arguments supplied; sog-reference.log"
+    }
+  ],
+  "scope": "host logic/decoder tests only; not rendering acceptance"
+}

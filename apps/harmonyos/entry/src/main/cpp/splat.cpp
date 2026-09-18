@@ -230,22 +230,29 @@ std::vector<uint32_t> SortIndices(const Scene &scene, const View &view) {
     thread_local Scratch scratch;
     auto &order=scratch.order;auto &temp=scratch.temp;
     order.resize(scene.Count());temp.resize(scene.Count());
-    size_t hist[4][256]{};
+    // 11/11/10-bit stable radix: retain all 32 depth bits, but visit the
+    // full scene only three times. The final scatter writes indices directly.
+    uint32_t hist[3][2048]{};
     const auto &m=view.matrix;
     for(uint32_t i=0;i<order.size();++i) {
         const auto *p=scene.Position(i);
         float depth=m[2]*p[0]+m[6]*p[1]+m[10]*p[2]; // Translation cannot change depth order.
         if(depth==0)depth=0;uint32_t bits;std::memcpy(&bits,&depth,4);
         const uint32_t key=bits^((bits&0x80000000u)?0xffffffffu:0x80000000u);
-        order[i]={key,i};++hist[0][key&255];++hist[1][(key>>8)&255];++hist[2][(key>>16)&255];++hist[3][key>>24];
+        order[i]={key,i};++hist[0][key&2047];++hist[1][(key>>11)&2047];++hist[2][key>>22];
     }
-    for(unsigned pass=0;pass<4;++pass) {
-        const unsigned shift=pass*8;auto &counts=hist[pass];
-        size_t offset=0;for(auto &c:counts){const auto n=c;c=offset;offset+=n;}
-        for(const auto &v:order)temp[counts[(v.key>>shift)&255]++]=v;
-        order.swap(temp);
+    std::vector<uint32_t> result(order.size());
+    for(unsigned pass=0;pass<3;++pass) {
+        const unsigned shift=pass*11;auto &counts=hist[pass];
+        uint32_t offset=0;for(auto &c:counts){const auto n=c;c=offset;offset+=n;}
+        if(pass==2) {
+            for(const auto &v:order)result[counts[v.key>>22]++]=v.index;
+        } else {
+            for(const auto &v:order)temp[counts[(v.key>>shift)&2047]++]=v;
+            order.swap(temp);
+        }
     }
-    std::vector<uint32_t> result;result.reserve(order.size());for(auto i:order)result.push_back(i.index);return result;
+    return result;
 }
 std::vector<Gaussian> Sort(const Scene &scene,const View &view) {
     const auto indices=SortIndices(scene,view);std::vector<Gaussian> result;result.reserve(indices.size());

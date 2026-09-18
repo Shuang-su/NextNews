@@ -1,0 +1,7 @@
+{
+  "matchedTrials": 20,
+  "prepareP95Ms": 447.75,
+  "sortP95Ms": 309.88,
+  "refineP95Ms": 533.43,
+  "note": "prepare includes sort; percentiles do not sum; EGL swap, not physical scanout"
+}

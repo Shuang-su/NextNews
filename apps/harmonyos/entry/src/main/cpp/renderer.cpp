@@ -44,6 +44,8 @@ void readEncoded(out vec3 position,out vec4 color,out mat3 covariance){
     covariance[1][2]=-covariance[1][2];covariance[2][1]=-covariance[2][1];
 }
 vec4 readSplat(uint offset) { uint address=splatIndex*4u+offset;return texelFetch(splatData,ivec2(int(address%4096u),int(address/4096u)),0); }
+uniform highp usampler2D shColorCache;
+uniform bool shColorCached;
 /*SH_FUNCTIONS*/
 uniform mat4 view;
 uniform vec2 viewport;
@@ -66,7 +68,7 @@ void main() {
         vec3 covA=vec3(t1.w,t2.xy),covB=vec3(t2.zw,t3.x);
         covariance=mat3(covA.x,covA.y,covA.z,covA.y,covB.x,covB.y,covA.z,covB.y,covB.z);
     }
-    if(shBands>0)color.rgb=directionalColor(position,view,color.rgb);
+    vec3 sourcePosition=position;
     // MetaFlow dot wave followed by the delayed lift wave. Covariance trace
     // gives the same RMS size as gsplatGetSizeFromScale without eigenvectors.
     if (introProgress < 1.0) {
@@ -95,13 +97,6 @@ void main() {
             size=min(size,originalSize);covariance=mat3(size*size);
         }
     }
-    if(directTone>1){
-        vec3 linear=pow(max(color.rgb,vec3(0)),vec3(2.2));
-        if(directTone==2)linear=toneMap2(linear);else if(directTone==3)linear=toneMap3(linear);
-        else if(directTone==4)linear=toneMap4(linear);else if(directTone==5)linear=toneMap5(linear);else if(directTone==6)linear=toneMap6(linear);
-        color.rgb=pow(max(linear,vec3(0))+0.0000001,vec3(1.0/2.2));
-    }
-    tint=color;
     vec3 center=(view*vec4(position,1.0)).xyz;
     float z=-center.z;
     if(z<=nearPlane || z>=farPlane || color.a<0.0039) {
@@ -137,6 +132,15 @@ void main() {
     if(optimized && any(greaterThan(abs(projected)-extent,viewport*0.5))) {
         gl_Position=vec4(0.0,0.0,2.0,1.0);gaussian=vec2(0.0);return;
     }
+    if(shColorCached)color.rgb=uintBitsToFloat(texelFetch(shColorCache,ivec2(int(splatIndex%4096u),int(splatIndex/4096u)),0).rgb);
+    else if(shBands>0)color.rgb=directionalColor(sourcePosition,view,color.rgb);
+    if(directTone>1){
+        vec3 linear=pow(max(color.rgb,vec3(0)),vec3(2.2));
+        if(directTone==2)linear=toneMap2(linear);else if(directTone==3)linear=toneMap3(linear);
+        else if(directTone==4)linear=toneMap4(linear);else if(directTone==5)linear=toneMap5(linear);else if(directTone==6)linear=toneMap6(linear);
+        color.rgb=pow(max(linear,vec3(0))+0.0000001,vec3(1.0/2.2));
+    }
+    tint=color;
     gaussian=corners[gl_VertexID]*support;
     vec2 offset=major*gaussian.x+minor*gaussian.y;
     vec2 ndc=(projected+offset)*2.0/viewport;
@@ -165,7 +169,8 @@ GLuint Compile(GLenum type,const char *source) {
 uint64_t Renderer::BeginSkybox(){std::lock_guard<std::mutex> lock(mutex_);skyImage_.reset();skyFailed_=false;status_.skyError.clear();status_.skyReady=false;dirty_=true;changed_.notify_one();return ++skyRequest_;}
 bool Renderer::SkyboxCurrent(uint64_t request){std::lock_guard<std::mutex> lock(mutex_);return request==skyRequest_;}
 bool Renderer::SetSkybox(uint64_t request,std::shared_ptr<const SkyImage> image){std::lock_guard<std::mutex> lock(mutex_);if(request!=skyRequest_)return false;skyImage_=std::move(image);skyFailed_=false;dirty_=true;changed_.notify_one();return true;}
-void Renderer::SetShDegree(int degree){std::lock_guard<std::mutex> lock(mutex_);shDegree_=degree;dirty_=true;changed_.notify_one();}
+// Keep the existing bridge ABI, but higher-order shading is disabled by product policy.
+void Renderer::SetShDegree(int){std::lock_guard<std::mutex> lock(mutex_);shDegree_=0;dirty_=true;changed_.notify_one();}
 void Renderer::SetEffects(Effects settings){std::lock_guard<std::mutex> lock(mutex_);if(effects_!=settings){effects_=settings;effectsFailed_=false;status_.postError.clear();dirty_=true;changed_.notify_one();}}
 Renderer &Renderer::Get() { static Renderer renderer; return renderer; }
 Renderer::~Renderer() { Stop(); }
@@ -285,13 +290,17 @@ void Renderer::InitGL(void *window) {
         timerResult_=reinterpret_cast<TimerResult>(eglGetProcAddress("glGetQueryObjectui64vEXT"));
         if(timerResult_)glGenQueries(4,timerQueries_);
     }
-    std::string vertexSource=Vertex;const std::string marker="/*TONE_FUNCTIONS*/";vertexSource.replace(vertexSource.find(marker),marker.size(),PostTone);
-    const std::string shMarker="/*SH_FUNCTIONS*/";vertexSource.replace(vertexSource.find(shMarker),shMarker.size(),ShShader);
-    GLuint vertex=Compile(GL_VERTEX_SHADER,vertexSource.c_str()), fragment=0;
-    try {fragment=Compile(GL_FRAGMENT_SHADER,Fragment);} catch(...) {glDeleteShader(vertex);throw;}
-    program_=glCreateProgram();glAttachShader(program_,vertex);glAttachShader(program_,fragment);glLinkProgram(program_);glDeleteShader(vertex);glDeleteShader(fragment);
-    GLint ok;glGetProgramiv(program_,GL_LINK_STATUS,&ok);if(!ok) throw std::runtime_error("Gaussian shader link failed");
-    viewLocation_=glGetUniformLocation(program_,"view");viewportLocation_=glGetUniformLocation(program_,"viewport");nearLocation_=glGetUniformLocation(program_,"nearPlane");farLocation_=glGetUniformLocation(program_,"farPlane");dataLocation_=glGetUniformLocation(program_,"splatData");optimizedLocation_=glGetUniformLocation(program_,"optimized");
+    auto makeProgram=[&](bool cached){
+        std::string source=Vertex;const std::string toneMarker="/*TONE_FUNCTIONS*/",shMarker="/*SH_FUNCTIONS*/";
+        source.replace(source.find(toneMarker),toneMarker.size(),PostTone);
+        source.replace(source.find(shMarker),shMarker.size(),cached?
+            "uniform int shBands; vec3 directionalColor(vec3 p,mat4 v,vec3 c){return c;}":ShShader);
+        GLuint vertex=Compile(GL_VERTEX_SHADER,source.c_str()),fragment=0;
+        try{fragment=Compile(GL_FRAGMENT_SHADER,Fragment);}catch(...){glDeleteShader(vertex);throw;}
+        GLuint program=glCreateProgram();glAttachShader(program,vertex);glAttachShader(program,fragment);glLinkProgram(program);glDeleteShader(vertex);glDeleteShader(fragment);
+        GLint ok=0;glGetProgramiv(program,GL_LINK_STATUS,&ok);if(!ok){glDeleteProgram(program);throw std::runtime_error("Gaussian shader link failed");}return program;
+    };
+    fullProgram_=makeProgram(false);cachedProgram_=makeProgram(true);program_=0;
     glGenVertexArrays(1,&vao_);glBindVertexArray(vao_);glGenBuffers(1,&buffer_);glBindBuffer(GL_ARRAY_BUFFER,buffer_);
     glEnableVertexAttribArray(0);glVertexAttribIPointer(0,1,GL_UNSIGNED_INT,sizeof(uint32_t),nullptr);glVertexAttribDivisor(0,1);
     GLint maxTexture=0;glGetIntegerv(GL_MAX_TEXTURE_SIZE,&maxTexture);atlasRows_=std::min(maxTexture,8192);atlas_.Reset(atlasRows_*4);encodedRows_=std::min(maxTexture,4096);encodedAtlas_.Reset(encodedRows_*16);encodedBookSlots_.assign(encodedRows_*16,UINT32_MAX);bookAtlas_.Reset(2048);shAtlas_.Reset(ShAtlasPages);
@@ -314,10 +323,10 @@ void Renderer::DestroyGL() {
     if(display_==EGL_NO_DISPLAY)return;
     if(context_!=EGL_NO_CONTEXT && surface_!=EGL_NO_SURFACE){
         eglMakeCurrent(display_,surface_,surface_,context_);
-        shTexture_.Destroy();stagingShTexture_.Destroy();sky_.Destroy();post_.Destroy();hotspots_.Destroy();depthBits_=0;
+        shWorkbuffer_.Destroy();shTexture_.Destroy();stagingShTexture_.Destroy();sky_.Destroy();post_.Destroy();hotspots_.Destroy();depthBits_=0;
         if(timerQueries_[0])glDeleteQueries(4,timerQueries_);
         if(dataTexture_)glDeleteTextures(1,&dataTexture_);
-        if(buffer_)glDeleteBuffers(1,&buffer_);if(vao_)glDeleteVertexArrays(1,&vao_);if(program_)glDeleteProgram(program_);
+        if(buffer_)glDeleteBuffers(1,&buffer_);if(vao_)glDeleteVertexArrays(1,&vao_);if(fullProgram_)glDeleteProgram(fullProgram_);if(cachedProgram_)glDeleteProgram(cachedProgram_);fullProgram_=cachedProgram_=program_=0;
     }
     timerResult_=nullptr;timerSlot_=0;
     std::fill_n(timerQueries_,4,0);std::fill_n(timerPending_,4,false);std::fill_n(timerInvalid_,4,false);
@@ -425,6 +434,8 @@ void Renderer::Draw(const View &view,int width,int height) {
     if(introProgress<1)style.visible=false;
     const bool annotationReady=depthBits_>0&&hotspots_.Prepare(annotations);
     {std::lock_guard<std::mutex> lock(mutex_);status_.annotationDepth=annotationReady?depthBits_:0;}
+    int shDegree;{std::lock_guard<std::mutex> lock(mutex_);shDegree=shDegree_;}
+    const bool shCached=(!uploadDirty_||preuploaded_)&&shWorkbuffer_.Prepare(scene_,view,shDegree,dataTexture_,shTexture_);
     Effects effects;{std::lock_guard<std::mutex> lock(mutex_);effects=effects_;}
     bool failed;{std::lock_guard<std::mutex> lock(mutex_);failed=effectsFailed_;}
     bool post=false;
@@ -441,8 +452,13 @@ void Renderer::Draw(const View &view,int width,int height) {
     {std::lock_guard<std::mutex> lock(mutex_);status_.skyBytes=sky_.Bytes();status_.skyReady=skyImage_&&skyImage_==skyImage&&!skyFailed_&&!sky_.Pending();if(sky_.Pending())dirty_=true;}
     if(annotationReady&&style.visible){glDepthMask(GL_TRUE);glClearDepthf(1);glClear(GL_DEPTH_BUFFER_BIT);hotspots_.Draw(view,width,height,style,false,post?0:int(effects[0]));}
     if(annotationReady&&style.visible){glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);}else glDisable(GL_DEPTH_TEST);
+    const GLuint selectedProgram=(shCached||shDegree==0||scene_->shDegree==0)?cachedProgram_:fullProgram_;
+    if(program_!=selectedProgram){
+        program_=selectedProgram;
+        viewLocation_=glGetUniformLocation(program_,"view");viewportLocation_=glGetUniformLocation(program_,"viewport");nearLocation_=glGetUniformLocation(program_,"nearPlane");farLocation_=glGetUniformLocation(program_,"farPlane");dataLocation_=glGetUniformLocation(program_,"splatData");optimizedLocation_=glGetUniformLocation(program_,"optimized");
+    }
     glDepthMask(GL_FALSE);glUseProgram(program_);
-    int shDegree;{std::lock_guard<std::mutex> lock(mutex_);shDegree=shDegree_;}
+    shWorkbuffer_.Bind(program_,shCached);
     // A paged SH0 scene must not sample a previous single-model SH texture.
     shTexture_.Bind(program_,scene_->paged?0:shDegree);
     const bool pagedSh=scene_->paged&&encodedDrawable_&&scene_->shDegree>0;
@@ -505,7 +521,7 @@ void Renderer::Draw(const View &view,int width,int height) {
     if(traceFrames_){const double now=std::chrono::duration<double,std::milli>(Clock::now().time_since_epoch()).count();
         if(lastTraceFrame_>0)OH_LOG_Print(LOG_APP,LOG_INFO,0xD003,"NextNewsPages","StreamPresent intervalMs=%{public}.3f submitMs=%{public}.3f count=%{public}zu revision=%{public}.0f",now-lastTraceFrame_,Ms(drawStart),scene_->Count(),status_.displayRevision);
         lastTraceFrame_=now;}
-    status_.shSource=scene_->shDegree;status_.shActive=std::min(scene_->shDegree,shDegree);status_.shBytes=(shCentroidAtlas_?size_t(4096)*4096*4+ShSourcePages*2048*4:0)+shTexture_.Bytes()+stagingShTexture_.Bytes()+scene_->harmonics.capacity()*sizeof(std::array<float,48>)+scene_->shLabels.capacity()*sizeof(std::array<uint32_t,2>)+(scene_->sogHarmonics?scene_->sogHarmonics->Bytes():0);
+    status_.shSource=scene_->shDegree;status_.shActive=std::min(scene_->shDegree,shDegree);status_.shBytes=shWorkbuffer_.Bytes()+(shCentroidAtlas_?size_t(4096)*4096*4+ShSourcePages*2048*4:0)+shTexture_.Bytes()+stagingShTexture_.Bytes()+scene_->harmonics.capacity()*sizeof(std::array<float,48>)+scene_->shLabels.capacity()*sizeof(std::array<uint32_t,2>)+(scene_->sogHarmonics?scene_->sogHarmonics->Bytes():0);
     status_.frames++;status_.sortMs=sortMs;status_.frameMs=Ms(drawStart);status_.fps=1000.0/std::max(Ms(start),.001);status_.bytes=status_.shBytes+(preparedPixels_.capacity()+stagingPixels_.capacity())*sizeof(float)+cacheBytes_.load()+scene_->points.capacity()*sizeof(Gaussian)+scene_->Count()*68+sorted.capacity()*sizeof(uint32_t);
 }
 void Renderer::LoadLoop() {
@@ -551,7 +567,7 @@ void Renderer::LoadLoop() {
             if(!path.empty()) {
                 const auto start=Clock::now();
                 try {
-                    decoded_.Clear();selected_.Clear();auto loaded=ReadModel(path,&cancel_);
+                    decoded_.Clear();selected_.Clear();auto loaded=ReadModel(path,&cancel_,false,false);
                     const uint32_t count=loaded.points.size();
                     publish(std::make_shared<Scene>(std::move(loaded)),false,Ms(start),{{nextSourceId_++,0,count}});
                 } catch(const std::exception &e) {
@@ -578,7 +594,7 @@ void Renderer::LoadLoop() {
                         if(subset)++subsetHits;
                         else {
                             auto part=decoded_.Get(chunks[file]);
-                            if(!part){part=std::make_shared<Scene>(ReadModel(chunks[file],&cancel_));decoded_.Put(chunks[file],part);++decodedFiles;}
+                            if(!part){part=std::make_shared<Scene>(ReadModel(chunks[file],&cancel_,false,false));decoded_.Put(chunks[file],part);++decodedFiles;}
                             subset=std::make_shared<Scene>();
                             for(size_t i=0;i<selection.size();i+=2){
                                 const size_t offset=selection[i],count=selection[i+1]?selection[i+1]:part->points.size();

@@ -23,7 +23,12 @@ c.cancel(); c.touch([point(3,300,300)],false); assert.deepEqual(Array.from(c.tar
 const a=new Controls(), b=new Controls(); a.target[0]=b.target[0]=1;
 a.tick(32); b.tick(16); b.tick(16); close(a.current[0],b.current[0]);
 for(let i=0;i<100;i++) a.tick(32); close(a.current[0],1); assert.equal(a.tick(32),false);
-c.zoom(1e10); close(c.target[2],20); c.zoom(1e-10); close(c.target[2],.05);
+// Reference zoomRange is 0.01 world units to Infinity; the former
+// scene-relative [0.05,20] limits were deliberately removed.
+const preZoom=c.target[2];c.zoom(1e10);close(c.target[2],preZoom*1e10);
+c.zoom(1e-10);close(c.target[2],preZoom);
+c.zoom(1e-20);close(c.target[2],.01/(3*c.sceneRadius));
+for(const invalid of [NaN,Infinity,0,-1]){const before=c.target[2];c.zoom(invalid);close(c.target[2],before);}
 c.reset(); assert.deepEqual(Array.from(c.current),[0,0,1,0,0,0]);
 c.resize(400,800); c.pan(40,0); const pan=c.target[3];
 c.resize(800,1600); c.reset(); c.pan(80,0); close(c.target[3],pan); // DPI-independent projection

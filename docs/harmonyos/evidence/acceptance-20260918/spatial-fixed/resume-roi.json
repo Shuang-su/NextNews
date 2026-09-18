@@ -1,0 +1,12 @@
+{
+  "roi": [
+    100,
+    500,
+    1220,
+    1650
+  ],
+  "mae8bit": 0.041393115942028984,
+  "p99Abs8bit": 1.0,
+  "maxAbs8bit": 120.0,
+  "scope": "one Huawei PLY Home/resume, content ROI only, not full lifecycle acceptance"
+}

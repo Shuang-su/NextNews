@@ -61,7 +61,6 @@ struct ViewerTool {
 @Entry
 @Component
 struct Index {
-  @State shEnabled: boolean = true;
   @State soundMuted: boolean = false;
   @State soundVolume: number = 1;
   @State soundMessage: string = '';
@@ -664,7 +663,7 @@ struct Index {
         this.message = state.state === 'ready' ? '官方导航 · 环绕聚焦 / 飞行前往 · 双击聚焦' : state.message;
       }
       this.graphics = state.graphics;
-      this.details = `${state.count.toLocaleString()} 个高斯 · SH${state.shActive}（源 SH${state.shSource}）\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\nCPU 提交 ${state.frameMs.toFixed(1)} ms（非屏幕帧率）\n最近上传批次 ${state.uploadMs.toFixed(1)} ms · 上传/复用 ${state.uploadedRows}/${state.reusedRows} 行\n渲染 GPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n后处理 ${state.postActive ? '开启' : '关闭'} · 缓冲 ${(state.postBytes / 1048576).toFixed(1)} MiB\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
+      this.details = `${state.count.toLocaleString()} 个高斯 · SH0 基础颜色\n加载 ${state.loadMs.toFixed(0)} ms · 排序 ${state.sortMs.toFixed(1)} ms\nCPU 提交 ${state.frameMs.toFixed(1)} ms（非屏幕帧率）\n最近上传批次 ${state.uploadMs.toFixed(1)} ms · 上传/复用 ${state.uploadedRows}/${state.reusedRows} 行\n渲染 GPU ${state.gpuMs < 0 ? '计时不可用' : state.gpuMs.toFixed(2) + ' ms'}\n后处理 ${state.postActive ? '开启' : '关闭'} · 缓冲 ${(state.postBytes / 1048576).toFixed(1)} MiB\n模型缓冲估算 ${(state.bytes / 1048576).toFixed(1)} MiB\n相机 ${this.controls.current.map((v: number) => v.toFixed(3)).join(",")} · ${this.flyMode ? "fly" : "orbit"}`;
     }, 500);
   }
   aboutToDisappear(): void {
@@ -1138,7 +1137,7 @@ struct Index {
                   }
                 }
                 if (this.settingsVisible) {
-                  Button(this.shEnabled ? '方向颜色：按源文件' : '方向颜色：SH0 对照').id('方向颜色').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.shEnabled = !this.shEnabled; nativeRender.shDegree(this.shEnabled ? 3 : 0); })
+                  if (this.backendName === 'OpenGL') { Text('颜色：SH0').fontSize(12).fontColor('#BACDDA') }
                   Text('设置').fontSize(16).fontColor('#FFFFFF').width('100%')
                   Button(this.effectsEnabled ? '画质效果：开' : '画质效果：关').id('画质效果').fontSize(12).enabled(this.backendName === 'OpenGL').onClick(() => { this.effectsEnabled = !this.effectsEnabled; this.updateCamera(); })
                   if (this.skyMessage) {

@@ -153,11 +153,18 @@ Scene ReadSog(const std::string &path,const std::atomic<bool> *cancel,bool encod
 }
 Scene ReadModel(const std::string &path,const std::atomic<bool> *cancel,bool encoded,bool preserveSH) {
     auto scene=(path.size()>=4&&path.substr(path.size()-4)==".sog")||(path.size()>=10&&path.substr(path.size()-10)=="/meta.json")?ReadSog(path,cancel,encoded,preserveSH):ReadPly(path,cancel);
+    if(!preserveSH){
+        // PLY also uses this entry point: release its parsed coefficients before
+        // merging/uploading. Source files and the standalone parser stay intact.
+        scene.shDegree=0;scene.sogHarmonics.reset();
+        std::vector<std::array<float,48>>().swap(scene.harmonics);
+        std::vector<std::array<uint32_t,2>>().swap(scene.shLabels);
+    }
     ApplyViewerTransform(scene);return scene;
 }
 std::array<float,4> InspectModel(const std::string &path) {
     // ReadModel already performs the Viewer import transform exactly once.
-    auto scene=ReadModel(path,nullptr,true);
+    auto scene=ReadModel(path,nullptr,true,false);
     return {scene.center[0],scene.center[1],scene.center[2],scene.radius};
 }
 

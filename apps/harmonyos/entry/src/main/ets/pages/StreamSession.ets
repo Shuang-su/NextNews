@@ -293,7 +293,15 @@ export class StreamSession {
         ranges.push(paths.length, 0, this.environmentCount); paths.push(this.environmentPath);
         count += this.environmentCount; desiredCount += this.environmentCount;
       }
-      if (count > this.budget) { throw new Error('主体与环境超出当前预算，保留上一帧；请提高预算'); }
+      if (count > this.budget) {
+        // Source LOD counts need not decrease monotonically. A cached coarser
+        // replacement can exceed the valid target budget. Keep the last frame
+        // and downloading active until the requested ranges become available.
+        if (m.leaves && matched < m.leaves.length && desiredCount <= this.budget) {
+          this.progress('等待目标 LOD 就绪 · 保留上一帧'); return [];
+        }
+        throw new Error('主体与环境超出当前预算，保留上一帧；请提高预算');
+      }
       const key = paths.join('|') + ':' + ranges.join(',');
       this.coverage = m.leaves ? matched / m.leaves.length : 1; this.requestedCount = desiredCount || count;
       if (key !== this.published && (nativeRender.status().state !== 'loading' || (this.paged && this.submittedTarget !== this.targetRevision))) {
